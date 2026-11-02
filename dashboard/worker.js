@@ -17,13 +17,22 @@ const json = (data, status = 200, headers = {}) =>
     headers: { 'content-type': 'application/json; charset=utf-8', ...headers },
   });
 
+// ⭐ contents API أولاً: أدق من raw.githubusercontent بعد force-push
+// (raw بيرجع 404 مؤقتاً لملفات اتغيّرت بنيتها). raw = fallback.
 async function raw(path) {
-  const res = await fetch(`${RAW}/${path}`, {
+  const apiRes = await fetch(`${API}/contents/${path}`, {
+    headers: { 'user-agent': 'wasl-hub', 'accept': 'application/vnd.github.raw' },
+    cf: { cacheTtl: 0 },
+  });
+  if (apiRes.ok) return await apiRes.text();
+
+  const rawRes = await fetch(`${RAW}/${path}`, {
     headers: { 'user-agent': 'wasl-hub' },
     cf: { cacheTtl: 0 },
   });
-  if (!res.ok) throw new Error(`raw ${path} -> ${res.status}`);
-  return await res.text();
+  if (rawRes.ok) return await rawRes.text();
+
+  throw new Error(`fetch ${path} -> contents:${apiRes.status} raw:${rawRes.status}`);
 }
 
 async function rawJson(path) {
@@ -182,7 +191,9 @@ ${extra}
 const NAV = [
   ['/', 'الرئيسية'],
   ['/p/STATUS.md', 'الحالة'],
+  ['/p/TIMELINE.md', 'الخط الزمني'],
   ['/p/CHARTER.md', 'الميثاق'],
+  ['/p/CHATGPT-BRIDGE.md', 'جسر ChatGPT'],
   ['/p/PROTOCOL.md', 'البروتوكول'],
   ['/p/ARCHITECTURE.md', 'المعمارية'],
   ['/p/DECISIONS.md', 'القرارات'],
@@ -360,6 +371,8 @@ async function home() {
 
   const cards = [
     ['لوحة الحالة', 'فين المشروع واقف بالظبط، إيه اللي اتعمل وإيه الجاي.', '/p/STATUS.md', 'acc'],
+    ['الخط الزمني', '٦ مراحل من التأسيس للترسيخ — مع بوابات الخروج والمدة.', '/p/TIMELINE.md', 'acc'],
+    ['جسر ChatGPT', 'حزمة السياق الكاملة — الرابط اللي ChatGPT بيقرأ منه.', '/p/CHATGPT-BRIDGE.md', 'acc'],
     ['الميثاق', 'المشروع إيه وليه، السوق، النموذج، ومبادئ مش قابلة للتفاوض.', '/p/CHARTER.md', ''],
     ['البروتوكول', 'دورة البروميت والمراجعة، وقواعد الموافقة وتدقيق الأدوات.', '/p/PROTOCOL.md', ''],
     ['المعمارية', 'البنية المقترحة — بتتبني من بروميتات ChatGPT.', '/p/ARCHITECTURE.md', 'warn'],
@@ -394,9 +407,37 @@ async function home() {
     <div class="grid">${cards}</div>
   </section>
 
+  <section class="section">
+    <h2>الدايرة مع ChatGPT</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>١ · ChatGPT يقرأ حالة المشروع</h3>
+        <p>رابط واحد فيه حالة المشروع والمعمارية والقرارات والخط الزمني وآخر حزمة مراجعة. بيتحدّث تلقائياً مع كل commit.</p>
+        <a href="/bridge" target="_blank" rel="noopener">افتح حزمة السياق ←</a>
+        <div class="filelist" style="margin-top:10px">
+          <a href="/bridge" target="_blank" rel="noopener"><span>حزمة السياق الكاملة</span><span class="path">/bridge</span></a>
+        </div>
+      </div>
+      <div class="card">
+        <h3>٢ · ChatGPT يراجع شغلنا</h3>
+        <p>آخر حزمة مراجعة بصيغة جاهزة — انسخها والصقها، أو خلّي ChatGPT يقرأ الرابط لوحده.</p>
+        <button class="copybtn" id="cp2">📋 انسخ آخر حزمة مراجعة</button>
+        <div class="filelist" style="margin-top:10px">
+          <a href="/review/latest" target="_blank" rel="noopener"><span>حزمة المراجعة (خام)</span><span class="path">/review/latest</span></a>
+        </div>
+      </div>
+      <div class="card">
+        <h3>٣ · ترتيب الأدوار</h3>
+        <p>ChatGPT مهندس معماري · أنا منفّذ · أنت المالك. كل واحد في دوره، ومفيش تجاوز.</p>
+        <a href="/p/CHATGPT-BRIDGE.md">الجسر كامل ←</a>
+        <a href="/p/TIMELINE.md">الخط الزمني ←</a>
+      </div>
+    </div>
+  </section>
+
   ${reviews.length ? `
   <section class="section">
-    <h2>آخر حزمة مراجعة — انسخها لـ ChatGPT</h2>
+    <h2>آخر حزمة مراجعة</h2>
     <div class="card">
       <h3>${escapeHtml(reviews[reviews.length - 1])}</h3>
       <p>اضغط «نسخ» والصقها في ChatGPT عشان يراجع الشغل ويعلّق.</p>
@@ -422,22 +463,24 @@ async function home() {
     </div>
   </section>`;
 
-  const script = reviews.length ? `
+  const script = `
 <script>
 (async()=>{
-  const b=document.getElementById('cp'); if(!b) return;
-  b.addEventListener('click',async()=>{
+  const doCopy = async()=>{
     try{
-      const r=await fetch('/review/latest');
-      const t=await r.text();
+      const r = await fetch('/review/latest');
+      const t = await r.text();
       await navigator.clipboard.writeText(t);
       const el=document.createElement('div'); el.className='toast'; el.textContent='✅ اتنسخت — الصقها في ChatGPT';
       document.body.appendChild(el); requestAnimationFrame(()=>el.classList.add('on'));
       setTimeout(()=>{el.classList.remove('on');setTimeout(()=>el.remove(),300);},2200);
     }catch(e){ alert('انسخ يدوياً من: '+location.origin+'/review/latest'); }
+  };
+  ['cp','cp2'].forEach(id=>{
+    const b=document.getElementById(id); if(b) b.addEventListener('click',doCopy);
   });
 })();
-</script>` : '';
+</script>`;
 
   return shell('الرئيسية', body, script);
 }
@@ -494,6 +537,32 @@ export default {
         const reviews = tree.filter(x => x.startsWith('REVIEWS/') && x.endsWith('.md') && !x.includes('.short.')).sort();
         if (!reviews.length) return new Response('لسه مفيش حزم مراجعة.', { headers: { 'content-type': 'text/plain; charset=utf-8' } });
         return new Response(await raw(reviews[reviews.length - 1]), {
+          headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
+        });
+      }
+
+      // /bridge → الحزمة الكاملة لـ ChatGPT (سياق المشروع كله في رابط واحد)
+      if (p === '/bridge' || p === '/bridge.txt' || p === '/bridge.md') {
+        const tree = await loadRepo();
+        const reviews = tree.filter(x => x.startsWith('REVIEWS/') && x.endsWith('.md') && !x.includes('.short.')).sort();
+        const parts = [];
+        parts.push('# WASl AI — حزمة السياق لـ ChatGPT');
+        parts.push('');
+        parts.push(`> رابط حيّ · آخر تحديث: ${new Date().toISOString()}`);
+        parts.push('> اقرأ ده كامل قبل أي مراجعة أو تصميم.');
+        parts.push('');
+        for (const f of ['CHATGPT-BRIDGE.md', 'STATUS.md', 'TIMELINE.md', 'ARCHITECTURE.md', 'DECISIONS.md']) {
+          try {
+            parts.push('');
+            parts.push('\n---\n');
+            parts.push(await raw(f));
+          } catch (e) { /* skip missing */ }
+        }
+        if (reviews.length) {
+          parts.push('\n---\n');
+          parts.push(await raw(reviews[reviews.length - 1]));
+        }
+        return new Response(parts.join('\n'), {
           headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
         });
       }
