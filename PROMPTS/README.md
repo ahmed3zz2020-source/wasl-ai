@@ -13,7 +13,14 @@
 
 | # | التاريخ | الموضوع | الحالة | المرحلة | الحزمة |
 |---|---|---|---|---|---|
-| — | — | *لسه مفيش بروميتات* | — | — | — |
+| R002 | ٢ نوفمبر ٢٠٢٦ | رؤية المنتج الكاملة | ✅ مُنفَّذ | ٠ — التأسيس | [`REVIEWS/R002-vision-concept.md`](../REVIEWS/R002-vision-concept.md) |
+| R003 | ٢ نوفمبر ٢٠٢٦ | مراجعة الرؤية بعد موافقة المالك على المبدأ | ✅ مُنفَّذ | ٠ — التأسيس | [`REVIEWS/R003-vision-update.md`](../REVIEWS/R003-vision-update.md) |
+| R004 | ٢ نوفمبر ٢٠٢٦ | ملاحظات المهندس المعماري (النص الكامل) | ✅ مُنفَّذ | ٠ — التأسيس | [`REVIEWS/R004-design-refinement.md`](../REVIEWS/R004-design-refinement.md) |
+| R004.1 | ٢ نوفمبر ٢٠٢٦ | التصحيحات النهائية (١٣ بند) | ✅ مُنفَّذ | ٠ — التأسيس | [`REVIEWS/R004.1-final-corrections.md`](../REVIEWS/R004.1-final-corrections.md) |
+| R004.2 | ٢ نوفمبر ٢٠٢٦ | موافقة المالك (٧ قرارات + بنود تنفيذ) | ✅ مُنفَّذ | ٠ — التأسيس | [`REVIEWS/R004.2-decisions-execution.md`](../REVIEWS/R004.2-decisions-execution.md) |
+
+> ⛔ **R001** مالوش بروميت — [`REVIEWS/R001-foundation.md`](../REVIEWS/R001-foundation.md) هو تقرير تأسيس، مش بروميت.
+> 📌 **رسالة المراجعة للمهندس المعماري** مش هنا — دي في [`docs/CHATGPT-REVIEW-REQUEST.md`](../docs/CHATGPT-REVIEW-REQUEST.md) (دي رسالة **إليه**، مش منه).
 
 ---
 
