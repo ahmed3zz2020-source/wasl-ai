@@ -458,12 +458,20 @@ async function home() {
   <section class="section">
     <h2>الخطوة صفر — أول رسالة لـ ChatGPT</h2>
     <div class="card" style="border-color:var(--acc)">
-      <h3>انسخ الرسالة دي والصقها في ChatGPT — هو هيعرف كل حاجة لوحده</h3>
-      <p>الرسالة فيها رابط <code>/bridge</code> (بيجيب حالة المشروع كاملة) + سياق مختصر + ٦ أسئلة مفتوحة + صيغة الإخراج الإلزامية + قوايدي اللي أقدر أنفّذها بنفسي.</p>
-      <p style="color:var(--fg3);font-size:13px">ملاحظة: «انسخ آخر حزمة مراجعة» دي للحالة التانية — لما يبقى في شغل بالفعل يراجعه. أول مرة = الرسالة دي.</p>
-      <button class="copybtn" id="cp0">📋 انسخ أول رسالة لـ ChatGPT</button>
+      <h3>① ابدأ من هنا لوChatGPT لسه ما شفش المشروع</h3>
+      <p>الرسالة فيها رابط <code>/bridge</code> (بيجيب حالة المشروع كاملة) + سياق مختصر + صيغة الإخراج الإلزامية + قوايدي اللي أقدر أنفّذها بنفسي.</p>
+      <button class="copybtn" id="cp0">📋 انسخ أول رسالة</button>
       <div class="filelist" style="margin-top:12px">
-        <a href="/first-message" target="_blank" rel="noopener"><span>أول رسالة (خام — للقراءة أو النسخ اليدوي)</span><span class="path">/first-message</span></a>
+        <a href="/first-message" target="_blank" rel="noopener"><span>أول رسالة (خام)</span><span class="path">/first-message</span></a>
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--ok);margin-top:12px">
+      <h3>② وده اللي محتاجه دلوقتي — رسالة مراجعة</h3>
+      <p>ChatGPT كتب الرؤية (R002) ⇒ إحنا كتبنا التصور ⇒ دلوقتي ابعتله التصور يراجعه. الرسالة دي بتطلب المراجعة بالشكل الإلزامي وبتسأله عن كل نقطة.</p>
+      <button class="copybtn" id="cp1">📋 انسخ رسالة المراجعة</button>
+      <div class="filelist" style="margin-top:12px">
+        <a href="/review-request" target="_blank" rel="noopener"><span>رسالة المراجعة (خام)</span><span class="path">/review-request</span></a>
+        <a href="/review/latest" target="_blank" rel="noopener"><span>آخر حزمة مراجعة (R002)</span><span class="path">/review/latest</span></a>
       </div>
     </div>
   </section>
@@ -481,7 +489,7 @@ async function home() {
       </div>
       <div class="card">
         <h3>٢ · ChatGPT يراجع شغلنا</h3>
-        <p>آخر حزمة مراجعة بصيغة جاهزة — انسخها والصقها، أو خلّي ChatGPT يقرأ الرابط لوحده. (بعد أول بروميت)</p>
+        <p>آخر حزمة مراجعة بصيغة جاهزة — انسخها والصقها، أو خلّي ChatGPT يقرأ الرابط لوحده.</p>
         <button class="copybtn" id="cp2">📋 انسخ آخر حزمة مراجعة</button>
         <div class="filelist" style="margin-top:10px">
           <a href="/review/latest" target="_blank" rel="noopener"><span>حزمة المراجعة (خام)</span><span class="path">/review/latest</span></a>
@@ -544,6 +552,7 @@ async function home() {
     const b=document.getElementById(id); if(b) b.addEventListener('click',()=>copyFrom(url,msg));
   };
   bind('cp0','/first-message','✅ اتنسخت — الصقها في ChatGPT');
+  bind('cp1','/review-request','✅ اتنسخت — الصقها في ChatGPT');
   bind('cp','/review/latest','✅ اتنسخت — الصقها في ChatGPT');
   bind('cp2','/review/latest','✅ اتنسخت — الصقها في ChatGPT');
 })();
@@ -614,6 +623,17 @@ export default {
         try { md = await raw('docs/CHATGPT-FIRST-MESSAGE.md'); }
         catch (e) { md = 'تعذّر تحميل الرسالة. جرّب: https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/CHATGPT-FIRST-MESSAGE.md'; }
         // اقتطع الجزء بين ``` fences = النص الجاهز للنسخ فقط
+        const m = md.match(/```\n([\s\S]*?)\n```/);
+        return new Response(m ? m[1] : md, {
+          headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
+        });
+      }
+
+      // /review-request → رسالة مراجعة جاهزة (للمرحلة اللي بعد الأولى)
+      if (p === '/review-request' || p === '/review-request.txt') {
+        let md = '';
+        try { md = await raw('docs/CHATGPT-REVIEW-REQUEST.md'); }
+        catch (e) { md = 'تعذّر تحميل الرسالة.'; }
         const m = md.match(/```\n([\s\S]*?)\n```/);
         return new Response(m ? m[1] : md, {
           headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
