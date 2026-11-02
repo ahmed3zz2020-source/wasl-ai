@@ -19,7 +19,15 @@ const json = (data, status = 200, headers = {}) =>
 
 // ⭐ contents API أولاً: أدق من raw.githubusercontent بعد force-push
 // (raw بيرجع 404 مؤقتاً لملفات اتغيّرت بنيتها). raw = fallback.
-async function raw(path) {
+//
+// ⭐ retry: GitHub contents API بيرجع أخطاء مؤقتة أحياناً (خاصة بعد push جديد)
+// ⇒ من غير retry، اللوحة الدائمة ممكن تفشل وترجع رسالة خطأ.
+//
+// ⭐ cache: الطلبات بدون توكن = 60/ساعة لكل IP ⇒ لازم نخزّن عشان ما نعملش
+// ضغط على الـAPI ولنعيش مع أي blip.
+const FILE_CACHE = new Map(); // path -> { body, at }
+
+async function fetchRawOnce(path) {
   const apiRes = await fetch(`${API}/contents/${path}`, {
     headers: { 'user-agent': 'wasl-hub', 'accept': 'application/vnd.github.raw' },
     cf: { cacheTtl: 0 },
@@ -33,6 +41,30 @@ async function raw(path) {
   if (rawRes.ok) return await rawRes.text();
 
   throw new Error(`fetch ${path} -> contents:${apiRes.status} raw:${rawRes.status}`);
+}
+
+async function raw(path) {
+  // 1) cache hit (60 ثانية)
+  const hit = FILE_CACHE.get(path);
+  if (hit && Date.now() - hit.at < 60_000) return hit.body;
+
+  // 2) fetch مع retry (٣ محاولات، ارتجاع متزايد)
+  let lastErr;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const body = await fetchRawOnce(path);
+      FILE_CACHE.set(path, { body, at: Date.now() });
+      return body;
+    } catch (e) {
+      lastErr = e;
+      if (i < 2) await new Promise(r => setTimeout(r, 300 * (i + 1)));
+    }
+  }
+
+  // 3) آخر hopes: ارجع نسخة قديمة من الكاش لو موجودة
+  if (hit) return hit.body;
+
+  throw lastErr;
 }
 
 async function rawJson(path) {
@@ -130,15 +162,31 @@ function mdToHtml(md) {
 }
 
 // ── Data loading ─────────────────────────────────────────
+let TREE_CACHE = { paths: null, at: 0 };
+
 async function loadRepo() {
-  // GitHub contents API — one call, full tree
-  const res = await fetch(`${API}/git/trees/${BRANCH}?recursive=1`, {
-    headers: { 'user-agent': 'wasl-hub', 'accept': 'application/vnd.github+json' },
-    cf: { cacheTtl: 0 },
-  });
-  if (!res.ok) throw new Error(`tree -> ${res.status}`);
-  const data = await res.json();
-  return (data.tree || []).filter(t => t.type === 'blob').map(t => t.path);
+  // cache ٦٠ ثانية — يقلل الضغط على الـAPI المحجوب
+  if (TREE_CACHE.paths && Date.now() - TREE_CACHE.at < 60_000) return TREE_CACHE.paths;
+
+  let lastErr;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(`${API}/git/trees/${BRANCH}?recursive=1`, {
+        headers: { 'user-agent': 'wasl-hub', 'accept': 'application/vnd.github+json' },
+        cf: { cacheTtl: 0 },
+      });
+      if (!res.ok) throw new Error(`tree -> ${res.status}`);
+      const data = await res.json();
+      const paths = (data.tree || []).filter(t => t.type === 'blob').map(t => t.path);
+      TREE_CACHE = { paths, at: Date.now() };
+      return paths;
+    } catch (e) {
+      lastErr = e;
+      if (i < 2) await new Promise(r => setTimeout(r, 300 * (i + 1)));
+    }
+  }
+  if (TREE_CACHE.paths) return TREE_CACHE.paths;
+  throw lastErr;
 }
 
 // ── Pages ────────────────────────────────────────────────
