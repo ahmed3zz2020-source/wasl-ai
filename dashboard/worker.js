@@ -534,7 +534,7 @@ export default {
       // /review/latest → latest review package as plain text
       if (p === '/review/latest' || p === '/review/latest.txt') {
         const tree = await loadRepo();
-        const reviews = tree.filter(x => x.startsWith('REVIEWS/') && x.endsWith('.md') && !x.includes('.short.')).sort();
+        const reviews = tree.filter(x => x.startsWith('REVIEWS/') && x.endsWith('.md') && !x.includes('.short.') && !x.includes('TEMPLATE')).sort();
         if (!reviews.length) return new Response('لسه مفيش حزم مراجعة.', { headers: { 'content-type': 'text/plain; charset=utf-8' } });
         return new Response(await raw(reviews[reviews.length - 1]), {
           headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
@@ -544,7 +544,7 @@ export default {
       // /bridge → الحزمة الكاملة لـ ChatGPT (سياق المشروع كله في رابط واحد)
       if (p === '/bridge' || p === '/bridge.txt' || p === '/bridge.md') {
         const tree = await loadRepo();
-        const reviews = tree.filter(x => x.startsWith('REVIEWS/') && x.endsWith('.md') && !x.includes('.short.')).sort();
+        const reviews = tree.filter(x => x.startsWith('REVIEWS/') && x.endsWith('.md') && !x.includes('.short.') && !x.includes('TEMPLATE')).sort();
         const parts = [];
         parts.push('# WASl AI — حزمة السياق لـ ChatGPT');
         parts.push('');
