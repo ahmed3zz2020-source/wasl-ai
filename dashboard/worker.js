@@ -408,6 +408,19 @@ async function home() {
   </section>
 
   <section class="section">
+    <h2>الخطوة صفر — أول رسالة لـ ChatGPT</h2>
+    <div class="card" style="border-color:var(--acc)">
+      <h3>انسخ الرسالة دي والصقها في ChatGPT — هو هيعرف كل حاجة لوحده</h3>
+      <p>الرسالة فيها رابط <code>/bridge</code> (بيجيب حالة المشروع كاملة) + سياق مختصر + ٦ أسئلة مفتوحة + صيغة الإخراج الإلزامية + قوايدي اللي أقدر أنفّذها بنفسي.</p>
+      <p style="color:var(--fg3);font-size:13px">ملاحظة: «انسخ آخر حزمة مراجعة» دي للحالة التانية — لما يبقى في شغل بالفعل يراجعه. أول مرة = الرسالة دي.</p>
+      <button class="copybtn" id="cp0">📋 انسخ أول رسالة لـ ChatGPT</button>
+      <div class="filelist" style="margin-top:12px">
+        <a href="/first-message" target="_blank" rel="noopener"><span>أول رسالة (خام — للقراءة أو النسخ اليدوي)</span><span class="path">/first-message</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
     <h2>الدايرة مع ChatGPT</h2>
     <div class="grid">
       <div class="card">
@@ -420,7 +433,7 @@ async function home() {
       </div>
       <div class="card">
         <h3>٢ · ChatGPT يراجع شغلنا</h3>
-        <p>آخر حزمة مراجعة بصيغة جاهزة — انسخها والصقها، أو خلّي ChatGPT يقرأ الرابط لوحده.</p>
+        <p>آخر حزمة مراجعة بصيغة جاهزة — انسخها والصقها، أو خلّي ChatGPT يقرأ الرابط لوحده. (بعد أول بروميت)</p>
         <button class="copybtn" id="cp2">📋 انسخ آخر حزمة مراجعة</button>
         <div class="filelist" style="margin-top:10px">
           <a href="/review/latest" target="_blank" rel="noopener"><span>حزمة المراجعة (خام)</span><span class="path">/review/latest</span></a>
@@ -466,19 +479,25 @@ async function home() {
   const script = `
 <script>
 (async()=>{
-  const doCopy = async()=>{
+  const toast = (msg)=>{
+    const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+    document.body.appendChild(el); requestAnimationFrame(()=>el.classList.add('on'));
+    setTimeout(()=>{el.classList.remove('on');setTimeout(()=>el.remove(),300);},2400);
+  };
+  const copyFrom = async (url, okMsg)=>{
     try{
-      const r = await fetch('/review/latest');
+      const r = await fetch(url);
       const t = await r.text();
       await navigator.clipboard.writeText(t);
-      const el=document.createElement('div'); el.className='toast'; el.textContent='✅ اتنسخت — الصقها في ChatGPT';
-      document.body.appendChild(el); requestAnimationFrame(()=>el.classList.add('on'));
-      setTimeout(()=>{el.classList.remove('on');setTimeout(()=>el.remove(),300);},2200);
-    }catch(e){ alert('انسخ يدوياً من: '+location.origin+'/review/latest'); }
+      toast(okMsg);
+    }catch(e){ alert('انسخ يدوياً من: '+location.origin+url); }
   };
-  ['cp','cp2'].forEach(id=>{
-    const b=document.getElementById(id); if(b) b.addEventListener('click',doCopy);
-  });
+  const bind = (id, url, msg)=>{
+    const b=document.getElementById(id); if(b) b.addEventListener('click',()=>copyFrom(url,msg));
+  };
+  bind('cp0','/first-message','✅ اتنسخت — الصقها في ChatGPT');
+  bind('cp','/review/latest','✅ اتنسخت — الصقها في ChatGPT');
+  bind('cp2','/review/latest','✅ اتنسخت — الصقها في ChatGPT');
 })();
 </script>`;
 
@@ -537,6 +556,18 @@ export default {
         const reviews = tree.filter(x => x.startsWith('REVIEWS/') && x.endsWith('.md') && !x.includes('.short.') && !x.includes('TEMPLATE')).sort();
         if (!reviews.length) return new Response('لسه مفيش حزم مراجعة.', { headers: { 'content-type': 'text/plain; charset=utf-8' } });
         return new Response(await raw(reviews[reviews.length - 1]), {
+          headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
+        });
+      }
+
+      // /first-message → أول رسالة جاهزة للنسخ لـ ChatGPT (نص صافي)
+      if (p === '/first-message' || p === '/first-message.txt') {
+        let md = '';
+        try { md = await raw('docs/CHATGPT-FIRST-MESSAGE.md'); }
+        catch (e) { md = 'تعذّر تحميل الرسالة. جرّب: https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/CHATGPT-FIRST-MESSAGE.md'; }
+        // اقتطع الجزء بين ``` fences = النص الجاهز للنسخ فقط
+        const m = md.match(/```\n([\s\S]*?)\n```/);
+        return new Response(m ? m[1] : md, {
           headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-cache' },
         });
       }
