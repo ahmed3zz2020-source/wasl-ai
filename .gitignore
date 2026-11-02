@@ -2,3 +2,4 @@ _fix.py
 .DS_Store
 *.pyc
 __pycache__/
+wrangler.toml
