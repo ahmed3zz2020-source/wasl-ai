@@ -578,10 +578,16 @@ export default {
       // /p/<path> → rendered markdown
       if (p.startsWith('/p/')) {
         const path = decodeURIComponent(p.slice(3));
-        const body = await renderPage(path);
-        return new Response(shell(TITLES[path] || path, body), {
-          headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' },
-        });
+        try {
+          const body = await renderPage(path);
+          return new Response(shell(TITLES[path] || path, body), {
+            headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' },
+          });
+        } catch (e) {
+          return new Response(shell('مش موجود', `<div class="err"><h1>٤٠٤</h1><p>الملف <code>${escapeHtml(path)}</code> مش موجود في المستودع.</p><p><a href="/files">شوف كل الملفات</a> · <a href="/">رجوع للرئيسية</a></p></div>`), {
+            status: 404, headers: { 'content-type': 'text/html; charset=utf-8' },
+          });
+        }
       }
 
       return new Response(shell('مش موجود', '<div class="err"><h1>٤٠٤</h1><p>الصفحة دي مش موجودة. ارجع للـ<a href="/">الرئيسية</a>.</p></div>'), {
