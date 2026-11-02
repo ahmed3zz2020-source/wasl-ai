@@ -18,13 +18,31 @@
 | **مونتاج فيديو** | ffmpeg · ريلز ٩:١٦ · شورتس · ترجمة · لقطات شاشة بمتصفح |
 | **تصميم** | صفحات عرض تفاعلية · رسوم بيانية · مخططات · عروض تقديمية (HTML/PPTX/DOCX/PDF) |
 | **أتمتة** | Cron · بوت تيليجرام · GitHub Actions · webhooks |
-| **سحابة** | Cloudflare Workers · Pages · D1 · R2 · Railway · Vercel |
+| **سحابة** | Cloudflare Workers ✅ · Pages ✅ · KV ✅ · Railway ✅ · Vercel |
+| **PWA** | manifest.json كامل ✅ · Service Worker ✅ (⭐ **صح من الأول** — درس OCTA) |
 | **مستودعات وم bumping** | GitHub API كامل (issues · PR · projects · actions) |
 | **أسرار** | تخزين مشفّر · إدارة env · صلاحيات |
 | **بحث ويب** | بحث + قراءة صفحات + تحقق من المصادر |
 | **ذكاء اصطناعي** | استدعاء موديلات · بناء وكلاء · تقييم · RAG · guardrails · Function calling |
 | **تحليل** | Python · pandas · إحصاء · visualizasyon · تقارير PDF |
 | **مراجعة متن بعين صارمة** | Adversarial review — كاشف الوكلاء بيكسّر المخرَج قبل ما يوصلك |
+
+## ⛔ محجوب حالياً بالتوكن (٢ نوفمبر ٢٠٢٦)
+
+| الخدمة | النتيجة | الكود | البديل |
+|---|---|---|---|
+| Cloudflare **D1** | 401 — التوكن ناقصه scope | 10000 | Postgres على Railway أو Neon (مجاني + RLS) |
+| Cloudflare **R2** | 403 — التوكن ناقصه scope | 10000 | ⚠️ الملفات لازم حل — شعارات العملاء |
+| Cloudflare **Workers AI** | 401 | 10000 | استدعاء موديلات من الـWorker عبر API المزوّد |
+
+## 🔎 متحقَّق منه عملياً (٢ نوفمبر ٢٠٢٦)
+
+- ✅ **Cloudflare Pages** — ٣ مشاريع شغّالة ⇒ مستضافة مثالية للوحتي التحكم + PWA.
+- ✅ **Cloudflare KV** — ٤ namespaces ⇒ قراءة شغّالة. ⚠️ الكتابة بسقف يومي account-wide ⇒ **مش تخزين أساسي**.
+- ✅ **Railway** — توكن project-scoped: بيكشف مشروع واحد بس. ⛔ `me` = Not Authorized. ⛔ إنشاء خدمة = تكلفة ⇒ **موافقة**.
+- ✅ **pip وقت البناء** — `octa-prices/requirements.txt` فيه `flask` + `gunicorn` ⇒ التثبيت بيحصل على باني Railway. ⛔ **PyPI محجوب داخل الـsandbox** ⇒ أي اختبار محلي لازم يكون على حزم موجودة سلفاً.
+- ✅ **الصوت** — توليد كلام (مفرد + دفعي ١٠/نداء) · تفريغ صوتي · فهم صوتي.
+- ✅ **PWA** — `octa/manifest.json` كامل (name · icons 192/512 · standalone · dir rtl). ⚠️ **درس OCTA**: الـService Worker اتشال ٣٠ أكتوبر ٢٠٢٦ بعد ما كسر الموقع (شاشة بيضا + كاش قديم + `Clear-Site-Data` مسح بيانات) ⇒ **لازم يتعمل صح من الأول، مش يتضاف بعدين**.
 
 ## ⚠️ أعمله بشروط (بحاجة من المالك أو حساب)
 
