@@ -31,7 +31,7 @@
 | ٥ | الخط الزمني (٧ مراحل + معايير قبول) | ✅ | [`TIMELINE.md`](TIMELINE.md) |
 | ٦ | قائمة قدرات المنفّذ | ✅ | [`docs/CAPABILITY-MANIFEST.md`](docs/CAPABILITY-MANIFEST.md) |
 | ٧ | قالب حزمة المراجعة | ✅ | [`REVIEWS/TEMPLATE.md`](REVIEWS/TEMPLATE.md) |
-| ٨ | هيكل المعرفة الدائم (٣٩ ملف متتبَّع · ٣٥ ملف `.md`) | ✅ | `ahmed3zz2020-source/wasl-ai` |
+| ٨ | هيكل المعرفة الدائم (٤٢ ملف متتبَّع · ٣٨ ملف `.md`) | ✅ | `ahmed3zz2020-source/wasl-ai` |
 | ٩ | اللوحة الدائمة (٩ مسارات متحقَّق) | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev |
 | ١٠ | حزمة السياق الحيّة لـ ChatGPT | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev/bridge |
 | ١١ | أول رسالة جاهزة لـ ChatGPT | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev/first-message |
