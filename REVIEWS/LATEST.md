@@ -1,7 +1,7 @@
 # ⭐ المؤشر الوحيد للإصدار الحالي — WASl AI
 
 > ⛔ **هذا الملف هو المرجع الوحيد لمعرفة أحدث إصدار.** أي ترتيب أبجدي أو تاريخي **ممنوع** كمرجع.
-> ⏳ حالة الملف: **محدَّث يدوياً في المرحلة ١ (٢ نوفمبر ٢٠٢٦)** — ⚙️ بلا أتمتة (قرار D-032).
+> ⏳ حالة الملف: **محدَّث يدوياً في ٣ نوفمبر ٢٠٢٦** — ⚙️ بلا أتمتة (قرار D-032).
 
 ---
 
@@ -9,22 +9,23 @@
 
 | الحقل | القيمة |
 |---|---|
-| **رقم الإصدار** | **R004.2** |
-| **اسم الحزمة** | القرارات المعتمدة من المالك (٧) + التفاصيل التنفيذية |
-| **الرابط الدقيق للحزمة** | [`REVIEWS/R004.2-decisions-execution.md`](R004.2-decisions-execution.md) |
-| **الرابط الخام (للقراءة من غير لوحة)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/REVIEWS/R004.2-decisions-execution.md` |
-| **رابط الحزمة عبر الـHub** | `https://wasl-hub.ahmed3zz2020.workers.dev/raw/REVIEWS/R004.2-decisions-execution.md` |
-| **تاريخ تحديث المؤشر** | ٢٠٢٦-١١-٠٢ ٢١:٢١ (توقيت القاهرة · EET · UTC+2) |
-| **مرجع الإصدار في المستودع** | الإصدار التوثيقي `R004.2.1` · آخر commit قبل هذا المؤشر: `d948069` |
-| **حالة مراجعة الإصدار** | ⏳ **مراجَع من المالك (٧ قرارات معتمدة) · بانتظار مراجعة المهندس المعماري** |
-| **رابط الإصدار السابق** | [`R004.1`](R004.1-final-corrections.md) — التصحيحات النهائية (١٣ بند) |
-| **الإصدار السابق —commit** | ضمن `42b03cf` (راجع `git log -- REVIEWS/R004.1-final-corrections.md`) |
+| **رقم الإصدار** | **R005** |
+| **اسم الحزمة** | ⭐ تقييم الجاهزية التقنية وأساس المعمارية — MISSION 001 (١٢ مخرجاً · D01..D12) |
+| **الرابط الدقيق للحزمة** | [`REVIEWS/R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) |
+| **الرابط الخام (للقراءة من غير لوحة)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/REVIEWS/R005-mission-001-technical-readiness.md` |
+| **رابط الحزمة عبر الـHub** | `https://wasl-hub.ahmed3zz2020.workers.dev/raw/REVIEWS/R005-mission-001-technical-readiness.md` |
+| **تاريخ تحديث المؤشر** | ٢٠٢٦-١١-٠٣ (توقيت القاهرة · EET · UTC+2) |
+| **مرجع الإصدار في المستودع** | الإصدار التوثيقي `R005` · آخر commit قبل هذا المؤشر: `f3c9ad9` |
+| **حالة مراجعة الإصدار** | ⏳ **جديد — بانتظار مراجعة المالك والمهندس المعماري** · ⛔ **مفيش توصية اتحوّلت لقرار** |
+| **رابط الإصدار السابق** | [`R004.2`](R004.2-decisions-execution.md) — القرارات المعتمدة (٧) + التفاصيل التنفيذية |
+| **الإصدار السابق —commit** | ضمن `f3c9ad9` |
 
 ## ٢. سلسلة الإصدارات (للمرجعية فقط — ⛔ ليست مرجع التحديد)
 
 | الإصدار | الحزمة | الحالة |
 |---|---|---|
-| **R004.2** ← الحالي | [`R004.2-decisions-execution.md`](R004.2-decisions-execution.md) | ⏳ بانتظار مراجعة المهندس المعماري |
+| **R005** ← الحالي | [`R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) | ⏳ بانتظار مراجعة المالك والمهندس المعماري |
+| R004.2 | [`R004.2-decisions-execution.md`](R004.2-decisions-execution.md) | ✅ اتنفّذ
 | R004.1 | [`R004.1-final-corrections.md`](R004.1-final-corrections.md) | ✅ اتنفّذ |
 | R004 | [`R004-design-refinement.md`](R004-design-refinement.md) | ✅ اتنفّذ |
 | R003 | [`R003-vision-update.md`](R003-vision-update.md) | ✅ اتنفّذ |
