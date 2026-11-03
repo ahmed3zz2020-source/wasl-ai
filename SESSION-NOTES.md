@@ -421,3 +421,5 @@
 - ⛔ **لم يتغيّر**: ⭐ **`DECISIONS.md`** (لا قرار جديد · لا إعادة ترقيم) · ⭐ **R005** · ⭐ **R006** · ⭐ **`docs/STATE-SNAPSHOT-2026-11-02.md`** (لقطة تاريخية) · ⭐ **`CHARTER.md`** · ⭐ **تصميمات Fit-Out**.
 
 ⛔ **NO CODE WRITTEN · NO DEPLOYMENT · NO PAID RESOURCES CREATED · NO TESTS EXECUTED · NO NEW DECISION APPROVED · NO MISSION STARTED.**
+
+- ⭐ **`docs/CHATGPT-REVIEW-REQUEST.md` اتحدّث**: ⭐ **سجل التناقضات ١٠ ⇒ ١٥ بنداً (C-8..C-22)** · ⭐ **الملف القانوني ١٤ ⇒ ١٨ سؤالاً (§8 · Q-L1..Q-L18)** · ⭐ **معرّفات الملاحظات M-1..M-10 ⇒ م1..م10** · ⭐ **سطر «تصحيح C-17..C-22» + الوثيقتان الجديدتان** ⇒ ⭐ **غرفة الإرسال تعكس R007 المصحّحة**.
