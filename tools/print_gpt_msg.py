@@ -6,6 +6,7 @@
     python3 print_gpt_msg.py 1        # يطبع رسالة ١ بس
     python3 print_gpt_msg.py 2        # يطبع رسالة ٢ بس
     python3 print_gpt_msg.py --copy   # ينسخ رسالة ١ للـclipboard
+    python3 print_gpt_msg.py --link   # يطبع سطر «اقرأ الملف ده» + اللينك
 """
 import re
 import shutil
@@ -24,8 +25,15 @@ def fence(heading: str) -> str:
     return m.group(1)
 
 
+LINK = "https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/CHATGPT-POST-REVIEW-QUERY.md"
+
+
 def main() -> int:
     arg = sys.argv[1] if len(sys.argv) > 1 else "both"
+    if arg == "--link":
+        print("يا ChatGPT — اقرأ الملف ده (فيه رسالتين جاهزتين بالترتيب: رسالة ١ ثم رسالة ٢) ونفّذهم:\n")
+        print(LINK)
+        return 0
     if arg == "1":
         print(fence("١"))
     elif arg == "2":
