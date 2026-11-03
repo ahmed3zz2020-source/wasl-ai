@@ -9,22 +9,23 @@
 
 | الحقل | القيمة |
 |---|---|
-| **رقم الإصدار** | **R005** |
-| **اسم الحزمة** | ⭐ تقييم الجاهزية التقنية وأساس المعمارية — MISSION 001 (١٢ مخرجاً · D01..D12) |
-| **الرابط الدقيق للحزمة** | [`REVIEWS/R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) |
-| **الرابط الخام (للقراءة من غير لوحة)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/REVIEWS/R005-mission-001-technical-readiness.md` |
-| **رابط الحزمة عبر الـHub** | `https://wasl-hub.ahmed3zz2020.workers.dev/raw/REVIEWS/R005-mission-001-technical-readiness.md` |
+| **رقم الإصدار** | **R006** |
+| **اسم الحزمة** | ⭐ معالجة ملاحظات R005 + الجاهزية المعمارية لقرارات المالك — MISSION 002 (١٢ مخرجاً · §1..§12) |
+| **الرابط الدقيق للحزمة** | [`REVIEWS/R006-r005-remediation-architecture-readiness.md`](R006-r005-remediation-architecture-readiness.md) |
+| **الرابط الخام (للقراءة من غير لوحة)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/REVIEWS/R006-r005-remediation-architecture-readiness.md` |
+| **رابط الحزمة عبر الـHub** | `https://wasl-hub.ahmed3zz2020.workers.dev/raw/REVIEWS/R006-r005-remediation-architecture-readiness.md` |
 | **تاريخ تحديث المؤشر** | ٢٠٢٦-١١-٠٣ (توقيت القاهرة · EET · UTC+2) |
-| **مرجع الإصدار في المستودع** | الإصدار التوثيقي `R005` · آخر commit قبل هذا المؤشر: `f3c9ad9` |
-| **حالة مراجعة الإصدار** | ⏳ **جديد — بانتظار مراجعة المالك والمهندس المعماري** · ⛔ **مفيش توصية اتحوّلت لقرار** |
-| **رابط الإصدار السابق** | [`R004.2`](R004.2-decisions-execution.md) — القرارات المعتمدة (٧) + التفاصيل التنفيذية |
-| **الإصدار السابق —commit** | ضمن `f3c9ad9` |
+| **مرجع الإصدار في المستودع** | الإصدار التوثيقي `R006` · آخر commit قبل هذا المؤشر: `57612d7` |
+| **حالة مراجعة الإصدار** | ⏳ **جديد — بانتظار مراجعة المالك والمهندس المعماري** · ⛔ **مفيش توصية اتحوّلت لقرار** · ⭐ R005 لم تتغيّر (تصحيحات موثّقة في R006 كتصحيح لا كتحرير) |
+| **رابط الإصدار السابق** | [`R005`](R005-mission-001-technical-readiness.md) — تقييم الجاهزية التقنية (MISSION 001 · ١٢ مخرجاً D01..D12) |
+| **الإصدار السابق —commit** | `398e814` |
 
 ## ٢. سلسلة الإصدارات (للمرجعية فقط — ⛔ ليست مرجع التحديد)
 
 | الإصدار | الحزمة | الحالة |
 |---|---|---|
-| **R005** ← الحالي | [`R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) | ⏳ بانتظار مراجعة المالك والمهندس المعماري |
+| **R006** ← الحالي | [`R006-r005-remediation-architecture-readiness.md`](R006-r005-remediation-architecture-readiness.md) | ⏳ بانتظار مراجعة المالك والمهندس المعماري |
+| R005 | [`R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) | ⏳ بانتظار مراجعة المالك والمهندس المعماري |
 | R004.2 | [`R004.2-decisions-execution.md`](R004.2-decisions-execution.md) | ✅ اتنفّذ
 | R004.1 | [`R004.1-final-corrections.md`](R004.1-final-corrections.md) | ✅ اتنفّذ |
 | R004 | [`R004-design-refinement.md`](R004-design-refinement.md) | ✅ اتنفّذ |
