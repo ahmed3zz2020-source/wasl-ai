@@ -28,7 +28,7 @@
 | **R007** ← الحالي | [`R007-r006-review-remediation.md`](R007-r006-review-remediation.md) | ⏳ بانتظار مراجعة المالك والمهندس المعماري |
 | R006 | [`R006-r005-remediation-architecture-readiness.md`](R006-r005-remediation-architecture-readiness.md) | ⏳ **مراجعة معمارية مستقلة — CONDITIONAL ACCEPTANCE** · 🗄️ محفوظ · ⭐ كل تعديل عليه موثّق في R007 §0.2 و§10 كتصحيح لا تحرير |
 | R005 | [`R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) | 🗄️ **إصدار تاريخي — محفوظ كاملاً بلا تعديل** · ⭐ تصحيحاته موثّقة في R006 (تصحيح لا تحرير) |
-| R004.2 | [`R004.2-decisions-execution.md`](R004.2-decisions-execution.md) | ✅ اتنفّذ
+| R004.2 | [`R004.2-decisions-execution.md`](R004.2-decisions-execution.md) | ✅ اتنفّذ |
 | R004.1 | [`R004.1-final-corrections.md`](R004.1-final-corrections.md) | ✅ اتنفّذ |
 | R004 | [`R004-design-refinement.md`](R004-design-refinement.md) | ✅ اتنفّذ |
 | R003 | [`R003-vision-update.md`](R003-vision-update.md) | ✅ اتنفّذ |
