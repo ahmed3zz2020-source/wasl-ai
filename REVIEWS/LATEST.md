@@ -15,7 +15,7 @@
 | **الرابط الخام (للقراءة من غير لوحة)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/REVIEWS/R006-r005-remediation-architecture-readiness.md` |
 | **رابط الحزمة عبر الـHub** | `https://wasl-hub.ahmed3zz2020.workers.dev/raw/REVIEWS/R006-r005-remediation-architecture-readiness.md` |
 | **تاريخ تحديث المؤشر** | ٢٠٢٦-١١-٠٣ (توقيت القاهرة · EET · UTC+2) |
-| **مرجع الإصدار في المستودع** | الإصدار التوثيقي `R006` · آخر commit قبل هذا المؤشر: `57612d7` |
+| **مرجع الإصدار في المستودع** | ⭐ الإصدار التوثيقي **`R006`** · ⭐ **آخر commit على `main` = `9186f3c`** (شاملاً §13 سجل قرار DR-1) |
 | **حالة مراجعة الإصدار** | ⏳ **جديد — بانتظار مراجعة المالك والمهندس المعماري** · ⛔ **مفيش توصية اتحوّلت لقرار** · ⭐ R005 لم تتغيّر (تصحيحات موثّقة في R006 كتصحيح لا كتحرير) · ✅ **DR-1 اتقفل ٣ نوفمبر ٢٠٢٦ (D-038)** · ⛔ **DR-2..DR-10 لسه غير معتمدة** |
 | **رابط الإصدار السابق** | [`R005`](R005-mission-001-technical-readiness.md) — تقييم الجاهزية التقنية (MISSION 001 · ١٢ مخرجاً D01..D12) |
 | **الإصدار السابق —commit** | `398e814` |
@@ -25,7 +25,7 @@
 | الإصدار | الحزمة | الحالة |
 |---|---|---|
 | **R006** ← الحالي | [`R006-r005-remediation-architecture-readiness.md`](R006-r005-remediation-architecture-readiness.md) | ⏳ بانتظار مراجعة المالك والمهندس المعماري |
-| R005 | [`R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) | ⏳ بانتظار مراجعة المالك والمهندس المعماري |
+| R005 | [`R005-mission-001-technical-readiness.md`](R005-mission-001-technical-readiness.md) | 🗄️ **إصدار تاريخي — محفوظ كاملاً بلا تعديل** · ⭐ تصحيحاته موثّقة في R006 (تصحيح لا تحرير) |
 | R004.2 | [`R004.2-decisions-execution.md`](R004.2-decisions-execution.md) | ✅ اتنفّذ
 | R004.1 | [`R004.1-final-corrections.md`](R004.1-final-corrections.md) | ✅ اتنفّذ |
 | R004 | [`R004-design-refinement.md`](R004-design-refinement.md) | ✅ اتنفّذ |

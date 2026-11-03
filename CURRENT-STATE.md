@@ -16,7 +16,7 @@
 | **تاريخ آخر تحديث** | **٢٠٢٦-١١-٠٣ (توقيت القاهرة · EET · UTC+2)** |
 | **آخر إصدار تمت مراجعته** | **R006** — الحالة: ⏳ **جديد · بانتظار مراجعة المالك والمهندس المعماري** ⭐ (⭐ **DR-1 اتقفل ٣ نوفمبر — D-038**) |
 | **المرحلة الحالية** | **٠ — التأسيس** (المراحل ١..٦ لم تبدأ) — [`TIMELINE.md`](TIMELINE.md) |
-| **آخر تغيير ومرجعه في GitHub** | ⭐ **آخر commit على `main`** = آخر سطر في `git log -1` و[`/api/state`](https://wasl-hub.ahmed3zz2020.workers.dev/api/state) · ⭐ آخر إصدار توثيقي = `R006` (commit `57612d7`) |
+| **آخر تغيير ومرجعه في GitHub** | ⭐ **آخر commit على `main`** = آخر سطر في `git log -1` و[`/api/state`](https://wasl-hub.ahmed3zz2020.workers.dev/api/state) · ⭐ آخر إصدار توثيقي = **`R006`** (آخر commit مؤكد = **`9186f3c`** · شاملاً §13 سجل قرار DR-1) |
 | **مؤشر الإصدار الحالي** | [`REVIEWS/LATEST.md`](REVIEWS/LATEST.md) ⭐ (المرجع الوحيد — ⛔ ممنوع الفرز الأبجدي) |
 
 ---
@@ -58,7 +58,7 @@
 | ٢ | بروتوكول العمل + نظام الحالات الستة | [`PROTOCOL.md`](PROTOCOL.md) · [`DECISIONS.md`](DECISIONS.md) | 📄 موثّق |
 | ٣ | معمارية ٤ طبقات + ٧ وحدات | [`ARCHITECTURE.md`](ARCHITECTURE.md) · قرار D-010 | 📄 موثّق |
 | ٤ | ٨ حزم مراجعة متسلسلة | [`REVIEWS/`](REVIEWS/) | 📄 موثّق |
-| ٥ | ٥ بروميتات واردة | [`PROMPTS/`](PROMPTS/) | 📄 موثّق |
+| ٥ | ⭐ **٦ بروميتات واردة** (آخرها موافقة المالك على DR-1) | [`PROMPTS/`](PROMPTS/) | 📄 موثّق |
 | ٦ | تصنيف الأنشطة + جدول التوافق ٣٣ صفاً | [`research/SECTORS.md`](research/SECTORS.md) | 📄 موثّق |
 | ٧ | سجل ٢٦ افتراض | [`ASSUMPTIONS.md`](ASSUMPTIONS.md) | 📄 موثّق |
 | ٨ | خط زمني ٧ مراحل + بوابات خروج | [`TIMELINE.md`](TIMELINE.md) | 📄 موثّق |
@@ -92,7 +92,7 @@
 | الاختبار | النتيجة | الدليل |
 |---|---|---|
 | مسارات الـHub | ✅ ٢٠٠ | ٩ مسارات (٧ نصّية + ٢ بادئة `/raw/*` و`/p/*` · ١٣ نمط بالتوسعات) — عدّاد على `dashboard/worker.js` |
-| `/review/latest` يقدّم R004.2 | ✅ | أول سطر الملف = `# R004.2 — …` |
+| ⭐ `/review/latest` يقدّم R006 | ✅ | أول سطر الملف = `# R006 — R005 Remediation & Architecture Decision Readiness` · ⭐ **متحقَّق حيّاً ٣ نوفمبر ٢٠٢٦** |
 | `/raw/<أي ملف>` يخدم أي ملف بالريبو | ✅ | ⭐ ⇒ `CURRENT-STATE.md` و`LATEST.md` قابلين للقراءة **من غير تعديل كود** |
 | أداة الفحص اللغوي | ✅ ٤١ ملف `.md` نظيف | `tools/check-lang.py` |
 | أرقام تقرير R005 (مصفوفة المكدّس · نموذج التكلفة · السقوف) | ✅ محسوبة بسكربت | سكربت مؤقت خارج الريبو — ⛔ مفيش سكربت داخل الريبو (D-033) |
@@ -190,7 +190,8 @@
 | المعمارية | `.../main/ARCHITECTURE.md` | `/p/ARCHITECTURE.md` |
 | الخط الزمني | `.../main/TIMELINE.md` | `/p/TIMELINE.md` |
 | سجل الافتراضات | `.../main/ASSUMPTIONS.md` | `/p/ASSUMPTIONS.md` |
-| حزمة R004.2 | `.../main/REVIEWS/R004.2-decisions-execution.md` | `/raw/REVIEWS/R004.2-decisions-execution.md` |
+| ⭐ **حزمة R006 (الحالية)** | `.../main/REVIEWS/R006-r005-remediation-architecture-readiness.md` | `/raw/REVIEWS/R006-r005-remediation-architecture-readiness.md` |
+| حزمة R004.2 (تاريخية) | `.../main/REVIEWS/R004.2-decisions-execution.md` | `/raw/REVIEWS/R004.2-decisions-execution.md` |
 | ⭐ **حزمة السياق الكاملة** | — | `https://wasl-hub.ahmed3zz2020.workers.dev/bridge` |
 | ⭐ **حالة المشروع JSON** | — | `https://wasl-hub.ahmed3zz2020.workers.dev/api/state` |
 | النموذج المنهجي | `.../main/research/SECTORS.md` | `/p/research/SECTORS.md` |
