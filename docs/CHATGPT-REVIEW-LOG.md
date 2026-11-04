@@ -50,7 +50,7 @@
 | # | البند | الملف · الموضع | ما الذي تغيّر |
 |:-:|---|---|---|
 | ١ | ⭐ **تسجيل الموافقة** | `DECISIONS.md` ⭐ **صف D-046 + قسم D-046 كامل** + `DECISION-REGISTER.md` ⭐ **§١٣ (ختم DR-5 · DR-8)** | ⭐ **رقم القرار = D-046** ⇒ ⭐ **ولم يُستخدم D-039** (محجوز لكتلة DR-3 ⇒ تعارض ترقيم) ⇒ ⭐ **والموافقة موصوفة «بحث فقط» في كل مكان** |
-| ٢ | ⭐ **البحث — مرشّحو المحامي** | ⭐ [`docs/DR-5-DR-8-SEARCH-REPORT.md`](../../docs/DR-5-DR-8-SEARCH-REPORT.md) ⭐ **§١** | ⭐ **٥ مرشّحين بأدلة مفتوحة**: Shehata & Partners (مؤلّف فصل Chambers 2026 لمصر) · Sharkawy & Sarhan (ممارسة خصوصية + تحليل قانون ١٥١/٢٠٢٠) · Soliman Hashish & Partners (TMT + Data Protection) · Clyde & Co Egypt · قائمة Lawzana كخريطة سوق لا كترشيح ⇒ ⭐ **+ مسار التحقق من قيد النقابة (egyls.com · إدارة القيد)** |
+| ٢ | ⭐ **البحث — مرشّحو المحامي** | ⭐ [`docs/DR-5-DR-8-SEARCH-REPORT.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/DR-5-DR-8-SEARCH-REPORT.md) ⭐ **§١** | ⭐ **٥ مرشّحين بأدلة مفتوحة**: Shehata & Partners (مؤلّف فصل Chambers 2026 لمصر) · Sharkawy & Sarhan (ممارسة خصوصية + تحليل قانون ١٥١/٢٠٢٠) · Soliman Hashish & Partners (TMT + Data Protection) · Clyde & Co Egypt · قائمة Lawzana كخريطة سوق لا كترشيح ⇒ ⭐ **+ مسار التحقق من قيد النقابة (egyls.com · إدارة القيد)** |
 | ٣ | ⭐ **البحث — مقارنة P2/BSP** | ⭐ نفس الملف ⭐ **§٢** | ⭐ **١٢ محوراً بمصادر Meta الرسمية** (الوصول المباشر «نيابةً عن عملائك الخاص فقط» · Business Verification · ملكية الـWABA والرقم · غياب API لقراءة السجل · التسعير لكل رسالة منذ ١ يوليو ٢٠٢٥ · نافذة ٢٤ ساعة · تغيّر ١ أكتوبر ٢٠٢٦ لرسائل الخدمة · بوابة المزوّد المعتمد) |
 | ٤ | ⭐ **التكلفة والمدة** | ⭐ نفس الملف ⭐ **§٣** | ⭐ **أرقام مصر ⏳ مرآة خارجية** (تسويق $0.0644 · مرافق $0.0036 · مصادقة $0.0036 · خدمة $0.0036 بعد ١٠٠٠/رقم/شهر + ١٤٪ VAT) ⇒ ⭐ **ومحسوبان توضيحيان** ⇒ ⭐ **وما لا يمكن معرفته قبل العرض الرسمي (١٠ بنود)** |
 | ٥ | ⭐ **القرارات التالية** | ⭐ نفس الملف ⭐ **§٤** | ⭐ **٥ قرارات مرقّمة للمالك** (من نرسل له · السماح بالإرسال الخارجي · قرار الملكية · الميزانية الشهرية · متى Business Verification) |
@@ -135,8 +135,8 @@
 
 | الملف | المواضع المعدَّلة |
 |---|---|
-| [`LEGAL-ACCEPTANCE.md`](../../LEGAL-ACCEPTANCE.md) | ⭐ **§٦.٠ (جديد)** · **القاعدتان ١١ · ١٢** · **§٦.٢** · **§٦.٣** · **§٨** · **§٩** |
-| [`docs/PARALLEL-PREPARATION-SPEC.md`](../../docs/PARALLEL-PREPARATION-SPEC.md) | ⭐ **§٤** · **§٤.٢ (جديد)** · **صف EV8** · **§حدود (بند ٨)** · **§٦** · **§٧** |
+| [`LEGAL-ACCEPTANCE.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/LEGAL-ACCEPTANCE.md) | ⭐ **§٦.٠ (جديد)** · **القاعدتان ١١ · ١٢** · **§٦.٢** · **§٦.٣** · **§٨** · **§٩** |
+| [`docs/PARALLEL-PREPARATION-SPEC.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/PARALLEL-PREPARATION-SPEC.md) | ⭐ **§٤** · **§٤.٢ (جديد)** · **صف EV8** · **§حدود (بند ٨)** · **§٦** · **§٧** |
 | ⭐ **الفحص** | ⭐ `tools/audit_docs.py` ⇒ **٠ عيب (١٣ فحصاً)** · ⭐ `tools/check-lang.py` ⇒ ٢ (R006 محمي · مُبلَّغ) · ⭐ `tools/make_handoff.py --check` ⇒ ✅ |
 
 ### ٤.٥ نتيجة الفحص
