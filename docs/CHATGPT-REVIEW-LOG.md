@@ -43,7 +43,7 @@
 ### ٣.١ ما طُلب (نص المالك — حرفي)
 
 > ⭐ **موافقة المالك (٤ نوفمبر ٢٠٢٦)**: ⭐ **DR-5 = البحث عن محامٍ مصري متخصص في حماية البيانات + التكنولوجيا (بلا تعاقد ولا دفع)** · ⭐ **DR-8 = البحث غير الملزم في P2 + دراسة عرض BSP مرجعي (بلا اعتماد مسار ولا تكامل)** · ⭐ **وحوكمة: تسجيل الموافقة برقم القرار التالي المتاح · تحديث ملفات الحالة والتسليم فقط · EA = 9/21 · لا كود · لا R008** · ⭐ **والتسليم: تقرير عملي مختصر (مرشّحون · مقارنة P2/BSP · التكلفة والمدة · القرارات التالية)**.
-> ⭐ **النص الحرفي الكامل**: [`PROMPTS/R007-owner-approval-DR5-DR8.md`](../../PROMPTS/R007-owner-approval-DR5-DR8.md) ⇒ ⭐ **ومرجعية القرار: `D-046`**.
+> ⭐ **النص الحرفي الكامل**: [`PROMPTS/R007-owner-approval-DR5-DR8.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/PROMPTS/R007-owner-approval-DR5-DR8.md) ⇒ ⭐ **ومرجعية القرار: `D-046`**.
 
 ### ٣.٢ ما نُفِّذ — كل بند مربوط بالملف والموضع
 
@@ -69,8 +69,8 @@
 
 | الملف | الوصف |
 |---|---|
-| ⭐ [`docs/DR-5-DR-8-SEARCH-REPORT.md`](../../docs/DR-5-DR-8-SEARCH-REPORT.md) | ⭐ **التقرير كاملاً** (٥ مرشّحين · ١٢ محور مقارنة · التكلفة والمدة · ٥ قرارات) |
-| ⭐ [`PROMPTS/R007-owner-approval-DR5-DR8.md`](../../PROMPTS/R007-owner-approval-DR5-DR8.md) | ⭐ **نص الموافقة الحرفي** |
+| ⭐ [`docs/DR-5-DR-8-SEARCH-REPORT.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/DR-5-DR-8-SEARCH-REPORT.md) | ⭐ **التقرير كاملاً** (٥ مرشّحين · ١٢ محور مقارنة · التكلفة والمدة · ٥ قرارات) |
+| ⭐ [`PROMPTS/R007-owner-approval-DR5-DR8.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/PROMPTS/R007-owner-approval-DR5-DR8.md) | ⭐ **نص الموافقة الحرفي** |
 | ⭐ `DECISIONS.md` | ⭐ **صف D-046 + قسم D-046 + بند ٧ في «تصادم الترقيم»** |
 | ⭐ `DECISION-REGISTER.md` | ⭐ **§١٣ (ختم DR-5 · DR-8) + §١٢ (حالة الموافقة في البطاقتين)** |
 | ⭐ **الفحص** | ⭐ `tools/audit_docs.py` ⇒ **٠ عيب (١٣ فحصاً)** · ⭐ `tools/check-lang.py` ⇒ ٢ (R006 محمي · مُبلَّغ) · ⭐ `tools/make_handoff.py --check` ⇒ ✅ |
