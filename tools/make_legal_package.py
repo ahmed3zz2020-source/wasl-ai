@@ -93,8 +93,10 @@ def apply_rtl(path: Path) -> int:
         wsum = sum(weights)
         widths = [total_cm * w / wsum for w in weights]
         if is_index_col and ncols > 1:
-            widths[0] = 0.9
-            rest = total_cm - 0.9
+            # ⭐ عمود الترقيم: لا يقلّ عن عرض المعرّف نفسه (Q-L18) ⇒ لا ينكسر على سطرين
+            longest_idx = max((len(row.cells[0].text.strip()) for row in t.rows), default=1)
+            widths[0] = max(0.9, min(2.2, 0.32 * longest_idx + 0.5))
+            rest = total_cm - widths[0]
             wsum2 = sum(weights[1:])
             for i in range(1, ncols):
                 widths[i] = rest * weights[i] / wsum2
