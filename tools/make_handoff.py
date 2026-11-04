@@ -259,6 +259,7 @@ def build() -> str:
     A("```")
     A("python3 tools/audit_docs.py --quiet     # تدقيق الوثائق الأربع (١٣ فحصاً)")
     A("python3 tools/check-lang.py --quiet     # فحص لغوي")
+    A("python3 tools/print_gpt_msg.py --reply --check  # ⭐ سطر الإرسال لـChatGPT جاهز (رابط مثبَّت على آخر commit + تحقّق حداثة)")
     A("python3 tools/make_handoff.py --check   # يتأكد إن الملف ده محدَّث")
     A("```")
     A("")
