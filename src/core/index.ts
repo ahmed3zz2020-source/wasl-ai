@@ -30,11 +30,23 @@ export {
   TenantContextError,
   assertTenantMatches,
   defaultNow,
-  tenantContextFromSession,
+  type SessionAttestation,
   type SessionClaims,
+  type SessionSourceId,
   type TenantContext,
   type TenantId,
 } from './tenant.ts';
+
+// ⛔ `tenantContextFromSession` و`issueSessionAttestation` و`markLocalTestInput`
+//    **غير مُصدَّرة من السطح العام** ⇒ المسار العام الوحيد لإنشاء سياق
+//    مستأجر معتمد = `resolveTenantContext` (يمرّ بمصدر جلسات).
+
+export {
+  ACTIVE_SESSION_SOURCES,
+  localTestSessionSource,
+  resolveTenantContext,
+  type SessionSource,
+} from './session.ts';
 
 export {
   AUDIT_META_ALLOWLIST,

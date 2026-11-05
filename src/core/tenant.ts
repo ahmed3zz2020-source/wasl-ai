@@ -1,10 +1,11 @@
 // ============================================================
 // WASL AI — سياق المستأجر الموثوق (المكوّن ٢ · الشريحة الأولى)
 // ------------------------------------------------------------
-// المبدأ الحاكم: هوية المستأجر تأتي من «جلسة مُصادَق عليها» فقط.
-// لا يوجد في هذا الملف أي مسار يقرأ من محتوى الرسالة أو من أي
-// حقل داخلها — والاختبار المعاكس في tests/slice-01.test.ts يثبت
-// ذلك بالتجربة (انتحال Tenant ID داخل الحمولة ⇒ رفض).
+// ⭐ المبدأ الحاكم: هوية المستأجر لا تُؤخذ من «ادّعاء» بل من «إثبات».
+//   ⛔ `authenticated: true` مكتوبة في كائن وارد ⇒ قيمتها إثباتية = صفر.
+//   ⇒ الادّعاءات الخام تُعالَج في `session.ts` عبر «مصدر جلسات»
+//     لا يمرّ منها شيء إلى هنا إلا بعد تحقّق المصدر نفسه.
+// ⛔ لا يوجد في هذا الملف أي مسار يقرأ من محتوى الرسالة.
 // ============================================================
 
 export type TenantId = string;
@@ -28,14 +29,31 @@ export class TenantContextError extends Error {
 }
 
 /**
- * مُطالبات الجلسة المُصادَق عليها.
- * مصدرها طبقة المصادقة (Auth) — وهي مستقلة تماماً عن حمولة الرسالة.
+ * ⛔ مُطالبات الجلسة الخام — «ادّعاءات واردة من طرف خارجي».
+ * ⛔ قيمها لا تُصدَّق بذاتها: `authenticated: true` كُتبت في كائن
+ *    يرسله الطرف الآخر ⇒ لا قيمة إثباتية لها إطلاقاً.
+ * ⇒ لا تُستخدم هذه الواجهة لإنشاء سياق تنفيذ — المسار الوحيد هو
+ *   `resolveTenantContext` في `session.ts`.
  */
 export interface SessionClaims {
   readonly session_id: string;
   readonly tenant_id: string;
   readonly actor_id: string;
   readonly authenticated: boolean;
+}
+
+/** ⭐ معرّف مصدر الجلسات (حدّ الثقة). */
+export type SessionSourceId = 'local-test-harness' | 'auth-middleware';
+
+/**
+ * ⭐ إثبات الجلسة — ناتج مصدر الجلسات **بعد** تحقّقه.
+ * لا يُبنى إلا عبر `issueSessionAttestation` (داخلية) ⇒ فأي كائن
+ * يحمل نفس الشكل لكن بدون تسجيل ⇒ مرفوض.
+ */
+export interface SessionAttestation {
+  readonly claims: SessionClaims;
+  readonly source: SessionSourceId;
+  readonly issuedAt: string;
 }
 
 /**
@@ -54,6 +72,10 @@ export function defaultNow(): string {
   return new Date().toISOString();
 }
 
+// ⭐⭐ سجلّ الإثباتات — خاصة بالوحدة ولا تُصدَّر.
+//    ⇒ كائن إثبات مزوَّر (من خارج الوحدة) لا يمرّ.
+const TRUSTED_ATTESTATIONS = new WeakSet<object>();
+
 function assertPattern(
   field: string,
   value: unknown,
@@ -70,13 +92,38 @@ function assertPattern(
 }
 
 /**
- * يبني سياق التنفيذ من مُطالبات جلسة مُصادَق عليها.
+ * ⭐ داخلي: يُصدر إثبات جلسة **مسجَّلاً** عند مصدر الجلسات فقط.
+ * ⛔ غير مُصدَّر من `index.ts` (السطح العام) — يُستدعى من `session.ts` وحده.
+ */
+export function issueSessionAttestation(
+  claims: SessionClaims,
+  source: SessionSourceId,
+  issuedAt: string,
+): SessionAttestation {
+  const attestation: SessionAttestation = { claims, source, issuedAt };
+  TRUSTED_ATTESTATIONS.add(attestation);
+  return attestation;
+}
+
+/**
+ * ⭐ يبني سياق التنفيذ من **إثبات جلسة** (لا من ادّعاءات خام).
  * ⛔ لا يقبل أي حمولة رسالة — عمداً: لا يوجد أي مسار من الرسالة إلى السياق.
+ * ⛔ ولا يقبل ادّعاءات خام: لا إثبات ⇒ لا سياق.
  */
 export function tenantContextFromSession(
-  claims: SessionClaims,
+  attestation: SessionAttestation,
   now: () => string = defaultNow,
 ): TenantContext {
+  if (!attestation || typeof attestation !== 'object') {
+    throw new TenantContextError('session_missing', 'إثبات الجلسة مفقود');
+  }
+  if (!TRUSTED_ATTESTATIONS.has(attestation)) {
+    throw new TenantContextError(
+      'session_unverified',
+      'إثبات الجلسة غير مُصدَر من مصدر الجلسات — لا يُبنى سياق تنفيذ',
+    );
+  }
+  const claims = attestation.claims;
   if (!claims || typeof claims !== 'object') {
     throw new TenantContextError('session_missing', 'مطالبات الجلسة مفقودة');
   }

@@ -12,6 +12,7 @@
 // ============================================================
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
@@ -20,13 +21,18 @@ import {
   ENVELOPE_RULES,
   EnvelopeValidationError,
   MessageStore,
+  TenantContextError,
   createSyntheticContext,
   createSyntheticEnvelope,
   createSyntheticPair,
+  createSyntheticSession,
   parseEnvelope,
+  resolveTenantContext,
   validateEnvelope,
   type MessageEnvelope,
 } from '../src/core/index.ts';
+// ⭐ استيراد داخلي مباشر — لاختبار أن المسار الداخلي نفسه يرفض الادّعاءات الخام
+import { tenantContextFromSession } from '../src/core/tenant.ts';
 
 const FIXED_NOW = '2026-01-01T00:00:00.000Z';
 
@@ -179,6 +185,99 @@ test('٣) منع تكرار message_ref — مُطبَّق لأن message_ref ج
     const outcome = store.append(otherTenant, envelope);
     assert.equal(outcome.status, 'accepted');
     assert.equal(store.countFor(otherTenant), 1);
+  });
+});
+
+test('٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد #١٣): مسار الإدخال غير الموثوق لا يُنشئ سياقاً معتمداً', async (t) => {
+  const forgedClaims = {
+    session_id: 'sess_forged_0001',
+    tenant_id: 'tnt_synth_0001',
+    actor_id: 'actor_synth_0001',
+    authenticated: true,
+  };
+
+  await t.test('⭐ `authenticated: true` وحدها ⇒ مرفوض', () => {
+    assert.throws(
+      () => resolveTenantContext({ ...forgedClaims }),
+      (error: unknown) => {
+        assert.ok(error instanceof TenantContextError);
+        assert.equal(error.code, 'session_unverified');
+        return true;
+      },
+    );
+  });
+
+  await t.test('⭐ مدخل عميل خام (نص JSON · كائن · مصفوفة) ⇒ مرفوض', () => {
+    const inputs: unknown[] = [
+      JSON.stringify(forgedClaims),
+      { ...forgedClaims, extra: 'client field' },
+      [forgedClaims],
+      null,
+      undefined,
+      'sess_forged_0001',
+      42,
+    ];
+    for (const input of inputs) {
+      assert.throws(
+        () => resolveTenantContext(input),
+        (error: unknown) => {
+          assert.ok(error instanceof TenantContextError);
+          assert.equal(error.code, 'session_unverified');
+          return true;
+        },
+        `مدخل غير موثوق نجح: ${JSON.stringify(input)}`,
+      );
+    }
+  });
+
+  await t.test('⭐ نسخة من جلسة اصطناعية صحيحة الشكل ⇒ مرفوض (المعيار = النَسَب لا الشكل)', () => {
+    const genuine = createSyntheticSession(1, 11, 101);
+    const copied = { ...genuine };
+    assert.deepEqual(copied, genuine, 'النسخة متطابقة الشكل');
+    assert.throws(
+      () => resolveTenantContext(copied),
+      (error: unknown) => {
+        assert.ok(error instanceof TenantContextError);
+        assert.equal(error.code, 'session_unverified');
+        return true;
+      },
+    );
+  });
+
+  await t.test('⭐ المسار العام الوحيد = `resolveTenantContext` (لا مسار من ادّعاءات خام)', () => {
+    assert.throws(
+      () => tenantContextFromSession(forgedClaims as never),
+      (error: unknown) => {
+        assert.ok(error instanceof TenantContextError);
+        assert.equal(error.code, 'session_unverified');
+        return true;
+      },
+    );
+  });
+
+  await t.test('⭐ السطح العام لا يُصدّر مسار الادّعاءات الخام', () => {
+    const indexSource = readFileSync(
+      new URL('../src/core/index.ts', import.meta.url),
+      'utf8',
+    );
+    for (const forbidden of [
+      'tenantContextFromSession',
+      'issueSessionAttestation',
+      'markLocalTestInput',
+    ]) {
+      const exported = new RegExp(`export\\s*\\{[^}]*\\b${forbidden}\\b`, 's');
+      assert.equal(
+        exported.test(indexSource),
+        false,
+        `السطح العام يُصدّر ${forbidden} — مسار الادّعاءات الخام متاح`,
+      );
+    }
+  });
+
+  await t.test('⭐ الجلسة الاصطناعية الأصلية وحدها ⇒ مقبولة', () => {
+    const context = resolveTenantContext(createSyntheticSession(1, 11, 101));
+    assert.equal(context.tenantId, 'tnt_synth_0001');
+    assert.equal(context.actorId, 'actor_synth_0011');
   });
 });
 

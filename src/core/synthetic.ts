@@ -9,11 +9,8 @@
 // ============================================================
 
 import type { MessageEnvelope } from './envelope.ts';
-import {
-  tenantContextFromSession,
-  type SessionClaims,
-  type TenantContext,
-} from './tenant.ts';
+import { markLocalTestInput, resolveTenantContext } from './session.ts';
+import type { SessionClaims, TenantContext } from './tenant.ts';
 
 /** نطاق محجوز رسمياً — لا يمكن أن يوجد فعلياً. */
 export const SYNTHETIC_EMAIL_DOMAIN = 'example.invalid';
@@ -58,30 +55,36 @@ export function toArabicDigits(value: number | string): string {
   return String(value).replace(/[0-9]/g, (digit) => '٠١٢٣٤٥٦٧٨٩'[Number(digit)]);
 }
 
-/** ⭐ مُطالبات جلسة اصطناعية (مُصادَق عليها) — مصدر السياق الموثوق. */
+/**
+ * ⭐ مُطالبات جلسة اصطناعية — مصدر السياق الموثوق في الاختبارات.
+ * ⭐ تُعلَّم داخلياً كمُصنَّعة ⇒ يمرّ بها مصدر الجلسات المحلي فقط.
+ */
 export function createSyntheticSession(
   tenantIndex: number,
   actorIndex: number,
   sessionIndex: number,
 ): SessionClaims {
-  return {
+  return markLocalTestInput({
     session_id: `sess_synth_${String(sessionIndex).padStart(4, '0')}`,
     tenant_id: createSyntheticTenantId(tenantIndex),
     actor_id: createSyntheticActorId(actorIndex),
     authenticated: true,
-  };
+  });
 }
 
-/** ⭐ سياق تنفيذ اصطناعي (من جلسة مُصادَق عليها). */
+/**
+ * ⭐ سياق تنفيذ اصطناعي — يمرّ بالمسار العام الوحيد `resolveTenantContext`
+ * (وليس بمسار مباشر من الادّعاءات الخام).
+ */
 export function createSyntheticContext(
   tenantIndex: number,
   actorIndex: number,
   sessionIndex: number,
   now: () => string = () => '2026-01-01T00:00:00.000Z',
 ): TenantContext {
-  return tenantContextFromSession(
+  return resolveTenantContext(
     createSyntheticSession(tenantIndex, actorIndex, sessionIndex),
-    now,
+    { now },
   );
 }
 
