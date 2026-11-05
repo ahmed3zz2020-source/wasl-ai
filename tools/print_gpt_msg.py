@@ -229,7 +229,7 @@ def summary_block(sha: str) -> str:
                 break
     if ready:
         if n_code:
-            state = f"✔ كود الشريحة الأولى ({ar_num(n_code)} ملفات) · ✔ اختبارات محلية ({ar_num(n_tests)} ملفات اختبار)"
+            state = f"✔ كود الإنتاج ({ar_num(n_code)} ملفات) · ✔ اختبارات محلية ({ar_num(n_tests)} ملفات اختبار)"
         else:
             state = "بلا كود · بلا اختبار"
         tail_txt = "" if moved else " (درجات EA-001..EA-007 لم تتحرك)"
@@ -259,7 +259,8 @@ def summary_block(sha: str) -> str:
 
     # ⑥ الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)
     docs = [
-        ("docs/SLICE-01-REPORT.md", "تقرير تنفيذ الشريحة"),
+        ("docs/SLICE-01-REPORT.md", "تقرير الشريحة الأولى"),
+        ("docs/SLICE-02-REPORT.md", "تقرير Slice 02"),
         ("docs/SECOND-SLICE-PROPOSAL.md", "مقترح الشريحة الثانية (🔵 بلا تصريح)"),
         ("DECISIONS.md", "سجل القرارات"),
     ]
@@ -280,7 +281,7 @@ def summary_block(sha: str) -> str:
     if n_code:
         lines.append(
             "- ⭐ **⛔ لم يُنفَّذ**: لا تكامل خارجي · لا حسابات · لا تواصل خارجي · لا تعاقد · لا دفعة · لا نشر "
-            "· ولا اعتماد نهائي لمسار واتساب · ⭐ **والكود الموجود = الشريحة الأولى فقط (محلي بالكامل)**."
+            "· ولا اعتماد نهائي لمسار واتساب · ⭐ **والكود الموجود = ما نُفِّذ محلياً فقط (بلا اتصال وبلا حساب)**."
         )
     else:
         lines.append(
