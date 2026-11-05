@@ -230,12 +230,13 @@ test('٢) ⭐ انتقال ممنوع ⇒ رفض صريح + صفر تغيير ف
 
 });
 
-test('٣) ⭐ انتقال إلى `closed` غير مسموح من أي حالة ⇒ رفض', async (t) => {
-  await t.test('⭐⭐⭐ `closed` نهائية ⇒ لا انتقال إليها من أي حالة', () => {
+test('٣) ⭐ الإغلاق مسموح من `resolved` فقط (بعد `D-056`)', async (t) => {
+  await t.test('⭐⭐⭐ الإغلاق من الحالات الأخرى ⇒ رفض صريح', () => {
     const { layer, deps } = scenario();
     const ctx = context('owner');
     seed(layer, ctx);
-    const paths: ConversationState[] = ['new', 'open', 'pending', 'resolved', 'assigned'];
+    // ⭐ الحالات الأخرى ترفض الإغلاق (وليس `resolved`).
+    const paths: ConversationState[] = ['new', 'open', 'pending', 'assigned'];
     for (const state of paths) {
       assert.throws(
         () => updateConversationState(ctx, 'conv_synth_0001', 'closed', deps),
@@ -248,17 +249,23 @@ test('٣) ⭐ انتقال إلى `closed` غير مسموح من أي حالة 
       );
     }
     assert.deepEqual([...ALLOWED_TRANSITIONS.closed], []);
+    // ⭐ والإغلاق من `resolved` مسموح (وتفاصيله في `tests/slice-04-closing.test.ts`).
+    updateConversationState(ctx, 'conv_synth_0001', 'open', deps);
+    updateConversationState(ctx, 'conv_synth_0001', 'resolved', deps);
+    const closed = updateConversationState(ctx, 'conv_synth_0001', 'closed', deps);
+    assert.equal(closed.state, 'closed');
   });
 
-  await t.test('⭐⭐⭐⭐ خريطة الانتقالات مغلقة ومطابقة للمقترح (١١ انتقالاً)', () => {
+  await t.test('⭐⭐⭐⭐ خريطة الانتقالات مغلقة ومطابقة (١٢ انتقالاً — بعد `D-056`)', () => {
     assert.deepEqual([...CONVERSATION_STATES], ['new', 'open', 'assigned', 'pending', 'resolved', 'closed']);
     const total = Object.values(ALLOWED_TRANSITIONS).reduce((sum, list) => sum + list.length, 0);
-    assert.equal(total, 11);
+    assert.equal(total, 12);
     assert.deepEqual([...ALLOWED_TRANSITIONS.new], ['open']);
     assert.deepEqual([...ALLOWED_TRANSITIONS.open], ['assigned', 'pending', 'resolved']);
     assert.deepEqual([...ALLOWED_TRANSITIONS.assigned], ['open', 'pending', 'resolved', 'assigned']);
     assert.deepEqual([...ALLOWED_TRANSITIONS.pending], ['assigned', 'resolved']);
-    assert.deepEqual([...ALLOWED_TRANSITIONS.resolved], ['open']);
+    assert.deepEqual([...ALLOWED_TRANSITIONS.resolved], ['open', 'closed']);
+    assert.deepEqual([...ALLOWED_TRANSITIONS.closed], []);
   });
 });
 

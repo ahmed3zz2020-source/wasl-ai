@@ -16,10 +16,11 @@ import { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } from './tenant.ts';
 import type { TenantContext } from './tenant.ts';
 import type { MessageStore } from './store.ts';
 import type { ReadAuditLog } from './read-audit.ts';
-import type {
-  ConversationChangeLog,
-  ConversationChangeEntry,
-  ConversationChangeOperation,
+import {
+  assertChangeReason,
+  type ConversationChangeLog,
+  type ConversationChangeEntry,
+  type ConversationChangeOperation,
 } from './conversation-change-log.ts';
 import { CONVERSATION_CHANGE_STATES } from './conversation-change-log.ts';
 
@@ -54,8 +55,9 @@ export const CONVERSATION_STATES = CONVERSATION_CHANGE_STATES;
 export type ConversationState = (typeof CONVERSATION_STATES)[number];
 
 /**
- * ⭐⭐⭐ الانتقالات المسموحة — ⭐ **خريطة مغلقة** (١١ انتقالاً).
- * ⭐ `closed` = **نهائية** ⇒ ⭐ **لا انتقال إليها من أي حالة** (مقصود).
+ * ⭐⭐⭐ الانتقالات المسموحة — ⭐⭐ **خريطة مغلقة** (١٢ انتقالاً — بعد `D-056`).
+ * ⭐⭐ `closed` = **نهائية** ⇒ ⭐⭐ **لا انتقال إليها من أي حالة** ⇒ ⭐⭐ **ولا إسناد ولا تعديل حالة ولا إعادة موظف بعد الإغلاق**.
+ * ⭐⭐ **الإغلاق** (تصريح المالك — `D-056`): ⭐⭐ `resolved ⇒ closed` هو الإغلاق الوحيد ⇒ ⭐⭐ وليس إغلاقً من حالة أخرى ⇒ ⭐⭐ ولا تعديل لمحادثة مغلقة بعد الإغلاق.
  */
 export const ALLOWED_TRANSITIONS: Readonly<
   Record<ConversationState, readonly ConversationState[]>
@@ -64,9 +66,22 @@ export const ALLOWED_TRANSITIONS: Readonly<
   open: Object.freeze(['assigned', 'pending', 'resolved']),
   assigned: Object.freeze(['open', 'pending', 'resolved', 'assigned']),
   pending: Object.freeze(['assigned', 'resolved']),
-  resolved: Object.freeze(['open']),
+  resolved: Object.freeze(['open', 'closed']),
   closed: Object.freeze([]),
 });
+
+/**
+ * ⭐⭐ الحالات النهائية — ⭐⭐ **مجموعة مغلقة**.
+ * ⭐⭐ حالة `closed` انتهاء من كل طريق ⇒ ⭐⭐ ولا تُعدَّل ولا تُسند.
+ */
+export const TERMINAL_CONVERSATION_STATES: readonly ConversationState[] = Object.freeze(['closed']);
+
+/**
+ * ⭐⭐ فحص النهائية — ⭐⭐ **الحالة لا تُعدَّل ولا تُسند منها**.
+ */
+export function isTerminalState(state: ConversationState): boolean {
+  return TERMINAL_CONVERSATION_STATES.includes(state);
+}
 
 /** ⭐⭐ حالة المحادثة كما يراها المستخدم. */
 export interface ConversationStateView {
@@ -337,6 +352,14 @@ export function updateConversationState(
   requireConversation(context, conversationRef, deps);
   const current = deps.states.ensure(context.tenantId, conversationRef);
 
+  // ⭐⬀ حارس النهائية — ⭐ المحادثة المغلقة لا تُعدل ولا تُسند (ولا حتى إغلاقً مريرًاً).
+  if (isTerminalState(current.state)) {
+    throw new ConversationStateError(
+      'state_terminal',
+      `المحادثة مغلقة (${current.state}) ⇒ لا تغيير ولا إسناد`,
+    );
+  }
+
   if (to === 'assigned') {
     throw new ConversationStateError(
       'transition_requires_assignee',
@@ -350,6 +373,8 @@ export function updateConversationState(
     );
   }
   const reason = options.reason ?? '';
+  // ⭐⬀ فحص السبب **قبل أي معاملة الحالة** ⇒ ⬀ لا تموت قابل أو تسجيل السبب.
+  assertChangeReason(reason);
   if (current.state === 'resolved' && to === 'open' && reason.trim() === '') {
     throw new ConversationStateError(
       'transition_requires_reason',
@@ -408,6 +433,14 @@ export function assignConversation(
   requireConversation(context, conversationRef, deps);
   const current = deps.states.ensure(context.tenantId, conversationRef);
 
+  // ⭐⬀ حارس النهائية — ⭐ لا إسناد لمحادثة مغلقة أبداً.
+  if (isTerminalState(current.state)) {
+    throw new ConversationStateError(
+      'state_terminal',
+      `المحادثة مغلقة (${current.state}) ⇒ لا إسناد`,
+    );
+  }
+
   if (!deps.employees.isEmployee(context.tenantId, assigneeActorId)) {
     throw new ConversationStateError(
       'assignee_not_in_tenant',
@@ -426,6 +459,8 @@ export function assignConversation(
       'المحادثة مسندة للموظف نفسه ⇒ لا تغيير (رفض صريح لا صمت)',
     );
   }
+  // ⭐⬀ فحص السبب قبل أي معاملة الإسناد.
+  assertChangeReason(options.reason ?? '');
   const operation: ConversationChangeOperation =
     current.state === 'assigned' ? 'assignment.transfer' : 'assignment.set';
   const updated = deps.states.setState(context.tenantId, conversationRef, {
@@ -470,6 +505,13 @@ export function unassignConversation(
   requireCapability(context, CONVERSATION_ASSIGN_CAPABILITY, 'conversation.assign', deps, conversationRef);
   requireConversation(context, conversationRef, deps);
   const current = deps.states.ensure(context.tenantId, conversationRef);
+  // ⭐⬀ حارس النهائية — ⭐ لا إلغاء إسناد لمحادثة مغلقة.
+  if (isTerminalState(current.state)) {
+    throw new ConversationStateError(
+      'state_terminal',
+      `المحادثة مغلقة (${current.state}) ⇒ لا إلغاء إسناد`,
+    );
+  }
   if (current.state !== 'assigned' || current.assignee_actor_id === null) {
     throw new ConversationStateError(
       'transition_not_allowed',

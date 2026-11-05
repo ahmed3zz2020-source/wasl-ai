@@ -90,6 +90,22 @@ function assertOptionalActor(value: string | null | undefined, field: string): s
 }
 
 /**
+ * ⭐⬀ فحص سبب السبب — ⭐ يُستخدم **قبل** أي معاملة الحالة.
+ * ⛔ علامة في الاستخداع ⇒ ⭐ معاملة السبب (لا تعديل حالة ثم تسجيل السبب فيستور الحالة).
+ */
+export function assertChangeReason(reason: string): void {
+  if (reason.length > MAX_CHANGE_REASON_LENGTH) {
+    throw new ConversationChangeError(
+      'reason_too_long',
+      `سبب التعديل أطول من الحدّ (٠٠٠ حرفاً)`,
+    );
+  }
+  if (containsSecret(reason)) {
+    throw new ConversationChangeError('reason_secret_forbidden', 'سبب التعديل يشبه سرًّاً');
+  }
+}
+
+/**
  * ⭐ سجل تغييرات المحادثات (في الذاكرة) — ⭐ **append-only**.
  * ⛔ يرفض أي قيمة تشبه سرّاً · ⛔ يرفض أي عملية أو حالة خارج المُعلَن.
  */

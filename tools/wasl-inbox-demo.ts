@@ -1,11 +1,11 @@
 // ============================================================
-// WASL AI — عرض تجريبي محلي (Slice 03 + Slice 04)
+// WASL AI — عرض تجريبي محلي (Slice 03 + Slice 04 + تصحيح الإغلاق D-056)
 // ------------------------------------------------------------
 // ⭐ تشغيل: `node --experimental-strip-types tools/wasl-inbox-demo.ts`
 // ⭐ **كل البيانات اصطناعية بالكامل** — ⭐ لا حساب · ⭐ لا شبكة · ⭐ لا نشر.
 // ⛔ لا يستورد من شجرة الاختبار (⇒ الملف مستقل تماماً).
 // ⛔ ليس واجهة عامة ولا API — ⭐ مخرجات على الطرفية فقط.
-// ⭐ **يعرض**: قراءة المحادثات (Slice 03) + حالة المحادثة وإسنادها وسجل التغييرات (Slice 04).
+// ⭐ **يعرض**: قراءة المحادثات (Slice 03) + حالة المحادثة وإسنادها وسجل التغييرات (Slice 04) + الإغلاق النهائي (D-056).
 // ============================================================
 
 import {
@@ -234,6 +234,16 @@ updateConversationState(tenantA, 'conv_demo_0001', 'open', stateDeps, { reason: 
 assignConversation(tenantA, 'conv_demo_0001', 'actor_demo_0007', stateDeps, { reason: 'توزيع على خدمة العملاء' });
 // ⭐ تحويلها إلى «بانتظار ردّ»
 updateConversationState(tenantA, 'conv_demo_0001', 'pending', stateDeps, { reason: 'بانتظار بيانات العميل' });
+// ⭐ حلّ الطلب ثم إغلاقه (تصحيح `D-056`: الإغلاق من `resolved` فقط)
+updateConversationState(tenantA, 'conv_demo_0001', 'resolved', stateDeps, { reason: 'تم حل الطلب' });
+updateConversationState(tenantA, 'conv_demo_0001', 'closed', stateDeps, { reason: 'إغلاق بعد الحل' });
+// ⭐ محاولة ممنوعة: تعديل بعد الإغلاق ⇒ مرفوضة (النهائية محقّقة)
+let afterCloseUpdate = 'لم تُنفَّذ';
+try {
+  updateConversationState(tenantA, 'conv_demo_0001', 'open', stateDeps, { reason: 'محاولة إعادة فتح' });
+} catch (error) {
+  afterCloseUpdate = (error as { code?: string }).code ?? 'غير معروف';
+}
 // ⭐ محاولة ممنوعة: إسناد موظف من مستأجر آخر ⇒ مرفوضة
 let crossTenantAssign = 'لم تُنفَّذ';
 try {
@@ -247,7 +257,7 @@ try {
 // ============================================================
 
 console.log(line('═'));
-console.log('⭐ WASL AI — عرض تجريبي محلي: محادثات المستأجر + حالة المحادثة وإسنادها');
+console.log('⭐ WASL AI — عرض تجريبي محلي: محادثات المستأجر + حالة المحادثة وإسنادها وإغلاقها');
 console.log('⭐ كل البيانات اصطناعية · بلا شبكة · بلا حساب · بلا نشر');
 console.log(line('═'));
 
@@ -294,6 +304,7 @@ for (const entry of changePage.entries) {
   );
 }
 console.log(`  (سطور: ${changePage.pagination.returned}/${changePage.pagination.total})`);
+console.log(`• محاولة تعديل بعد الإغلاق ⇒ ${afterCloseUpdate}`);
 console.log(`• محاولة إسناد موظف من مستأجر آخر ⇒ ${crossTenantAssign}`);
 
 console.log('\n⭐ سجل أحداث القراءة (مسار منفصل عن سجل المعالجة)');
