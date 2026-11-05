@@ -22,15 +22,19 @@ import {
   EnvelopeValidationError,
   MessageStore,
   TenantContextError,
-  createSyntheticContext,
-  createSyntheticEnvelope,
-  createSyntheticPair,
-  createSyntheticSession,
   parseEnvelope,
   resolveTenantContext,
   validateEnvelope,
   type MessageEnvelope,
 } from '../src/core/index.ts';
+// ⭐ أدوات الاختبار موجودة في `tests/support/` ⇒ خارج حزمة الإنتاج
+import {
+  createSyntheticContext,
+  createSyntheticEnvelope,
+  createSyntheticPair,
+  createSyntheticSession,
+  localTestSessionSource,
+} from './support/index.ts';
 // ⭐ استيراد داخلي مباشر — لاختبار أن المسار الداخلي نفسه يرفض الادّعاءات الخام
 import { tenantContextFromSession } from '../src/core/tenant.ts';
 
@@ -198,7 +202,7 @@ test('٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد #١٣): �
 
   await t.test('⭐ `authenticated: true` وحدها ⇒ مرفوض', () => {
     assert.throws(
-      () => resolveTenantContext({ ...forgedClaims }),
+      () => resolveTenantContext({ ...forgedClaims }, { source: localTestSessionSource }),
       (error: unknown) => {
         assert.ok(error instanceof TenantContextError);
         assert.equal(error.code, 'session_unverified');
@@ -219,7 +223,7 @@ test('٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد #١٣): �
     ];
     for (const input of inputs) {
       assert.throws(
-        () => resolveTenantContext(input),
+        () => resolveTenantContext(input, { source: localTestSessionSource }),
         (error: unknown) => {
           assert.ok(error instanceof TenantContextError);
           assert.equal(error.code, 'session_unverified');
@@ -235,7 +239,7 @@ test('٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد #١٣): �
     const copied = { ...genuine };
     assert.deepEqual(copied, genuine, 'النسخة متطابقة الشكل');
     assert.throws(
-      () => resolveTenantContext(copied),
+      () => resolveTenantContext(copied, { source: localTestSessionSource }),
       (error: unknown) => {
         assert.ok(error instanceof TenantContextError);
         assert.equal(error.code, 'session_unverified');
@@ -275,7 +279,9 @@ test('٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد #١٣): �
   });
 
   await t.test('⭐ الجلسة الاصطناعية الأصلية وحدها ⇒ مقبولة', () => {
-    const context = resolveTenantContext(createSyntheticSession(1, 11, 101));
+    const context = resolveTenantContext(createSyntheticSession(1, 11, 101), {
+      source: localTestSessionSource,
+    });
     assert.equal(context.tenantId, 'tnt_synth_0001');
     assert.equal(context.actorId, 'actor_synth_0011');
   });

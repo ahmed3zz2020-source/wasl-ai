@@ -42,8 +42,13 @@ export interface SessionClaims {
   readonly authenticated: boolean;
 }
 
-/** ⭐ معرّف مصدر الجلسات (حدّ الثقة). */
-export type SessionSourceId = 'local-test-harness' | 'auth-middleware';
+/**
+ * ⭐ معرّف مصدر الجلسات (حدّ الثقة).
+ * ⭐ `auth-middleware` = المعرّف الإنتاجي الوحيد المعتمد اليوم.
+ * ⛔ أي معرّف آخر يجب أن يبدأ بـ`test-` ⇒ ⇒ لا يمكن التعبير عن
+ *   مصدر اختبار بمعرّف إنتاجي داخل هذا الملف.
+ */
+export type SessionSourceId = 'auth-middleware' | `test-${string}`;
 
 /**
  * ⭐ إثبات الجلسة — ناتج مصدر الجلسات **بعد** تحقّقه.

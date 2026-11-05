@@ -4,9 +4,16 @@
 // المكوّنات الأربعة المعتمدة في تصريح المالك (MISSION 004):
 //   ١) عقد الرسالة الداخلي  → envelope.ts
 //   ٢) عزل المستأجر        → tenant.ts + store.ts
-//   ٣) البيانات الاصطناعية → synthetic.ts
+//   ٣) البيانات الاصطناعية → ⛔ NOT HERE (tests/support/synthetic.ts)
 //   ٤) سجل التدقيق المحلي  → audit-log.ts
 // ⛔ لا تكامل خارجي · ⛔ لا شبكة · ⛔ لا حساب · ⛔ لا نشر.
+// ============================================================
+// ⭐⭐ هذا هو السطح العام الإنتاجي الوحيد.
+// ⛔ لا يُصدَّر منه أي أداة اختبار · ولا مولّد بيانات اصطناعية.
+// ⛔ ولا `localTestSessionSource` ولا `markLocalTestInput`.
+// ⛔ ولا أي دالة تُنتج ادّعاءات خام أو تُصدر إثبات جلسة.
+// ⭐ ⇒ المصدر الوحيد لإنشاء سياق مستأجر معتمد = `resolveTenantContext`
+//    (بمصدر جلسات إلزامي) و`resolveProductionTenantContext` (يرفض مصدر الاختبار).
 // ============================================================
 
 export {
@@ -43,8 +50,9 @@ export {
 
 export {
   ACTIVE_SESSION_SOURCES,
-  localTestSessionSource,
+  resolveProductionTenantContext,
   resolveTenantContext,
+  type SessionScope,
   type SessionSource,
 } from './session.ts';
 
@@ -65,16 +73,7 @@ export {
   type StoredMessage,
 } from './store.ts';
 
-export {
-  SYNTHETIC_EMAIL_DOMAIN,
-  createSeededRandom,
-  createSyntheticActorId,
-  createSyntheticAddress,
-  createSyntheticContext,
-  createSyntheticDisplayName,
-  createSyntheticEnvelope,
-  createSyntheticPair,
-  createSyntheticSession,
-  createSyntheticTenantId,
-  toArabicDigits,
-} from './synthetic.ts';
+// ⛔⛔ لا مولّد بيانات اصطناعية هنا.
+// ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
+// ⛔ لا مصدر جلسات اختباري هنا — ولا حتى واحد.
+// ⛔ ولا مصدر إنتاجي مسجَّل ⇒ لا افتراض افتراضي لمصدر الجلسات.

@@ -19,9 +19,12 @@ import { NetworkAccessError } from './network-guard.ts';
 import {
   MessageStore,
   SECRET_PATTERNS,
+} from '../src/core/index.ts';
+// ⭐ أدوات الاختبار موجودة في `tests/support/` ⇒ خارج حزمة الإنتاج
+import {
   createSyntheticContext,
   createSyntheticEnvelope,
-} from '../src/core/index.ts';
+} from './support/index.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const SRC_DIR = path.join(ROOT, 'src');

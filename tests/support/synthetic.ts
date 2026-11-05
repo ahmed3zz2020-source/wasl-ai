@@ -1,6 +1,8 @@
 // ============================================================
-// WASL AI — البيانات الاصطناعية المحلية (المكوّن ٣ · الشريحة الأولى)
+// WASL AI — البيانات الاصطناعية المحلية (شجرة الاختبار فقط)
 // ------------------------------------------------------------
+// ⭐ نُقل من `src/core/synthetic.ts` (٥ نوفمبر ٢٠٢٦ · المرحلة الأولى
+//   من تصريح المالك) ⇒ ⛔ خارج حزمة الإنتاج.
 // ⭐ كل المخرجات اصطناعية بالكامل ومولَّدة محلياً بمُولِّد شبه عشوائي
 //   مُبذَّر (deterministic) ⇒ نفس البذرة = نفس البيانات ⇒ نتائج الاختبار قابلة للتكرار.
 // ⛔ لا بيانات عميل حقيقي · ⛔ لا استيراد من أي مصدر خارجي.
@@ -8,9 +10,10 @@
 //   ⇒ عنوان لا يمكن أن يوجد فعلياً على الإنترنت.
 // ============================================================
 
-import type { MessageEnvelope } from './envelope.ts';
-import { markLocalTestInput, resolveTenantContext } from './session.ts';
-import type { SessionClaims, TenantContext } from './tenant.ts';
+import type { MessageEnvelope } from '../../src/core/envelope.ts';
+import { resolveTenantContext } from '../../src/core/session.ts';
+import type { SessionClaims, TenantContext } from '../../src/core/tenant.ts';
+import { localTestSessionSource, markLocalTestInput } from './local-session.ts';
 
 /** نطاق محجوز رسمياً — لا يمكن أن يوجد فعلياً. */
 export const SYNTHETIC_EMAIL_DOMAIN = 'example.invalid';
@@ -73,8 +76,9 @@ export function createSyntheticSession(
 }
 
 /**
- * ⭐ سياق تنفيذ اصطناعي — يمرّ بالمسار العام الوحيد `resolveTenantContext`
- * (وليس بمسار مباشر من الادّعاءات الخام).
+ * ⭐ سياق تنفيذ اصطناعي — يمرّ بالمسار العام `resolveTenantContext`
+ * (وليس بمسار مباشر من الادّعاءات الخام)
+ * ⭐ وبمصدر الجلسات الاختباري **محدَّد صراحةً** ⇒ لا افتراض افتراضي.
  */
 export function createSyntheticContext(
   tenantIndex: number,
@@ -84,7 +88,7 @@ export function createSyntheticContext(
 ): TenantContext {
   return resolveTenantContext(
     createSyntheticSession(tenantIndex, actorIndex, sessionIndex),
-    { now },
+    { now, source: localTestSessionSource },
   );
 }
 

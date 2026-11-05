@@ -4,8 +4,11 @@
   "private": true,
   "type": "module",
   "description": "WASL AI — نواة الشريحة الأولى (محلية فقط · بلا اتصال شبكي · بلا اعتماد خارجي)",
+  "files": [
+    "src/core/"
+  ],
   "scripts": {
-    "test:slice": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts",
-    "test": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts"
+    "test:slice": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts",
+    "test": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts"
   }
 }
