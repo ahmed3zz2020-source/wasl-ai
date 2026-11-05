@@ -41,7 +41,9 @@ import {
   type ProcessingOutcome,
   type SessionClaims,
   type SessionSource,
+  type VerifiedIdentity,
 } from '../src/core/index.ts';
+import { registerSessionSource } from '../src/core/session.ts';
 // ⭐ أدوات الاختبار موجودة في شجرة الاختبار ⇒ خارج حزمة الإنتاج
 import {
   createSyntheticContext,
@@ -159,8 +161,8 @@ test('٢) رفض معرّفات المحادثة غير الموثوقة أو غ
     const looseSource: SessionSource = {
       id: 'test-loose-source',
       scope: 'test',
-      description: 'مصدر اختباري يعيد ادّعاءات بلا فحص شكل (لاختبار حدّ الثقة)',
-      verify: (): SessionClaims => ({
+      description: 'مصدر اختباري يعيد هوية بلا فحص شكل (لاختبار حدّ الثقة)',
+      verify: (): VerifiedIdentity => ({
         session_id: 'sess_loose_0001',
         tenant_id: 'tnt_synth_0001',
         actor_id: 'actor_synth_0001',
@@ -168,6 +170,8 @@ test('٢) رفض معرّفات المحادثة غير الموثوقة أو غ
         authenticated: true,
       }),
     };
+    // ⭐ المصدر مسجّل (سلطة المالك) ⇒ ⭐ والشكل يُفحص في النواة.
+    registerSessionSource({ source: looseSource, grantedRole: 'none', grantCeiling: [] });
     assert.throws(
       () => resolveTenantContext({}, { source: looseSource }),
       (error: unknown) => {

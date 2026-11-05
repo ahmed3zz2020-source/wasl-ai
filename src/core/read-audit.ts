@@ -15,8 +15,15 @@ import type { TenantContext } from './tenant.ts';
 /** ⭐ نتيجة عملية قراءة — ⭐ **مستقلة عن `AuditOutcome`**. */
 export type ReadAuditResult = 'allowed' | 'denied';
 
-/** ⭐ عمليات القراءة المعلنة. */
-export type ReadAuditOperation = 'conversation.list' | 'conversation.read' | 'conversation.audit';
+/** ⭐ عمولات القراءة المعلنة — ⭐ أضيفت الشريحة الرابعة (⭐ إضافة قط — القيم القديمة لم تتغيّر). */
+export type ReadAuditOperation =
+  | 'conversation.list'
+  | 'conversation.read'
+  | 'conversation.audit'
+  | 'conversation.state.read'
+  | 'conversation.state.update'
+  | 'conversation.assign'
+  | 'conversation.changes';
 
 export interface ReadAuditEvent {
   readonly ts: string;
@@ -56,6 +63,10 @@ const OPERATIONS: readonly ReadAuditOperation[] = [
   'conversation.list',
   'conversation.read',
   'conversation.audit',
+  'conversation.state.read',
+  'conversation.state.update',
+  'conversation.assign',
+  'conversation.changes',
 ];
 
 function containsSecret(text: string): boolean {

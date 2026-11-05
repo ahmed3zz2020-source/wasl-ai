@@ -7,9 +7,16 @@
 // ============================================================
 
 export {
+  LOCAL_RESTRICTED_SOURCES,
+  LOCAL_TEST_SOURCES,
   localTestSessionSource,
   markLocalTestInput,
 } from './local-session.ts';
+
+export {
+  syntheticEmployeeDirectory,
+  syntheticEmployeesFor,
+} from './employees.ts';
 
 export {
   SYNTHETIC_EMAIL_DOMAIN,
@@ -21,6 +28,7 @@ export {
   createSyntheticDisplayName,
   createSyntheticEnvelope,
   createSyntheticPair,
+  createSyntheticContextWithSource,
   createSyntheticSession,
   createSyntheticTenantId,
   toArabicDigits,

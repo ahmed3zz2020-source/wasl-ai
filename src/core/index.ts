@@ -32,11 +32,17 @@ export {
 } from './envelope.ts';
 
 // ⭐ Slice 03 — الصلاحيات المحلية (حدّ الثقة نفسه · ⭐ الافتراضي = المنع)
+// ⭐ الدور وسياسة الأدوار (حدّ الثقة — الاصلاحية من النواة)
 export {
   CAPABILITY_PATTERN,
   CapabilityError,
+  ROLE_CAPABILITIES,
+  TRUSTED_ROLES,
   assertCapability,
+  isTrustedRole,
   normalizeCapabilities,
+  resolveGrantedCapabilities,
+  type TrustedRole,
 } from './capability.ts';
 
 export {
@@ -53,14 +59,17 @@ export {
   type SessionSourceId,
   type TenantContext,
   type TenantId,
+  type TrustedClaims,
+  type VerifiedIdentity,
 } from './tenant.ts';
 
-// ⛔ `tenantContextFromSession` و`issueSessionAttestation` و`markLocalTestInput`
-//    **غير مُصدَّرة من السطح العام** ⇒ المسار العام الوحيد لإنشاء سياق
-//    مستأجر معتمد = `resolveTenantContext` (يمرّ بمصدر جلسات).
+// ⛔ `tenantContextFromSession` و`issueSessionAttestation` و`registerSessionSource`
+//    و`markLocalTestInput`
+//    **غير مُصدرة من السطح العام** ⇒ المسار العام الوحيد = `resolveTenantContext`
+//    (بمصدر جلسات إلزامي **مسجّل**) و`resolveProductionTenantContext` (يرفض مصدر الاختبار).
 
 export {
-  ACTIVE_SESSION_SOURCES,
+  activeSessionSources,
   resolveProductionTenantContext,
   resolveTenantContext,
   type SessionScope,
@@ -137,6 +146,43 @@ export {
   type ConversationSummary,
   type ConversationThread,
 } from './conversation-query.ts';
+
+// ⭐ Slice 04 — سجل تغييرات المحادثات (⭐ مستقل عن سجل المعالجة وسجل أحداث القراءة)
+export {
+  CONVERSATION_CHANGE_OPERATIONS,
+  CONVERSATION_CHANGE_STATES,
+  ConversationChangeError,
+  ConversationChangeLog,
+  MAX_CHANGE_REASON_LENGTH,
+  type ConversationChangeEntry,
+  type ConversationChangeInput,
+  type ConversationChangeOperation,
+  type ConversationChangeState,
+} from './conversation-change-log.ts';
+
+// ⭐ Slice 04 — طبقة إدارة حالة المحادثة والإسناد
+export {
+  ALLOWED_TRANSITIONS,
+  CONVERSATION_ASSIGN_CAPABILITY,
+  CONVERSATION_STATE_OPERATIONS,
+  CONVERSATION_STATE_READ_CAPABILITY,
+  CONVERSATION_STATE_UPDATE_CAPABILITY,
+  CONVERSATION_STATES,
+  ConversationStateError,
+  ConversationStateStore,
+  MAX_CHANGE_PAGE_SIZE,
+  assignConversation,
+  getConversationState,
+  readConversationChanges,
+  unassignConversation,
+  updateConversationState,
+  type ConversationChangePage,
+  type ConversationState,
+  type ConversationStateDependencies,
+  type ConversationStateOperation,
+  type ConversationStateView,
+  type EmployeeDirectory,
+} from './conversation-state.ts';
 
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.

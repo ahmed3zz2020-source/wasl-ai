@@ -13,7 +13,9 @@
 import type { MessageEnvelope } from '../../src/core/envelope.ts';
 import { resolveTenantContext } from '../../src/core/session.ts';
 import type { SessionClaims, TenantContext } from '../../src/core/tenant.ts';
-import { localTestSessionSource, markLocalTestInput } from './local-session.ts';
+import { LOCAL_TEST_SOURCES, markLocalTestInput } from './local-session.ts';
+import type { TrustedRole } from '../../src/core/capability.ts';
+import type { SessionSource } from '../../src/core/session.ts';
 
 /** نطاق محجوز رسمياً — لا يمكن أن يوجد فعلياً. */
 export const SYNTHETIC_EMAIL_DOMAIN = 'example.invalid';
@@ -66,30 +68,32 @@ export function toArabicDigits(value: number | string): string {
 /**
  * ⭐ مُطالبات جلسة اصطناعية — مصدر السياق الموثوق في الاختبارات.
  * ⭐ تُعلَّم داخلياً كمُصنَّعة ⇒ يمرّ بها مصدر الجلسات المحلي فقط.
- * ⭐ `capabilities` = الصلاحيات الممنوحة (الشريحة الثالثة) ⇒ ⭐ **فارغة = لا صلاحية** (المنع).
+ * ⭐ **`role`** = الدور (السلطة المعتمدة) ⇒ ⭐ **الصلاحيات يُشتقق في النواة من (دور · سقف)** ⇒ ⭐ **`none` = لا صلاحية** (المنع).
  */
 export function createSyntheticSession(
   tenantIndex: number,
   actorIndex: number,
   sessionIndex: number,
   conversationIndex = 1,
-  capabilities: readonly string[] = [],
+  role: TrustedRole = 'none',
 ): SessionClaims {
-  return markLocalTestInput({
-    session_id: `sess_synth_${String(sessionIndex).padStart(4, '0')}`,
-    tenant_id: createSyntheticTenantId(tenantIndex),
-    actor_id: createSyntheticActorId(actorIndex),
-    conversation_ref: createSyntheticConversationRef(conversationIndex),
-    authenticated: true,
-    ...(capabilities.length ? { capabilities: [...capabilities] } : {}),
-  });
+  return markLocalTestInput(
+    {
+      session_id: `sess_synth_${String(sessionIndex).padStart(4, '0')}`,
+      tenant_id: createSyntheticTenantId(tenantIndex),
+      actor_id: createSyntheticActorId(actorIndex),
+      conversation_ref: createSyntheticConversationRef(conversationIndex),
+      authenticated: true,
+    },
+    role,
+  );
 }
 
 /**
  * ⭐ سياق تنفيذ اصطناعي — يمرّ بالمسار العام `resolveTenantContext`
  * (وليس بمسار مباشر من الادّعاءات الخام)
  * ⭐ وبمصدر الجلسات الاختباري **محدَّد صراحةً** ⇒ لا افتراض افتراضي.
- * ⭐ `capabilities` آخر معامل (إضافة فقط) ⇒ لا يكسر أي نداء سابق.
+ * ⭐ `role` آخر معامل (إضافة فقط) ⇒ لا يكسر أي نداء سابق.
  */
 export function createSyntheticContext(
   tenantIndex: number,
@@ -97,11 +101,29 @@ export function createSyntheticContext(
   sessionIndex: number,
   conversationIndex = 1,
   now: () => string = () => '2026-01-01T00:00:00.000Z',
-  capabilities: readonly string[] = [],
+  role: TrustedRole = 'none',
 ): TenantContext {
   return resolveTenantContext(
-    createSyntheticSession(tenantIndex, actorIndex, sessionIndex, conversationIndex, capabilities),
-    { now, source: localTestSessionSource },
+    createSyntheticSession(tenantIndex, actorIndex, sessionIndex, conversationIndex, role),
+    { now, source: LOCAL_TEST_SOURCES[role] },
+  );
+}
+
+/**
+ * ⭐ سياق اصطناعي بمصدر محدّد — ⭐ يمرّ بمصدر الجلسات المحلي.
+ * ⭐ يُستخدم لخثبة السقف المقيّد (خارج الإسحاء).
+ */
+export function createSyntheticContextWithSource(
+  source: SessionSource,
+  tenantIndex: number,
+  actorIndex: number,
+  sessionIndex: number,
+  conversationIndex = 1,
+  now: () => string = () => '2026-01-01T00:00:00.000Z',
+): TenantContext {
+  return resolveTenantContext(
+    createSyntheticSession(tenantIndex, actorIndex, sessionIndex, conversationIndex, 'none'),
+    { now, source },
   );
 }
 

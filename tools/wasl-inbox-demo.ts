@@ -1,75 +1,110 @@
 // ============================================================
-// WASL AI — عرض تجريبي محلي لطبقة قراءة المحادثات (Slice 03)
+// WASL AI — عرض تجريبي محلي (Slice 03 + Slice 04)
 // ------------------------------------------------------------
 // ⭐ تشغيل: `node --experimental-strip-types tools/wasl-inbox-demo.ts`
 // ⭐ **كل البيانات اصطناعية بالكامل** — ⭐ لا حساب · ⭐ لا شبكة · ⭐ لا نشر.
 // ⛔ لا يستورد من شجرة الاختبار (⇒ الملف مستقل تماماً).
 // ⛔ ليس واجهة عامة ولا API — ⭐ مخرجات على الطرفية فقط.
+// ⭐ **يعرض**: قراءة المحادثات (Slice 03) + حالة المحادثة وإسنادها وسجل التغييرات (Slice 04).
 // ============================================================
 
 import {
   AuditLog,
-  CONVERSATION_AUDIT_CAPABILITY,
-  CONVERSATION_LIST_CAPABILITY,
-  CONVERSATION_READ_CAPABILITY,
+  CONVERSATION_CHANGE_STATES,
+  ConversationChangeLog,
+  ConversationStateStore,
   MessageStore,
   OrderingState,
   ProcessingLayer,
   ReadAuditLog,
+  assignConversation,
   getConversation,
+  getConversationState,
   listConversations,
   readConversationAudit,
+  readConversationChanges,
   resolveTenantContext,
-  type SessionClaims,
+  updateConversationState,
+  type ConversationStateDependencies,
   type SessionSource,
   type TenantContext,
+  type TrustedRole,
+  type VerifiedIdentity,
 } from '../src/core/index.ts';
+// ⭐ تسجيل المصدر داخليّ من `src/core/index.ts` ⇒ ⭐ لأنّ يستوريس من السطح العام.
+import { registerSessionSource } from '../src/core/session.ts';
 
 // ============================================================
 // ⭐ مصدر جلسات محلي — ⭐ نطاقه `test` ⇒ أي مسار إنتاجي يرفضه بنيوياً.
-// ⭐ مُعرّفه يبدأ بـ`test-` ⇒ لا يمكن التعبير عنه بمعرّف إنتاجي.
+// ⭐ **الدور من سجلّ داخلي** (سلطة المصدر) ⇒ ⭐ لا يُقرأ من حمولة العميل.
 // ============================================================
 
-const DEMO_INPUTS = new WeakSet<object>();
+const DEMO_ROLES = new WeakMap<object, TrustedRole>();
 
-function markDemoInput<T extends SessionClaims>(claims: T): T {
-  DEMO_INPUTS.add(claims);
+function markDemoInput<T extends object>(claims: T, role: TrustedRole): T {
+  DEMO_ROLES.set(claims, role);
   return claims;
 }
 
-const demoSessionSource: SessionSource = {
-  id: 'test-inbox-demo',
-  scope: 'test',
-  description: 'مصدر محلي للعرض التجريبي فقط — بيانات اصطناعية بالكامل',
-  verify(input: unknown): SessionClaims | null {
-    if (!input || typeof input !== 'object') return null;
-    if (!DEMO_INPUTS.has(input as object)) return null;
-    const claims = input as SessionClaims;
-    return claims.authenticated === true ? claims : null;
-  },
-};
+function buildDemoSource(role: TrustedRole): SessionSource {
+  return {
+    id: `test-inbox-demo-${role}`,
+    scope: 'test',
+    description: 'مصدر محلي للعرض التجريبي فقط — بيانات اصطناعية بالكامل',
+    verify(input: unknown): VerifiedIdentity | null {
+      if (!input || typeof input !== 'object') return null;
+      const granted = DEMO_ROLES.get(input as object);
+      if (!granted) return null;
+      const claims = input as {
+        session_id: string;
+        tenant_id: string;
+        actor_id: string;
+        conversation_ref: string;
+        authenticated: boolean;
+      };
+      if (claims.authenticated !== true) return null;
+      // ⭐ كائن هوية جديد ⇒ ⭐ بلا تمرير لحمولة العميل.
+      return {
+        session_id: claims.session_id,
+        tenant_id: claims.tenant_id,
+        actor_id: claims.actor_id,
+        conversation_ref: claims.conversation_ref,
+        authenticated: true,
+      };
+    },
+  };
+}
 
-const CAPABILITIES = [
-  CONVERSATION_LIST_CAPABILITY,
-  CONVERSATION_READ_CAPABILITY,
-  CONVERSATION_AUDIT_CAPABILITY,
-];
+const demoSource = buildDemoSource('owner');
+registerSessionSource({
+  source: demoSource,
+  grantedRole: 'owner',
+  grantCeiling: [
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.state.update',
+    'conversation.assign',
+  ],
+});
 
 function demoContext(
   tenantId: string,
   actorId: string,
   conversationRef: string,
-  capabilities: readonly string[] = CAPABILITIES,
 ): TenantContext {
-  const claims = markDemoInput({
-    session_id: 'sess_demo_0001',
-    tenant_id: tenantId,
-    actor_id: actorId,
-    conversation_ref: conversationRef,
-    authenticated: true,
-    capabilities: [...capabilities],
-  });
-  return resolveTenantContext(claims, { source: demoSessionSource });
+  const claims = markDemoInput(
+    {
+      session_id: 'sess_demo_0001',
+      tenant_id: tenantId,
+      actor_id: actorId,
+      conversation_ref: conversationRef,
+      authenticated: true,
+    },
+    'owner',
+  );
+  return resolveTenantContext(claims, { source: demoSource });
 }
 
 function demoEnvelope(options: {
@@ -106,6 +141,24 @@ const readAudit = new ReadAuditLog();
 const store = new MessageStore({ audit });
 const layer = new ProcessingLayer({ store, audit, orderingState: new OrderingState() });
 const deps = { store, audit, readAudit };
+const states = new ConversationStateStore();
+const changes = new ConversationChangeLog();
+const stateDeps: ConversationStateDependencies = {
+  store,
+  states,
+  changes,
+  readAudit,
+  // ⭐⭐ دليل الموظفين الاصطناعي — ⭐ authority خارجية موثوقة (لا نظام مستخدمين).
+  employees: {
+    isEmployee(tenantId: string, actorId: string): boolean {
+      const roster: Record<string, readonly string[]> = {
+        tnt_demo_0001: ['actor_demo_0007', 'actor_demo_0008'],
+        tnt_demo_0002: ['actor_demo_0009'],
+      };
+      return (roster[tenantId] ?? []).includes(actorId);
+    },
+  },
+};
 
 const tenantA = demoContext('tnt_demo_0001', 'actor_demo_0001', 'conv_demo_0001');
 const tenantAConv2 = demoContext('tnt_demo_0001', 'actor_demo_0001', 'conv_demo_0002');
@@ -172,11 +225,29 @@ layer.process(
 );
 
 // ============================================================
+// ⭐⭐ إدارة الحالة والإسناد (Slice 04)
+// ============================================================
+
+// ⭐ فتح المحادثة
+updateConversationState(tenantA, 'conv_demo_0001', 'open', stateDeps, { reason: 'فتح الطلب' });
+// ⭐ إسنادها لموظف
+assignConversation(tenantA, 'conv_demo_0001', 'actor_demo_0007', stateDeps, { reason: 'توزيع على خدمة العملاء' });
+// ⭐ تحويلها إلى «بانتظار ردّ»
+updateConversationState(tenantA, 'conv_demo_0001', 'pending', stateDeps, { reason: 'بانتظار بيانات العميل' });
+// ⭐ محاولة ممنوعة: إسناد موظف من مستأجر آخر ⇒ مرفوضة
+let crossTenantAssign = 'لم تُنفَّذ';
+try {
+  assignConversation(tenantB, 'conv_demo_0001', 'actor_demo_0007', stateDeps);
+} catch (error) {
+  crossTenantAssign = (error as { code?: string }).code ?? 'غير معروف';
+}
+
+// ============================================================
 // ⭐ العرض
 // ============================================================
 
 console.log(line('═'));
-console.log('⭐ WASL AI — عرض تجريبي محلي: شاشة محادثات المستأجر (Slice 03)');
+console.log('⭐ WASL AI — عرض تجريبي محلي: محادثات المستأجر + حالة المحادثة وإسنادها');
 console.log('⭐ كل البيانات اصطناعية · بلا شبكة · بلا حساب · بلا نشر');
 console.log(line('═'));
 
@@ -207,6 +278,23 @@ for (const entry of decisions.entries) {
     `• ${entry.outcome} · ${entry.reason_code} · ${entry.meta?.message_ref ?? '—'} · محادثة ${entry.meta?.conversation_ref ?? '—'}`,
   );
 }
+
+const state = getConversationState(tenantA, 'conv_demo_0001', stateDeps);
+console.log('\n⭐⭐ حالة المحادثة (Slice 04)');
+console.log(line());
+console.log(`• الحالة: ${state.state} · الموظف المسنَد: ${state.assignee_actor_id ?? '—'} · النسخة: ${state.version}`);
+console.log(`• الحالات المغلقة: ${CONVERSATION_CHANGE_STATES.join(' · ')}`);
+
+const changePage = readConversationChanges(tenantA, 'conv_demo_0001', stateDeps);
+console.log('\n⭐⭐ سجل تغييرات المحادثة (سجل مستقل — بلا نصوص رسائل)');
+console.log(line());
+for (const entry of changePage.entries) {
+  console.log(
+    `• ${entry.operation} · ${entry.from_state} ⇒ ${entry.to_state} · ${entry.assignee_from ?? '—'} ⇒ ${entry.assignee_to ?? '—'} · ${entry.reason || '(بلا سبب)'}`,
+  );
+}
+console.log(`  (سطور: ${changePage.pagination.returned}/${changePage.pagination.total})`);
+console.log(`• محاولة إسناد موظف من مستأجر آخر ⇒ ${crossTenantAssign}`);
 
 console.log('\n⭐ سجل أحداث القراءة (مسار منفصل عن سجل المعالجة)');
 console.log(line());

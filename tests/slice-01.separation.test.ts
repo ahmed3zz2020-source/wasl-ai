@@ -19,8 +19,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import {
-  ACTIVE_SESSION_SOURCES,
   TenantContextError,
+  activeSessionSources,
   resolveProductionTenantContext,
   resolveTenantContext,
 } from '../src/core/index.ts';
@@ -143,8 +143,8 @@ test('٧) ⭐ الفصل الأمني: أدوات الاختبار لا تدخل
   });
 
   await t.test('⭐ ٦) لا مصدر إنتاجي مسجَّل اليوم ⇒ لا مسار افتراضي', () => {
-    assert.equal(ACTIVE_SESSION_SOURCES.length, 0);
-    for (const source of ACTIVE_SESSION_SOURCES) {
+    assert.equal(activeSessionSources().length, 0);
+    for (const source of activeSessionSources()) {
       assert.equal(source.scope, 'production');
     }
   });

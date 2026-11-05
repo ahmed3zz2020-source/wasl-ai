@@ -6,9 +6,13 @@
 //   ⇒ الادّعاءات الخام تُعالَج في `session.ts` عبر «مصدر جلسات»
 //     لا يمرّ منها شيء إلى هنا إلا بعد تحقّق المصدر نفسه.
 // ⛔ لا يوجد في هذا الملف أي مسار يقرأ من محتوى الرسالة.
+// ⭐⭐ **إصلاح حدّ الثقة (تصريح المالك · ٥ نوفمبر ٢٠٢٦ · D-055)**:
+//   ⭐ **الادّعاءات الموثوقة (`TrustedClaims`) تبنيها النواة بنفسها** ⇒
+//   ⇒ ⭐ **من (هوية موثّقة · دور مسجَّل · سقف مسجَّل)** ⇒ ⇒ ⇒
+//   ⇒⇒ **ولا حقل `capabilities` في حمولة العميل يُقرأ في أي مكان**.
 // ============================================================
 
-import { normalizeCapabilities } from './capability.ts';
+import { normalizeCapabilities, type TrustedRole } from './capability.ts';
 
 export type TenantId = string;
 
@@ -54,11 +58,43 @@ export interface SessionClaims {
   readonly conversation_ref: string;
   readonly authenticated: boolean;
   /**
-   * ⭐⭐ الصلاحيات الممنوحة — ⭐ **يضعها مصدر الجلسات بعد تحقّقه** (حدّ الثقة).
-   * ⛔ **قائمة حرة من العميل لا تُعدّ موثوقة** ⇒ ⭐ وما لا يطابق النمط لا يمنح شيئاً.
-   * ⭐ **والافتراضي = المنع** ⇒ ⭐ جلسة بلا صلاحيات = لا قراءة ولا تسريب.
+   * ⭐⛔⛔ حقل عدائي — ⛔ **يُتجاهل تماماً في كل المسارات** (إصلاح D-055).
+   * ⛔ كان مصدر الجلسات يقرأ الصلاحيات من هنا ⇒ ⇒ ⇒ ومن ثمّ كان بإمكان مصدر
+   *   يمرّر حمولة العميل كما هي أن يمنح العميل **صلاحياته بنفسه** ⇒ ⇒ ⇒ **تمّ
+   *   إغلاق ذلك**: ⭐ الصلاحيات صارت تُشتق من **(دور · سقف)** في النواة.
+   * ⛔ الحقل باقٍ **للشكل العدائي فقط** ⇒ ⭐ وله اختبار يثبت التجاهل.
    */
   readonly capabilities?: readonly string[];
+}
+
+/**
+ * ⭐⭐⭐ الهوية الموثّقة — ⭐ **ناتج مصدر الجلسات بعد تحقّقه**.
+ * ⛔ **بلا صلاحيات وبلا دور** ⇒ ⭐ ⇒ ⇒ **مدخل العميل لا يحمل أي صلاحية هنا**.
+ * ⛔ يجب أن يبنيها المصدر **كائناً جديداً** (لا يمرّر حمولة العميل كما هي).
+ */
+export interface VerifiedIdentity {
+  readonly session_id: string;
+  readonly tenant_id: string;
+  readonly actor_id: string;
+  readonly conversation_ref: string;
+  readonly authenticated: boolean;
+}
+
+/**
+ * ⭐⭐⭐⭐ الادّعاءات الموثوقة — ⭐ **تبنيها النواة** (لا تصل من طرف خارجي).
+ * ⭐ `capabilities` هنا = **ناتج اشتقاق النواة** من (دور · سقف) ⇒ ⭐ **لا**
+ *   يمكن أن تأتي من مدخل العميل ⇒ ⇒ ⇒ (ويُثبت ذلك باختبار).
+ */
+export interface TrustedClaims {
+  readonly session_id: string;
+  readonly tenant_id: string;
+  readonly actor_id: string;
+  readonly conversation_ref: string;
+  readonly authenticated: true;
+  /** ⭐ الدور الموثّق — ⭐ من سجل التسجيل المعتمد (سلطة المالك). */
+  readonly role: TrustedRole;
+  /** ⭐⭐ الصلاحيات الممنوحة — ⭐ **مشتقّة في النواة** (لا من الحمولة). */
+  readonly capabilities: readonly string[];
 }
 
 /**
@@ -67,7 +103,7 @@ export interface SessionClaims {
  * ⛔ أي معرّف آخر يجب أن يبدأ بـ`test-` ⇒ ⇒ لا يمكن التعبير عن
  *   مصدر اختبار بمعرّف إنتاجي داخل هذا الملف.
  */
-export type SessionSourceId = 'auth-middleware' | `test-${string}`;
+export type SessionSourceId = `auth-${string}` | `test-${string}`;
 
 /**
  * ⭐ إثبات الجلسة — ناتج مصدر الجلسات **بعد** تحقّقه.
@@ -75,7 +111,7 @@ export type SessionSourceId = 'auth-middleware' | `test-${string}`;
  * يحمل نفس الشكل لكن بدون تسجيل ⇒ مرفوض.
  */
 export interface SessionAttestation {
-  readonly claims: SessionClaims;
+  readonly claims: TrustedClaims;
   readonly source: SessionSourceId;
   readonly issuedAt: string;
 }
@@ -98,6 +134,11 @@ export interface TenantContext {
    * ⛔ **فارغة = لا صلاحية** ⇒ ⭐ الفشل = المنع (لا تجاوز).
    */
   readonly capabilities: readonly string[];
+  /**
+   * ⭐⭐ الدور الموثّق — ⭐ **من سجل التسجيل المعتمد** (سلطة المالك)
+   * ⇒ ⭐ ⇒ ⇒ **ليس من مدخل العميل** ⇒ ⇒ ⇒ (و`none` = بلا صلاحية).
+   */
+  readonly role: TrustedRole;
   readonly issuedAt: string;
 }
 
@@ -130,7 +171,7 @@ function assertPattern(
  * ⛔ غير مُصدَّر من `index.ts` (السطح العام) — يُستدعى من `session.ts` وحده.
  */
 export function issueSessionAttestation(
-  claims: SessionClaims,
+  claims: TrustedClaims,
   source: SessionSourceId,
   issuedAt: string,
 ): SessionAttestation {
@@ -187,7 +228,15 @@ export function tenantContextFromSession(
     'conversation_invalid',
   );
   const capabilities = normalizeCapabilities(claims.capabilities);
-  return { tenantId, actorId, sessionId, conversationRef, capabilities, issuedAt: now() };
+  return {
+    tenantId,
+    actorId,
+    sessionId,
+    conversationRef,
+    capabilities,
+    role: claims.role,
+    issuedAt: now(),
+  };
 }
 
 /**

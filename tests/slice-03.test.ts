@@ -44,11 +44,16 @@ import {
   resolveTenantContext,
   validateEnvelope,
   type ConversationQueryDependencies,
+  type SessionSource,
   type TenantContext,
+  type TrustedRole,
 } from '../src/core/index.ts';
 // ⭐ أدوات الاختبار موجودة في شجرة الاختبار ⇒ خارج حزمة الإنتاج
 import {
+  LOCAL_RESTRICTED_SOURCES,
+  LOCAL_TEST_SOURCES,
   createSyntheticContext,
+  createSyntheticContextWithSource,
   createSyntheticConversationRef,
   createSyntheticEnvelope,
   createSyntheticSession,
@@ -64,19 +69,33 @@ const ALL_CAPABILITIES: readonly string[] = [
   CONVERSATION_AUDIT_CAPABILITY,
 ];
 
+/** ⭐⭐ الدور المقابل بسياسة الأدوار — ⭐ يُشتقق خليها من النواة. */
+const ALL_ROLES: readonly TrustedRole[] = ['owner', 'supervisor', 'agent', 'viewer', 'none'];
+
 /** ⭐ سياق موثوق — ⭐ **محادثة واحدة لكل سياق** (حدّ الثقة). */
 function context(
   tenantIndex: number,
   conversationIndex = 1,
-  capabilities: readonly string[] = ALL_CAPABILITIES,
+  role: TrustedRole = 'viewer',
+  source?: SessionSource,
 ): TenantContext {
+  if (source) {
+    return createSyntheticContextWithSource(
+      source,
+      tenantIndex,
+      tenantIndex * 10 + 1,
+      100 + tenantIndex,
+      conversationIndex,
+      () => FIXED_NOW,
+    );
+  }
   return createSyntheticContext(
     tenantIndex,
     tenantIndex * 10 + 1,
     100 + tenantIndex,
     conversationIndex,
     () => FIXED_NOW,
-    capabilities,
+    role,
   );
 }
 
@@ -218,7 +237,7 @@ test('٥) رفض قراءة قائمة المحادثات دون صلاحية م
     context(1, 1),
     messageAt({ messageIndex: 1, conversationIndex: 1, occurredAt: '2026-01-01T10:00:00.000Z' }),
   );
-  const noList = context(1, 1, [CONVERSATION_READ_CAPABILITY]);
+  const noList = context(1, 1, 'viewer', LOCAL_RESTRICTED_SOURCES.readOnly);
 
   await t.test('⭐⭐ الرفض صريح بخطأ صلاحية', () => {
     assert.throws(
@@ -241,7 +260,7 @@ test('٥) رفض قراءة قائمة المحادثات دون صلاحية م
   });
 
   await t.test('⭐⭐ الخيار الافتراضي = المنع (جلسة بلا صلاحيات)', () => {
-    const bare = context(1, 1, []);
+    const bare = context(1, 1, 'none');
     assert.deepEqual([...bare.capabilities], []);
     assert.throws(() => listConversations(bare, deps), CapabilityError);
   });
@@ -254,7 +273,7 @@ test('٦) رفض قراءة محادثة منفردة دون صلاحيتها', 
     context(1, 1),
     messageAt({ messageIndex: 1, conversationIndex: 1, occurredAt: '2026-01-01T10:00:00.000Z' }),
   );
-  const listOnly = context(1, 1, [CONVERSATION_LIST_CAPABILITY]);
+  const listOnly = context(1, 1, 'viewer', LOCAL_RESTRICTED_SOURCES.listOnly);
 
   await t.test('⭐⭐ الصلاحيتان منفصلتان: قائمة بلا قراءة محادثة', () => {
     const page = listConversations(listOnly, deps);
@@ -309,14 +328,14 @@ test('٧) منع الوصول العابر حتى عند تخمين المعرّ
   });
 
   await t.test('⭐⭐ امتلاك المعرّف ليس دليل حق وصول (بلا صلاحية = رفض)', () => {
-    const noAccess = context(2, 1, []);
+    const noAccess = context(2, 1, 'none');
     assert.throws(() => getConversation(noAccess, convOfA, deps), CapabilityError);
   });
 
   await t.test('⭐⭐ معرّف مستأجر من العميل لا يبني سياقاً ⇒ لا قراءة', () => {
     // ⛔ ادّعاءات خام (لم تُصنَّع محلياً) ⇒ لا إثبات ⇒ لا سياق ⇒ لا قراءة.
     const forged = {
-      ...createSyntheticSession(1, 11, 101, 1, ALL_CAPABILITIES),
+      ...createSyntheticSession(1, 11, 101, 1, 'viewer'),
       tenant_id: 'tnt_forged_0001',
     };
     assert.throws(
@@ -610,7 +629,7 @@ test('١٣) ⭐⭐ التحقّق: الصلاحيات لا تُشتق من مد�
   });
 
   await t.test('⭐⭐ نسخة (كائن جديد) من جلسة صحيحة مع صلاحيات مُضافة ⇒ رفض', () => {
-    const genuine = createSyntheticSession(1, 11, 101, 1, CAPS);
+    const genuine = createSyntheticSession(1, 11, 101, 1, 'viewer');
     const copied = { ...genuine, capabilities: [...CAPS, 'super.admin'] };
     assert.throws(
       () =>
@@ -623,8 +642,36 @@ test('١٣) ⭐⭐ التحقّق: الصلاحيات لا تُشتق من مد�
     );
   });
 
+  await t.test('⭐⭐⭐ حقل `capabilities` في الحمولة مُتجاهل تماماً (إصلاح D-055)', () => {
+    // ⭐ الجلسةSynthetic مُصنَّعة ودورها `viewer` ⇒ ⇒⇒给她 صلاحيات في الحمولة ⇒ ⇒⇒
+    // ⭐ ⇒⇒⇒ النتيجة: **نفس** صلاحيات الدور (لا تُضاف ولا تُزاد).
+    const genuine = createSyntheticSession(1, 11, 101, 1, 'viewer');
+    const tampered = { ...genuine, capabilities: [...CAPS, 'super.admin', 'conversation.assign'] };
+    // ⭐ لا تمرير للحمولة ⇒ ⇒⇒ الأصل مُصنَّع ⇒ ⇒⇒ والحمولة المُعدَّلة ليست ⇒ ⇒⇒ رفض.
+    assert.throws(
+      () => resolveTenantContext(tampered, { source: localTestSessionSource, now: () => FIXED_NOW }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /لم يوثّق|unverified/);
+        return true;
+      },
+    );
+    // ⭐ والأصل بلا تعديل ⇒ ⇒⇒ صلاحيات الدور فقط (بلا `conversation.assign`).
+    const context = resolveTenantContext(genuine, {
+      source: LOCAL_TEST_SOURCES.viewer,
+      now: () => FIXED_NOW,
+    });
+    assert.deepEqual([...context.capabilities], [
+      'conversation.audit',
+      'conversation.list',
+      'conversation.read',
+    ]);
+    assert.equal(context.capabilities.includes('conversation.assign'), false);
+    assert.equal(context.role, 'viewer');
+  });
+
   await t.test('⭐ المسار الإنتاجي يرفض مصدر الاختبار ⇒ لا مسار إنتاجي من جلسة اختبار', () => {
-    const genuine = createSyntheticSession(1, 11, 101, 1, CAPS);
+    const genuine = createSyntheticSession(1, 11, 101, 1, 'viewer');
     assert.throws(
       () => resolveProductionTenantContext(genuine, localTestSessionSource),
       (error: unknown) => {
@@ -637,21 +684,32 @@ test('١٣) ⭐⭐ التحقّق: الصلاحيات لا تُشتق من مد�
 
   await t.test('⭐⭐ السطح العام لا يُصدّر أدوات إصدار الإثبات ⇒ لا بناء سياق من ادّعاءات', async () => {
     const production = (await import('../src/core/index.ts')) as Record<string, unknown>;
-    for (const forbidden of ['tenantContextFromSession', 'issueSessionAttestation']) {
+    for (const forbidden of ['tenantContextFromSession', 'issueSessionAttestation', 'registerSessionSource']) {
       assert.equal(forbidden in production, false, `${forbidden} مكشوف في السطح العام`);
     }
   });
 
-  await t.test('⭐⭐⭐ الفجوة المعروفة موثّقة: واجهة المصدر لا تفرض «بناء ادّعاءات جديدة»', () => {
-    // ⭐ هذا الفحص **توثيقي لا تقييدي**: ⭐ يثبت أن الفجوة مشروحة ومحدّدة، لا أنها مُغلقة.
-    const source = fs.readFileSync(path.join(ROOT, 'src/core/session.ts'), 'utf8');
-    assert.ok(
-      source.includes('يجب أن يُعيد كائن ادّعاءات جديداً'),
-      'واجب المصدر غير موثّق في العقد ⇒ ثغرة العقد غير معروفة للقارئ',
-    );
-    assert.ok(
-      source.includes('ثغرة مثبتة على مستوى العقد'),
-      'الفجوة المعروفة غير موثّقة ⇒ قارئ الكود لا يعرف الخطر',
+  await t.test('⭐⭐⭐ ⭐ الفجوة مُغلقة: مصدر غير مسجَّل ⇒ رفض بنيوي', () => {
+    // ⭐ مصدر لم يسجّله المالك ⇒ ⇒⇒ ⇒⇒ لا يبني سياقاً إطلاقاً.
+    const rogue = {
+      id: 'auth-rogue-0001' as const,
+      scope: 'production' as const,
+      description: 'مصدر لم يُسجَّل',
+      verify: () => ({
+        session_id: 'sess_rogue_0001',
+        tenant_id: 'tnt_rogue_0001',
+        actor_id: 'actor_rogue_0001',
+        conversation_ref: 'conv_rogue_0001',
+        authenticated: true,
+      }),
+    };
+    assert.throws(
+      () => resolveTenantContext({}, { source: rogue, now: () => FIXED_NOW }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /غير مسج/);
+        return true;
+      },
     );
   });
 });
