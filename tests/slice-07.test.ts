@@ -9,7 +9,6 @@
 // ============================================================
 
 import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -18,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { SECRET_PATTERNS } from '../src/core/audit-log.ts';
 import { bundleModules } from '../tools/wasl-workbench-bundle.ts';
 import { createPreviewRuntime } from '../tools/wasl-workbench-preview-runtime.ts';
+import { CORE_BASELINE_COMMIT, changedCoreFiles } from './support/core-baseline.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PREVIEW = path.join(ROOT, 'docs', 'wasl-workbench-interactive.html');
@@ -364,11 +364,15 @@ test('⭐⭐ Slice 07 — حدود التسليم', async (t) => {
   await t.test('⭐ ⭐ `src/core/` لم يتغيّر (المعاينة لا تعدّل النواة)', () => {
     const git = path.join(ROOT, '.git');
     if (!fs.existsSync(git)) return; // ⭐ بلا git ⇒ لا فحص
-    const out = execSync('git diff --name-only HEAD -- src/core/', {
-      cwd: ROOT,
-      encoding: 'utf8',
-    });
-    assert.equal(out.trim(), '', `تغيّرت ملفات النواة:\n${out}`);
+    // ⭐⭐⭐ **مقارنة بخطّ أساس ثابت** (M13) ⇒ ⭐ `HEAD` **أعمى عن الملتزم**.
+    const committed = changedCoreFiles(ROOT, CORE_BASELINE_COMMIT, 'HEAD');
+    assert.deepEqual(committed, [], `تغيّرت ملفات النواة:\n${committed.join('\n')}`);
+    const workingTree = changedCoreFiles(ROOT, CORE_BASELINE_COMMIT, 'WORKTREE');
+    assert.deepEqual(
+      workingTree,
+      [],
+      `تغيّرت ملفات النواة (شجرة العمل):\n${workingTree.join('\n')}`,
+    );
   });
 
   await t.test('⭐ ⭐ لا مفاتيح ولا أسرار في المعاينة (فحص مستقلّ)', () => {

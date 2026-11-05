@@ -35,7 +35,7 @@ dلوقتي مستني: **مراجعة المهندس المعماري لحزم�
 | ٥ | الخط الزمني (٧ مراحل + معايير قبول) | ✅ | [`TIMELINE.md`](TIMELINE.md) |
 | ٦ | قائمة قدرات المنفّذ | ✅ | [`docs/CAPABILITY-MANIFEST.md`](docs/CAPABILITY-MANIFEST.md) |
 | ٧ | قالب حزمة المراجعة | ✅ | [`REVIEWS/TEMPLATE.md`](REVIEWS/TEMPLATE.md) |
-| ٨ | هيكل المعرفة الدائم (١٤٠ ملف متتبَّع · ٧٨ ملف `.md`) | ✅ | ⭐ **١٥ ملف `src/core/` + ٢٠ ملف `tests/`** |
+| ٨ | هيكل المعرفة الدائم (١٤٤ ملف متتبَّع · ٧٩ ملف `.md`) | ✅ | ⭐ **١٥ ملف `src/core/` + ٢٣ ملف `tests/`** |
 | ٩ | اللوحة الدائمة (٩ مسارات متحقَّق) | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev |
 | ١٠ | حزمة السياق الحيّة لـ ChatGPT | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev/bridge |
 | ١١ | أول رسالة جاهزة لـ ChatGPT | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev/first-message |
@@ -46,6 +46,7 @@ dلوقتي مستني: **مراجعة المهندس المعماري لحزم�
 | ١٦ | **الرؤية المحدَّثة R003** (٧ وحدات + ٤ طبقات) | ✅ | [`REVIEWS/R003-vision-update.md`](REVIEWS/R003-vision-update.md) |
 | ١٧ | **القرارات المعتمدة (D-008..D-010)** | ✅ | [`DECISIONS.md`](DECISIONS.md) |
 | ١٨ | **تعديل الميثاق** (multi-tenant + المسار المزدوج) | ✅ | [`CHARTER.md`](CHARTER.md) §٨ |
+| ١٩ | ⭐⭐ **بطاقة قرار `DR-2`** (ما المطلوب اعتماده · الأثر على الـMVP · الخيارات · التوصية · المخاطر) | 🔵 **مقترح — بلا اعتماد** | [`docs/DR-2-DECISION-CARD.md`](docs/DR-2-DECISION-CARD.md) |
 | ١٩ | **R004 — تصحيح ١٢ ملاحظة** | ✅ | [`REVIEWS/R004-design-refinement.md`](REVIEWS/R004-design-refinement.md) |
 | ٢٠ | **تصنيف الأنشطة المرجعي (ISIC Rev.4)** + الكتالوج | ✅ | [`research/SECTORS.md`](research/SECTORS.md) |
 | ٢١ | **سجل الافتراضات** | ✅ | [`ASSUMPTIONS.md`](ASSUMPTIONS.md) |
