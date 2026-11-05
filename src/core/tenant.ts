@@ -19,6 +19,12 @@ export const ACTOR_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{1,63}$/;
 /** نمط معرّف الجلسة. */
 export const SESSION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,127}$/;
 
+/**
+ * ⭐⭐ نمط معرّف المحادثة — محادثة داخل نطاق مستأجر واحد.
+ * ⛔ **الشكل الصحيح ≠ موثوقية** ⇒ ⭐ **الموثوقية تأتي من مصدر الجلسات (حدّ الثقة)**.
+ */
+export const CONVERSATION_REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+
 export class TenantContextError extends Error {
   readonly code: string;
   constructor(code: string, message: string) {
@@ -39,6 +45,11 @@ export interface SessionClaims {
   readonly session_id: string;
   readonly tenant_id: string;
   readonly actor_id: string;
+  /**
+   * ⭐⭐ معرّف المحادثة — ⭐ **يضعه مصدر الجلسات بعد تحقّقه** (حدّ الثقة).
+   * ⛔ **قيمة حرة من العميل لا تُعدّ موثوقة أبداً**.
+   */
+  readonly conversation_ref: string;
   readonly authenticated: boolean;
 }
 
@@ -69,6 +80,11 @@ export interface TenantContext {
   readonly tenantId: TenantId;
   readonly actorId: string;
   readonly sessionId: string;
+  /**
+   * ⭐⭐ المحادثة الموثوقة — ⭐ **مأخوذة من ادّعاءات جلسة تحقّق منها المصدر**
+   * ⭐ (وليس من محتوى الرسالة) ⇒ ⭐ **وبها يُبنى نطاق الترتيب**.
+   */
+  readonly conversationRef: string;
   readonly issuedAt: string;
 }
 
@@ -151,7 +167,13 @@ export function tenantContextFromSession(
     SESSION_ID_PATTERN,
     'session_invalid',
   );
-  return { tenantId, actorId, sessionId, issuedAt: now() };
+  const conversationRef = assertPattern(
+    'conversation_ref',
+    claims.conversation_ref,
+    CONVERSATION_REF_PATTERN,
+    'conversation_invalid',
+  );
+  return { tenantId, actorId, sessionId, conversationRef, issuedAt: now() };
 }
 
 /**
@@ -169,6 +191,30 @@ export function assertTenantMatches(
     throw new TenantContextError(
       'tenant_mismatch',
       'معرّف المستأجر المُعلن لا يطابق سياق التنفيذ الموثوق',
+    );
+  }
+}
+
+/**
+ * ⭐⭐ فحص تطابق معرّف المحادثة المُعلن مع المحادثة الموثوقة في السياق.
+ * ⛔ **فحص صارم (بلا استثناء)**: ⭐ الحقل إجباري في العقد ⇒ ⭐ وأي اختلاف
+ *   = محاولة دخول محادثة أخرى ⇒ تُرفض العملية.
+ * ⭐ **والسياق نفسه يحمل محادثة واحدة موثوقة ⇒ ⇒ فلا خلط بين محادثات المستأجر الواحد.**
+ */
+export function assertConversationMatches(
+  context: TenantContext,
+  declaredConversationRef: string | undefined,
+): void {
+  if (declaredConversationRef === undefined) {
+    throw new TenantContextError(
+      'conversation_missing',
+      'معرّف المحادثة مفقود — المحادثة إلزامية في عقد الرسالة',
+    );
+  }
+  if (declaredConversationRef !== context.conversationRef) {
+    throw new TenantContextError(
+      'conversation_mismatch',
+      'معرّف المحادثة المُعلن لا يطابق المحادثة الموثوقة في سياق التنفيذ',
     );
   }
 }

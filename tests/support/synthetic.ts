@@ -48,6 +48,11 @@ export function createSyntheticAddress(index: number): string {
   return `participant-synth-${String(index).padStart(4, '0')}@${SYNTHETIC_EMAIL_DOMAIN}`;
 }
 
+/** ⭐⭐ معرّف محادثة اصطناعي — نطاق الترتيب داخل المستأجر الواحد. */
+export function createSyntheticConversationRef(index: number): string {
+  return `conv_synth_${String(index).padStart(4, '0')}`;
+}
+
 /** ⭐ اسم عرض اصطناعي. */
 export function createSyntheticDisplayName(index: number): string {
   return `مشترك تجريبي ${toArabicDigits(index)}`;
@@ -66,11 +71,13 @@ export function createSyntheticSession(
   tenantIndex: number,
   actorIndex: number,
   sessionIndex: number,
+  conversationIndex = 1,
 ): SessionClaims {
   return markLocalTestInput({
     session_id: `sess_synth_${String(sessionIndex).padStart(4, '0')}`,
     tenant_id: createSyntheticTenantId(tenantIndex),
     actor_id: createSyntheticActorId(actorIndex),
+    conversation_ref: createSyntheticConversationRef(conversationIndex),
     authenticated: true,
   });
 }
@@ -84,10 +91,11 @@ export function createSyntheticContext(
   tenantIndex: number,
   actorIndex: number,
   sessionIndex: number,
+  conversationIndex = 1,
   now: () => string = () => '2026-01-01T00:00:00.000Z',
 ): TenantContext {
   return resolveTenantContext(
-    createSyntheticSession(tenantIndex, actorIndex, sessionIndex),
+    createSyntheticSession(tenantIndex, actorIndex, sessionIndex, conversationIndex),
     { now, source: localTestSessionSource },
   );
 }
@@ -102,6 +110,8 @@ export function createSyntheticEnvelope(options: {
   seed?: number;
   direction?: 'inbound' | 'outbound';
   declaredTenantId?: string;
+  conversationIndex?: number;
+  conversationRef?: string;
   body?: string;
 }): MessageEnvelope {
   const random = createSeededRandom((options.seed ?? 1337) + options.messageIndex * 7919);
@@ -115,6 +125,8 @@ export function createSyntheticEnvelope(options: {
     from,
     to,
     body: options.body ?? `رسالة اصطناعية للاختبار المحلي رقم ${toArabicDigits(options.messageIndex)}.`,
+    conversation_ref:
+      options.conversationRef ?? createSyntheticConversationRef(options.conversationIndex ?? 1),
     occurred_at: `2026-01-0${(options.messageIndex % 9) + 1}T12:00:00.000Z`,
     locale: 'ar-EG',
     attributes: {

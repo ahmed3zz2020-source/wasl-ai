@@ -17,6 +17,7 @@ export {
   createSyntheticActorId,
   createSyntheticAddress,
   createSyntheticContext,
+  createSyntheticConversationRef,
   createSyntheticDisplayName,
   createSyntheticEnvelope,
   createSyntheticPair,

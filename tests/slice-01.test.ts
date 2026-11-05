@@ -52,6 +52,7 @@ function validBase(): Record<string, unknown> {
     occurred_at: '2026-01-01T12:00:00.000Z',
     locale: 'ar-EG',
     attributes: { synthetic: 'true' },
+    conversation_ref: 'conv_synth_0001',
   };
 }
 
@@ -82,6 +83,8 @@ test('١) عقد الرسالة: الصالح يُقبَل والناقص يُر
     { name: 'اللغة بصيغة خاطئة', patch: { locale: 'AR-EG' }, field: 'locale', rule: 'pattern' },
     { name: 'attributes ليست كائناً', patch: { attributes: ['a'] }, field: 'attributes', rule: 'type' },
     { name: 'معرّف مستأجر مُعلن بصيغة خاطئة', patch: { declared_tenant_id: 'BAD TENANT' }, field: 'declared_tenant_id', rule: 'pattern' },
+    { name: 'معرّف المحادثة مفقود', patch: { conversation_ref: undefined }, field: 'conversation_ref', rule: 'required' },
+    { name: 'معرّف المحادثة بصيغة خاطئة', patch: { conversation_ref: 'محادثة!' }, field: 'conversation_ref', rule: 'pattern' },
   ];
 
   for (const testCase of invalidCases) {

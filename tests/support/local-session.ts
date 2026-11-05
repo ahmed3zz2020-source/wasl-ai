@@ -9,6 +9,7 @@
 
 import {
   ACTOR_ID_PATTERN,
+  CONVERSATION_REF_PATTERN,
   SESSION_ID_PATTERN,
   TENANT_ID_PATTERN,
   type SessionClaims,
@@ -34,7 +35,9 @@ function structurallyValid(claims: SessionClaims): boolean {
     typeof claims.tenant_id === 'string' &&
     TENANT_ID_PATTERN.test(claims.tenant_id) &&
     typeof claims.actor_id === 'string' &&
-    ACTOR_ID_PATTERN.test(claims.actor_id)
+    ACTOR_ID_PATTERN.test(claims.actor_id) &&
+    typeof claims.conversation_ref === 'string' &&
+    CONVERSATION_REF_PATTERN.test(claims.conversation_ref)
   );
 }
 

@@ -9,7 +9,7 @@
 //   ⇒ وبه يكون بند «منع التكرار» من معايير القبول مُطبَّقاً صراحةً.
 // ============================================================
 
-import { TENANT_ID_PATTERN } from './tenant.ts';
+import { CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } from './tenant.ts';
 
 export const ENVELOPE_SCHEMA_VERSION = '1';
 
@@ -29,6 +29,12 @@ export interface MessageEnvelope {
   readonly occurred_at: string;
   readonly locale: string;
   readonly attributes: MessageAttributes;
+  /**
+   * ⭐⭐ معرّف المحادثة — ⭐ **إجباري في العقد**.
+   * ⛔ **هذا حقل خام من المُرسِل ⇒ وجوده أو شكله لا يُثبت موثوقيته** ⇒
+   * ⭐ **الموثوقية من مصدر الجلسات، والتحقّق من المطابقة في حدّ الثقة.**
+   */
+  readonly conversation_ref: string;
   readonly declared_tenant_id?: string;
 }
 
@@ -70,6 +76,7 @@ export const ENVELOPE_RULES = {
   occurred_at: { type: 'string', required: true, pattern: ISO_UTC },
   locale: { type: 'string', required: true, pattern: LOCALE },
   attributes: { type: 'object', required: true, maxEntries: 16, keyPattern: ATTR_KEY, maxValueLength: 256 },
+  conversation_ref: { type: 'string', required: true, pattern: CONVERSATION_REF_PATTERN },
   declared_tenant_id: { type: 'string', required: false, pattern: TENANT_ID_PATTERN },
 } as const;
 
@@ -189,6 +196,7 @@ export function validateEnvelope(input: unknown): EnvelopeValidation {
       occurred_at: input.occurred_at as string,
       locale: input.locale as string,
       attributes,
+      conversation_ref: input.conversation_ref as string,
     };
     const declared = input.declared_tenant_id;
     if (declared !== undefined) {

@@ -8,6 +8,9 @@
 // ⭐ إعادة استخدام: ⭐ **منع التكرار = آلية Slice 01 نفسها** (المخزن +
 //   القاعدة داخل نطاق المستأجر) ⇒ ⭐ **و`reason_code` هنا يُعرَّف فوقها لا بجانبها**.
 // ⭐ الترتيب: ⭐ مواصفة `docs/SLICE-02-ORDERING-RULE.md` (قرار المالك).
+// ⭐⭐ النطاق = (المستأجر · المحادثة الموثوقة) ⇒ ⭐ **المحادثة من السياق
+//   الموثوق (حدّ الثقة) — لا من محتوى الرسالة** ⇒ ⭐ **ولا خلط بين المستأجرين
+//   ولا بين محادثات المستأجر الواحد**.
 // ============================================================
 
 import {
@@ -15,14 +18,13 @@ import {
   type EnvelopeFieldError,
   type MessageEnvelope,
 } from './envelope.ts';
-import { assertTenantMatches, type TenantContext } from './tenant.ts';
+import { assertConversationMatches, assertTenantMatches, type TenantContext } from './tenant.ts';
 import { MessageStore } from './store.ts';
 import { AuditLog } from './audit-log.ts';
 import {
-  defaultOrderingScopeResolver,
   evaluateOrdering,
   OrderingState,
-  type OrderingScopeResolver,
+  type OrderingScope,
 } from './ordering.ts';
 
 /** ⭐ قرارات المعالجة الثلاثة. */
@@ -34,9 +36,9 @@ export type ProcessingDecision = 'accepted' | 'rejected' | 'deferred';
  */
 export type ProcessingReasonCode =
   | 'accepted_in_order'
-  | 'accepted_no_ordering_scope'
   | 'envelope_invalid'
   | 'tenant_mismatch'
+  | 'conversation_mismatch'
   | 'tenant_context_missing'
   | 'message_ref_duplicate'
   | 'deferred_out_of_order'
@@ -60,9 +62,9 @@ export const PROCESSING_OUTCOME_RULES = {
   decision: { type: 'string', required: true, oneOf: ['accepted', 'rejected', 'deferred'] },
   reason_code: { type: 'string', required: true, oneOf: [
     'accepted_in_order',
-    'accepted_no_ordering_scope',
     'envelope_invalid',
     'tenant_mismatch',
+    'conversation_mismatch',
     'tenant_context_missing',
     'message_ref_duplicate',
     'deferred_out_of_order',
@@ -174,8 +176,6 @@ export interface ProcessingDependencies {
   readonly store: MessageStore;
   /** ⭐ سجل التدقيق الخاص بالمعالجة (سطر واحد لكل عملية معالجة). */
   readonly audit: AuditLog;
-  /** ⭐ مُحلِّل نطاق الترتيب — الافتراضي لا نطاق (قرار المالك). */
-  readonly orderingScope?: OrderingScopeResolver;
   /** ⭐ حالة الترتيب — نقطة مقبولة لكل (مستأجر · نطاق). */
   readonly orderingState?: OrderingState;
 }
@@ -200,13 +200,11 @@ function auditOutcome(decision: ProcessingDecision): 'accepted' | 'rejected' | '
 export class ProcessingLayer {
   readonly #store: MessageStore;
   readonly #audit: AuditLog;
-  readonly #resolver: OrderingScopeResolver;
   readonly #orderingState: OrderingState;
 
   constructor(deps: ProcessingDependencies) {
     this.#store = deps.store;
     this.#audit = deps.audit;
-    this.#resolver = deps.orderingScope ?? defaultOrderingScopeResolver;
     this.#orderingState = deps.orderingState ?? new OrderingState();
   }
 
@@ -227,8 +225,7 @@ export class ProcessingLayer {
    */
   process(context: TenantContext | undefined, input: unknown): ProcessingOutcome {
       const audit = this.#audit;
-      const resolver = this.#resolver;
-      const orderingState = this.#orderingState;
+        const orderingState = this.#orderingState;
 
     const finish = (
       decision: ProcessingDecision,
@@ -277,18 +274,24 @@ export class ProcessingLayer {
     return finish('rejected', 'tenant_mismatch', context.tenantId, envelope.message_ref, envelope.occurred_at);
   }
 
+  // ②.ب مطابقة المحادثة — محادثة موثوقة واحدة في السياق ⇒ لا خلط.
+  try {
+    assertConversationMatches(context, envelope.conversation_ref);
+  } catch {
+    return finish('rejected', 'conversation_mismatch', context.tenantId, envelope.message_ref, envelope.occurred_at);
+  }
+
   // ③ منع التكرار — قراءة من نفس مخزن Slice 01 (لا آلية ثانية).
   if (this.#store.getByRef(context, envelope.message_ref)) {
     return finish('rejected', 'message_ref_duplicate', context.tenantId, envelope.message_ref, envelope.occurred_at);
   }
 
-  // ④ الترتيب — القاعدة كما اعتمدها المالك (أو مُوقَّفة لغياب النطاق الموثوق).
-  const scope = resolver.resolve(context, envelope);
+  // ④ الترتيب — النطاق = (المستأجر · المحادثة الموثوقة) ⇒ لا افتراض ولا اشتقاق.
+  const scope: OrderingScope = context.conversationRef;
   const decision = evaluateOrdering({
-    scope,
     occurredAt: envelope.occurred_at,
     messageRef: envelope.message_ref,
-    lastAccepted: scope === null ? undefined : orderingState.lastAccepted(context, scope),
+    lastAccepted: orderingState.lastAccepted(context, scope),
   });
   if (decision.outcome === 'deferred') {
     // ⭐ الرسالة المؤجلة: لا تُخزَّن · ولا تُغيّر آخر توقيت مقبول · ولا تُعالَج تلقائياً.
@@ -303,12 +306,10 @@ export class ProcessingLayer {
   if (appended.status === 'rejected') {
     return finish('rejected', appended.reason_code, context.tenantId, envelope.message_ref, envelope.occurred_at, appended.errors);
   }
-  if (scope !== null) {
-    orderingState.recordAccepted(context, scope, {
-      occurred_at: envelope.occurred_at,
-      message_ref: envelope.message_ref,
-    });
-  }
+  orderingState.recordAccepted(context, scope, {
+    occurred_at: envelope.occurred_at,
+    message_ref: envelope.message_ref,
+  });
   return finish('accepted', decision.reason_code, context.tenantId, envelope.message_ref, envelope.occurred_at);
   }
 }

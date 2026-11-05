@@ -32,9 +32,11 @@ export {
 
 export {
   ACTOR_ID_PATTERN,
+  CONVERSATION_REF_PATTERN,
   SESSION_ID_PATTERN,
   TENANT_ID_PATTERN,
   TenantContextError,
+  assertConversationMatches,
   assertTenantMatches,
   defaultNow,
   type SessionAttestation,
@@ -91,13 +93,11 @@ export {
 // ⭐ Slice 02 — قاعدة الترتيب (قرار المالك: `docs/SLICE-02-ORDERING-RULE.md`)
 export {
   OrderingState,
-  defaultOrderingScopeResolver,
   evaluateOrdering,
   type OrderingDecision,
   type OrderingDeferReason,
   type OrderingPoint,
   type OrderingScope,
-  type OrderingScopeResolver,
 } from './ordering.ts';
 
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
