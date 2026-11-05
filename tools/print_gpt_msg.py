@@ -9,6 +9,8 @@
     python3 tools/print_gpt_msg.py 1 | 2          # رسالة واحدة
     python3 tools/print_gpt_msg.py --reply        # ⭐ سطر «راجع الردود» (جاهز للنسخ)
     python3 tools/print_gpt_msg.py --reply --summary  # ⭐ + «ما الذي تمّ» آلياً من حالة الريبو
+    #                          (١٠ أسطر: آخر قرار · آخر ٥ مراحل · البطاقة · الجاهزية ·
+    #                           العدّادات · الملفات · الاختبارات حيّاً · الروابط · ما ينتظرك · ⛔ لم يُنفَّذ)
     python3 tools/print_gpt_msg.py --reply --check  # ⭐ + يتحقّق أن الرابط منشور وحديث
     python3 tools/print_gpt_msg.py --copy         # ينسخ رسالة ١ للـclipboard
     python3 tools/print_gpt_msg.py --copy-reply   # ⭐ ينسخ سطر «راجع الردود» للـclipboard
@@ -97,6 +99,75 @@ def ar_num(value: int) -> str:
     return "".join(AR_DIGITS[int(d)] for d in str(value))
 
 
+def decision_rows(dec: str) -> list[tuple[str, str]]:
+    """⭐ صفوف فهرس القرارات = (المعرّف · باقي الصف) ⇒ العدّادات تُشتق لا تُكتب."""
+    rows: list[tuple[str, str]] = []
+    for ln in dec.splitlines():
+        m = re.match(r"^\|\s*(?:⭐\s*)?(?:\*\*)?(D-\d+)(.*)$", ln)
+        if m:
+            rows.append((m.group(1), m.group(2)))
+    return rows
+
+
+def decision_title(dec: str, did: str) -> str:
+    """⭐ عنوان القسم الكامل للقرار ⇒ جملة قصيرة تُقرأ في الرسالة."""
+    m = re.search(r"^##\s*" + re.escape(did) + r"\s*—\s*(.+)$", dec, re.M)
+    if not m:
+        return ""
+    title = m.group(1).replace("⭐", " ")
+    title = re.sub(r"\s+", " ", title).strip(" *·—")
+    return title
+
+
+def test_counts() -> tuple[int, int, int] | None:
+    """⭐ عدّادات الاختبارات من **تشغيل فعلي** ⇒ رقم حيّ لا رقم مكتوب يدوياً."""
+    try:
+        p = subprocess.run(
+            ["npm", "test", "--silent"], cwd=str(REPO), capture_output=True, text=True, timeout=240
+        )
+    except Exception:
+        return None
+    out = p.stdout or ""
+
+    def grab(key: str) -> int:
+        m = re.search(r"^#\s*" + key + r"\s+(\d+)", out, re.M)
+        return int(m.group(1)) if m else 0
+
+    total = grab("tests")
+    if not total:
+        return None
+    return total, grab("pass"), grab("fail")
+
+
+def pending_owner_items() -> list[str]:
+    """⭐ «ما ينتظر قرار المالك» يُشتق من §٣.٥ في آخر ردّ ⇒ لا يتقادم."""
+    if not LOG.exists():
+        return []
+    text = LOG.read_text(encoding="utf-8")
+    start = text.find("## ٣.")
+    if start < 0:
+        return []
+    end = text.find("\n## ", start + 1)
+    block = text[start: end if end > 0 else len(text)]
+    heads = [m for m in re.finditer(r"^###\s*[^\n]*ما ينتظر[^\n]*$", block, re.M)]
+    if not heads:
+        return []
+    tail = block[heads[-1].end():]
+    items: list[str] = []
+    for ln in tail.splitlines():
+        if ln.startswith("|"):
+            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+            if len(cells) >= 2 and not set(cells[0]) <= set("-: "):
+                if cells[0].strip() in ("#", "") or cells[1].replace("⭐", "").replace("**", "").strip() == "القرار":
+                    continue  # ⭐ صف الرأس لا صف بيانات
+                name = cells[1].replace("⭐", "").replace("**", "").strip()
+                if name:
+                    items.append(name)
+        elif items and not ln.startswith("|"):
+            break
+    return items
+
+
 def summary_block(sha: str) -> str:
     """⭐ «ما الذي تم» — يُشتق آلياً من حالة الريبو ⇒ لا يتقادم ولا يُكتب يدوياً."""
     lines: list[str] = []
@@ -105,13 +176,16 @@ def summary_block(sha: str) -> str:
     tracked = git("ls-files").splitlines()
     n_code = len([f for f in tracked if f.startswith("src/")])
     n_tests = len([f for f in tracked if f.startswith("tests/")])
+    rows = decision_rows(dec)
+    n_ok = sum(1 for _, t in rows if "✅" in t)
+    n_mid = sum(1 for _, t in rows if "🟡" in t)
+    n_blue = sum(1 for _, t in rows if "🔵" in t)
 
     # ① آخر قرار مُعتمد = آخر صف في فهرس DECISIONS.md حالته ✅
     last_ok = ""
-    for ln in dec.splitlines():
-        m = re.match(r"^\|\s*(?:⭐\s*)?(?:\*\*)?(D-\d+)", ln)
-        if m and "✅" in ln:
-            last_ok = m.group(1)
+    for did, tail in rows:
+        if "✅" in tail:
+            last_ok = did
     if last_ok:
         closed = False
         idx = dec.find(f"## {last_ok}")
@@ -119,15 +193,31 @@ def summary_block(sha: str) -> str:
             nxt = dec.find("\n## ", idx + 1)
             section = dec[idx: nxt if nxt > 0 else len(dec)]
             closed = "إغلاق المهمة" in section
-        tail = " = ✅ منجَز ومغلَق (المخرَج موثَّق في السجل)." if closed else " (المخرَج موثَّق في السجل)."
-        lines.append(f"- ⭐ **آخر قرار مُعتمد**: {last_ok}{tail}")
+        tail_txt = " = ✅ منجَز ومغلَق (المخرَج موثَّق في السجل)." if closed else " (المخرَج موثَّق في السجل)."
+        lines.append(f"- ⭐ **آخر قرار مُعتمد**: {last_ok}{tail_txt}")
+
+    # ② آخر ٥ مراحل مُنفَّذة (عناوين مُشتقّة من أقسام سجل القرارات)
+    phases = []
+    for did, tail in [r for r in rows if "✅" in r[1]][-5:]:
+        title = decision_title(dec, did)
+        phases.append(f"{did} ({title})" if title else did)
+    if phases:
+        lines.append("- ⭐ **آخر ٥ مراحل مُنفَّذة**: " + " · ".join(phases))
+
     card = REPO / "docs/FIRST-SLICE-DECISION-CARD.md"
     if card.exists():
-        lines.append(
-            "- ⭐ **بطاقة الشريحة البرمجية الأولى جاهزة** (إعداد ≠ موافقة): "
-            f"https://raw.githubusercontent.com/{OWNER_REPO}/{sha}/docs/FIRST-SLICE-DECISION-CARD.md"
+        executed = any(did == "D-049" and "✅" in t for did, t in rows)
+        note = (
+            "نطاق مجمَّد — نُفِّذ بـD-049 ✅"
+            if executed
+            else "إعداد ≠ موافقة"
         )
-    # ⭐ الجاهزية تُقرأ من سطر درجات EA-001..EA-007 تحديداً ⇒ لا تُلتقط أي «ن/م» عشوائي
+        lines.append(
+            f"- ⭐ **بطاقة الشريحة البرمجية الأولى** ({note}): "
+            f"{BASE_RAW}/{sha}/docs/FIRST-SLICE-DECISION-CARD.md"
+        )
+
+    # ③ الجاهزية تُقرأ من سطر درجات EA-001..EA-007 تحديداً ⇒ لا تُلتقط أي «ن/م» عشوائي
     ready = ""
     moved = False
     for ln in cs.splitlines():
@@ -142,10 +232,51 @@ def summary_block(sha: str) -> str:
             state = f"✔ كود الشريحة الأولى ({ar_num(n_code)} ملفات) · ✔ اختبارات محلية ({ar_num(n_tests)} ملفات اختبار)"
         else:
             state = "بلا كود · بلا اختبار"
-        tail = "" if moved else " (درجات EA-001..EA-007 لم تتحرك)"
-        lines.append(f"- ⭐ **الجاهزية {ready}** — {state} · بلا حساب · بلا نشر{tail}.")
+        tail_txt = "" if moved else " (درجات EA-001..EA-007 لم تتحرك)"
+        lines.append(f"- ⭐ **الجاهزية {ready}** — {state} · بلا حساب · بلا نشر{tail_txt}.")
+
+    # ④ عدّادات القرار والملفات (كلها مشتقّة)
+    if rows:
+        lines.append(
+            f"- ⭐ **سجل القرارات**: {ar_num(len(rows))} صف = {ar_num(n_ok)}✅ · {ar_num(n_mid)}🟡 · {ar_num(n_blue)}🔵 "
+            "· ⭐ **والفجوة `D-039..D-045` محجوزة لكتلة `DR-3`** · ⭐ **والتوصيات (🔵) ليست قرارات**."
+        )
     n_md = len([f for f in tracked if f.endswith(".md")])
-    lines.append(f"- ⭐ **الريبو**: {ar_num(len(tracked))} ملف متتبَّع ({ar_num(n_md)} ملف `.md`) · العدّادات في `CURRENT-STATE.md` مصحَّحة.")
+    lines.append(
+        f"- ⭐ **الريبو**: {ar_num(len(tracked))} ملف متتبَّع ({ar_num(n_md)} ملف `.md`) · "
+        f"{ar_num(n_code)} ملف إنتاج · {ar_num(n_tests)} ملف اختبار · العدّادات في `CURRENT-STATE.md` مصحَّحة."
+    )
+
+    # ⑤ نتائج الاختبارات الحية (تشغيل فعلي)
+    counts = test_counts()
+    if counts:
+        total, passed, failed = counts
+        verdict = "✅ كله ناجح" if failed == 0 else f"⛔ {ar_num(failed)} فاشل"
+        lines.append(
+            f"- ⭐ **الاختبارات (تشغيل حيّ)**: {ar_num(total)} اختبار · {ar_num(passed)} ناجح · {verdict} "
+            "· ⛔ **نتائج اختبارات محلية — ليست شهادة جاهزية**."
+        )
+
+    # ⑥ الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)
+    docs = [
+        ("docs/SLICE-01-REPORT.md", "تقرير تنفيذ الشريحة"),
+        ("docs/SECOND-SLICE-PROPOSAL.md", "مقترح الشريحة الثانية (🔵 بلا تصريح)"),
+        ("DECISIONS.md", "سجل القرارات"),
+    ]
+    links = [
+        f"{label}: {BASE_RAW}/{sha}/{path}"
+        for path, label in docs
+        if (REPO / path).exists()
+    ]
+    if links:
+        lines.append("- ⭐ **الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)**: " + " · ".join(links))
+
+    # ⑦ ما ينتظر قرار المالك (مشتق من §٣.٥ في آخر ردّ)
+    pending = pending_owner_items()
+    if pending:
+        lines.append("- ⭐ **ما ينتظر قرار المالك الآن** (من §٣.٥ في السجل): " + " · ".join(pending))
+
+    # ⑧ ما لم يُنفَّذ
     if n_code:
         lines.append(
             "- ⭐ **⛔ لم يُنفَّذ**: لا تكامل خارجي · لا حسابات · لا تواصل خارجي · لا تعاقد · لا دفعة · لا نشر "
