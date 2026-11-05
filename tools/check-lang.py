@@ -8,6 +8,7 @@
     python3 tools/check-lang.py [مجلد]           # فحص كل ملفات .md
     python3 tools/check-lang.py --quiet [مجلد]   # ملخص بس
 """
+import re
 import sys
 from pathlib import Path
 
@@ -45,6 +46,36 @@ def has_arabic(text: str) -> bool:
     return any(ARABIC[0] <= ord(c) <= ARABIC[1] for c in text)
 
 
+# ⭐⭐ حارس التشوّه داخل الكلمة (٦ نوفمبر ٢٠٢٦) — عيب مثبت حيّاً:
+# ⭐ «وernelه» (بدل موعده) · «مcentage» (بدل percentage) · «يsupplementaryا» · «ةMismatchت»
+# ⭐ القاعدة: كلمة لاتينية ملتصقة بحرف عربي على اليمين ⇒ تشوّه لا مصطلح.
+# ⭐ الاستثناء المشروع: «الـmanifest» · «الـMVP» · «الـHTML» ⇒ التاء المربوطة (U+0640) قبل اللاتيني = مصطلح معتمد.
+TATWEEL = "ـ"
+ARABIC_LETTER = re.compile(r"[ء-يٱ-ۓ]")
+LATIN_RUN = re.compile(r"[A-Za-z]{2,}")
+ARABIC_PUNCT_AFTER = "؟،؛"
+
+
+def mixed_script_tokens(line: str):
+    """يرجّع التوكنات اللي فيها لاتيني ملتصق بحرف عربي (تشوّه مثبَت).
+
+    ⭐ الأجزاء داخل ``code span`` (باك تكس) مستثناة ⇒ لأن التوكنات التقنية
+    ⭐ تُقتبس حرفياً هناك (أمثلة على تشوّه مثبَت · أسماء دوال · معرّفات).
+    """
+    out = []
+    segments = [seg for i, seg in enumerate(line.split("`")) if i % 2 == 0]
+    for segment in segments:
+        for m in LATIN_RUN.finditer(segment):
+            start, end = m.start(), m.end()
+            left = segment[start - 1] if start > 0 else ""
+            right = segment[end] if end < len(segment) else ""
+            left_ok = bool(left) and left != TATWEEL and bool(ARABIC_LETTER.match(left))
+            right_ok = bool(right) and (bool(ARABIC_LETTER.match(right)) or right in ARABIC_PUNCT_AFTER)
+            if left_ok and right_ok:
+                out.append((m.group(0), segment[max(0, start - 1):end + 1]))
+    return out
+
+
 def scan_line(line: str):
     hits = []
     for ch in line:
@@ -54,6 +85,8 @@ def scan_line(line: str):
         for label, (lo, hi) in BAD.items():
             if lo <= cp <= hi:
                 hits.append((label, ch, f"U+{cp:04X}"))
+    for token, context in mixed_script_tokens(line):
+        hits.append(("تشوّه داخل كلمة (لاتيني ملتصق بعربي)", token, context))
     return hits
 
 
