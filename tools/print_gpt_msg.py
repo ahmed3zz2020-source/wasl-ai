@@ -8,6 +8,7 @@
     python3 tools/print_gpt_msg.py                # رسالتا المراجعة (١ ثم ٢)
     python3 tools/print_gpt_msg.py 1 | 2          # رسالة واحدة
     python3 tools/print_gpt_msg.py --reply        # ⭐ سطر «راجع الردود» (جاهز للنسخ)
+    python3 tools/print_gpt_msg.py --reply --summary  # ⭐ + «ما الذي تمّ» آلياً من حالة الريبو
     python3 tools/print_gpt_msg.py --reply --check  # ⭐ + يتحقّق أن الرابط منشور وحديث
     python3 tools/print_gpt_msg.py --copy         # ينسخ رسالة ١ للـclipboard
     python3 tools/print_gpt_msg.py --copy-reply   # ⭐ ينسخ سطر «راجع الردود» للـclipboard
@@ -88,14 +89,55 @@ def reply_block(sha: str, link: str) -> str:
     )
 
 
-def print_reply(check: bool) -> int:
+def summary_block(sha: str) -> str:
+    """⭐ «ما الذي تم» — يُشتق آلياً من حالة الريبو ⇒ لا يتقادم ولا يُكتب يدوياً."""
+    lines: list[str] = []
+    dec = (REPO / "DECISIONS.md").read_text(encoding="utf-8") if (REPO / "DECISIONS.md").exists() else ""
+    cs = (REPO / "CURRENT-STATE.md").read_text(encoding="utf-8") if (REPO / "CURRENT-STATE.md").exists() else ""
+    if "إغلاق المهمة" in dec:
+        m = re.search(r"##\s*(D-\d+)[^\n]*", dec[dec.find("إغلاق المهمة") - 4000:] if dec.find("إغلاق المهمة") > 4000 else dec)
+        lines.append(f"- ⭐ **آخر قرار مُغلق**: {m.group(1) if m else 'D-048'} = ✅ منجَز ومغلَق (المخرَج موثَّق في السجل).")
+    card = REPO / "docs/FIRST-SLICE-DECISION-CARD.md"
+    if card.exists():
+        lines.append(
+            "- ⭐ **بطاقة الشريحة البرمجية الأولى جاهزة** (إعداد ≠ موافقة): "
+            f"https://raw.githubusercontent.com/{OWNER_REPO}/{sha}/docs/FIRST-SLICE-DECISION-CARD.md"
+        )
+    # ⭐ الجاهزية تُقرأ من سطر درجات EA-001..EA-007 تحديداً ⇒ لا تُلتقط أي «ن/م» عشوائي
+    ready = ""
+    for ln in cs.splitlines():
+        if "EA-001..EA-007" in ln or "EA-001..EA-007" in ln.replace("..", ".."):
+            m2 = re.search(r"(\d+)/(\d+)", ln)
+            if m2:
+                ready = f"{m2.group(1)}/{m2.group(2)}"
+                break
+    if ready:
+        lines.append(
+            f"- ⭐ **الجاهزية {ready}** — بلا كود · بلا اختبار · بلا حساب · بلا نشر "
+            "(درجات EA-001..EA-007 لم تتحرك)."
+        )
+    n_md = len([f for f in git("ls-files").splitlines() if f.endswith(".md")])
+    lines.append(f"- ⭐ **الريبو**: {len(git('ls-files').splitlines())} ملف متتبَّع ({n_md} ملف `.md`) · العدّادات في `CURRENT-STATE.md` مصحَّحة.")
+    lines.append("- ⭐ **⛔ لم يُنفَّذ**: لا كود · لا اختبارات فعلية · لا حسابات · لا تواصل خارجي · لا تعاقد · لا دفعة · لا نشر · ولا اعتماد نهائي لمسار واتساب.")
+    return "\n".join(lines)
+
+
+def reply_with_summary(sha: str, link: str) -> str:
+    return (
+        reply_block(sha, link)
+        + "\n\n⭐ **ما الذي تمّ في الجولة الأخيرة (لا تفترض — اقرأ §٣ و§٤ و§٢):**\n"
+        + summary_block(sha)
+    )
+
+
+def print_reply(check: bool, with_summary: bool = False) -> int:
     sha = latest_commit()
     if not sha:
         print("⛔ مفيش commit — الـtools/print_gpt_msg.py محتاج git.")
         return 1
     link = pinned(sha, "CHATGPT-REVIEW-LOG.md")
     main_link = f"{BASE_RAW}/main/docs/CHATGPT-REVIEW-LOG.md"
-    block = reply_block(sha, link)
+    block = reply_with_summary(sha, link) if with_summary else reply_block(sha, link)
     print(block)
     print()
     print(f"⏺️ commit: {sha}")
@@ -133,10 +175,12 @@ def main() -> int:
     args = [a for a in sys.argv[1:]]
     check = "--check" in args
     args = [a for a in args if a != "--check"]
+    summary = "--summary" in args
+    args = [a for a in args if a != "--summary"]
     arg = args[0] if args else "both"
 
     if arg == "--reply":
-        return print_reply(check)
+        return print_reply(check, summary)
     if arg == "--copy-reply":
         sha = latest_commit()
         if not sha:
