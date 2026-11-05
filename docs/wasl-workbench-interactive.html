@@ -1,0 +1,4909 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>WASL AI — معاينة مركز العمل التفاعلية (اصطناعية)</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --panel: #161b22;
+    --panel-2: #1c2230;
+    --line: #2a323d;
+    --ink: #e6edf3;
+    --muted: #9aa7b4;
+    --accent: #4c8dff;
+    --warn: #f0a132;
+    --ok: #3fb950;
+    --err: #f85149;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 0 40px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .banner {
+    background: var(--warn);
+    color: #1b1200;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 15px;
+    border-bottom: 2px solid #b8770f;
+  }
+  .banner strong { display: block; font-size: 16px; }
+  .banner span { display: block; font-size: 13px; margin-top: 4px; }
+  h1 {
+    font-size: 22px;
+    margin: 20px 16px 6px;
+    font-weight: 700;
+  }
+  .sub {
+    margin: 0 16px 16px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  #preview-root { padding: 0 16px; }
+  .role-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .role-btn {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .role-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .role-now { color: var(--accent); font-weight: 700; font-size: 13px; }
+  .caps { direction: ltr; unicode-bidi: isolate; }
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+    min-width: 0;
+  }
+  .panel h2 { font-size: 16px; margin: 0 0 10px; }
+  .panel h3 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
+  table.grid th, table.grid td {
+    border-bottom: 1px solid var(--line);
+    padding: 7px 8px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  table.grid th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  table.grid td.num { text-align: left; direction: ltr; unicode-bidi: isolate; }
+  table.grid td.ltr { direction: ltr; unicode-bidi: isolate; text-align: left; }
+  table.grid td.ref { direction: ltr; unicode-bidi: isolate; text-align: left; cursor: pointer; color: var(--accent); }
+  table.grid tbody tr:hover { background: var(--panel-2); cursor: pointer; }
+  table.grid tbody tr.selected { background: #1d2b45; }
+  td.empty { text-align: center; color: var(--muted); padding: 16px; }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .meta span { background: var(--panel-2); border-radius: 6px; padding: 4px 9px; }
+  .meta span.terminal { background: #3a1d1d; color: #ffb4ac; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .state-btn, .action-btn {
+    background: var(--panel-2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 13px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .state-btn:hover:not(:disabled), .action-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .state-btn.blocked, .action-btn.blocked { opacity: .42; cursor: not-allowed; }
+  select {
+    background: var(--panel-2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    direction: ltr;
+  }
+  .result {
+    margin-top: 14px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-size: 13px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+  }
+  .result.ok { border-color: var(--ok); color: #7ee787; }
+  .result.err { border-color: var(--err); color: #ffb4ac; }
+  .proof { margin: 0; padding-right: 18px; font-size: 13px; }
+  .proof li { margin: 3px 0; }
+  .proof li.leak { color: #7ee787; font-weight: 700; }
+  @media (max-width: 820px) {
+    .columns { grid-template-columns: 1fr; }
+    h1 { font-size: 19px; }
+    .banner { font-size: 13px; }
+    .banner strong { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<header class="banner">
+  <strong>معاينة تجريبية ببيانات صناعية — تبديل الدور ليس تسجيل دخول أو تحققاً من الهوية</strong>
+  <span>كل التعديلات مؤقتة داخل ذاكرة المعاينة وتُفقد عند إغلاق الصفحة أو إعادة تحميلها — بلا شبكة وبلا حفظ دائم.</span>
+</header>
+<h1>WASL AI — معاينة مركز العمل التفاعلية</h1>
+<p class="sub">المعاينة تستدعي منطق النواة نفسه (قواعد الصلاحيات · خريطة الانتقالات · سجل التغييرات) — وكل قبول أو رفض يأتي منها.</p>
+<div id="preview-root"></div>
+<script>
+/* ⭐ WASL AI — نواة مُجمَّعة (Slice 07 P0) — مولَّدة وقت البناء ⭐ */
+
+/* ⭐ المصدر: src/core/*.ts — بلا أي نسخة مُكرَّرة من المنطق ⭐ */
+
+/* ⭐ مُجمِّع: tools/wasl-workbench-bundle.ts ⭐ */
+
+const __m_capability = (() => {
+// ============================================================
+// WASL AI — الصلاحيات المحلية + سياسة الأدوار (حدّ الثقة)
+// ------------------------------------------------------------
+// ⭐ **الصلاحية = اسم مُعلَن** يمنح عملية بعينها (قراءة · حالة · إسناد · تدقيق).
+// ⛔ **ليست نظام مصادقة** ⇒ ⭐ لا تسجيل دخول ولا كلمة مرور ولا حساب ولا جلسة حقيقية.
+// ⭐ تُشتق من **دور موثّق** في جدول سياسة النواة ⇒ ⭐ ولا تُؤخذ من محتوى الرسالة
+//   ولا من مدخل العميل ولا من حقل في حمولة الجلسة.
+// ⛔ **الافتراضي = المنع** ⇒ ⭐ جلسة بلا دور يمنح ⇒ لا قراءة ولا تسريب.
+// ⭐ **إصلاح حدّ الثقة (تصريح المالك · ٥ نوفمبر ٢٠٢٦ · D-055)**:
+//   ⭐ قبل ⇒ كانت الصلاحيات تُقرأ من ادّعاءات الجلسة ⇒ ⇒ ومصدر يمرّر حمولة
+//   العميل كما هي يمنح العميل صلاحياته بنفسه.
+//   ⭐ بعد ⇒ ⭐ **الصلاحيات تُشتق هنا من (دور · سقف)** ⇒ ⭐ والدور من **سجل
+//   التسجيل المعتمد** (سلطة المالك) ⇒ ⇒ ⇒ **مدخل العميل لا يملك أي تأثير
+//   على الصلاحيات** ⇒ ⇒ ⇒ **لا مدخل ⇒ ولا مسار عبور**.
+// ============================================================
+
+                                                 
+
+/** ⭐ نمط اسم الصلاحية: حروف صغيرة وأرقام وشرطة سفلية، مقسّمة بنقاط. */
+const CAPABILITY_PATTERN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/;
+
+/**
+ * ⭐⭐ الأدوار الموثوقة — ⭐ **مجموعة مغلقة** (لا قيمة خارجها).
+ * ⛔ أي دور غير معلَن ⇒ ⭐ **صفر صلاحية** (الافتراضي = المنع).
+ */
+const TRUSTED_ROLES = ['owner', 'supervisor', 'agent', 'viewer', 'none']         ;
+
+                                                         
+
+/**
+ * ⭐⭐⭐ سياسة الصلاحيات حسب الدور — ⭐ **المصدر الوحيد للصلاحيات في النواة**.
+ * ⭐ الدور `none` = ⭐ **بلا منح** (الدور الافتراضي ⇒ المنع).
+ * ⭐ الهرمية: `owner` (٨) › `supervisor` (٧) › `agent` (٥) › `viewer` (٣) › `none` (٠).
+ * ⭐ **الشريحة الخامسة (قرار المالك · ٥ نوفمبر ٢٠٢٦)**: ⭐ `conversation.queue.read`
+ *   (الوكيل يرى محادثاته · والمشرف طابور فريقه) ⇒ ⭐ و`conversation.metrics.read`
+ *   (**المشرف والمالك فقط**) ⇒ ⭐ والـ`viewer` **لا يحصل على الطابور** (سطح عمل لا قراءة).
+ */
+const ROLE_CAPABILITIES                                                   = Object.freeze({
+  owner: Object.freeze([
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.state.update',
+    'conversation.assign',
+    'conversation.queue.read',
+    'conversation.metrics.read',
+  ]),
+  supervisor: Object.freeze([
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.state.update',
+    'conversation.queue.read',
+    'conversation.metrics.read',
+  ]),
+  agent: Object.freeze([
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.queue.read',
+  ]),
+  viewer: Object.freeze(['conversation.list', 'conversation.read', 'conversation.audit']),
+  none: Object.freeze([]),
+});
+
+/** ⭐ فحص الدور: ⭐ **مُعلَن فقط** ⇒ ⭐ ما عداه ⇒ صفر صلاحية. */
+function isTrustedRole(value         )                       {
+  return typeof value === 'string' && (TRUSTED_ROLES                     ).includes(value);
+}
+
+class CapabilityError extends Error {
+           code        ;
+           capability        ;
+  constructor(code        , capability        , message        ) {
+    super(message);
+    this.name = 'CapabilityError';
+    this.code = code;
+    this.capability = capability;
+  }
+}
+
+/**
+ * ⭐⭐ تطبيع الصلاحيات القادمة من **سقف مسجَّل** (لا من ادّعاءات العميل).
+ * ⛔ **ما لا يطابق النمط لا يمنح أي صلاحية** ⇒ ⭐ الفشل = المنع (لا تجاوز).
+ * ⭐ النتيجة مُجمَّدة ومرتَّبة ⇒ ⭐ نفس المدخلات = نفس النتيجة (قابل للتكرار).
+ */
+function normalizeCapabilities(input         )                    {
+  if (!Array.isArray(input)) {
+    return Object.freeze([]);
+  }
+  const granted = new Set        ();
+  for (const item of input) {
+    if (typeof item !== 'string') continue;
+    const text = item.trim();
+    if (!CAPABILITY_PATTERN.test(text)) continue;
+    granted.add(text);
+  }
+  return Object.freeze([...granted].sort());
+}
+
+/**
+ * ⭐⭐⭐ اشتقاق الصلاحيات الممنوحة — ⭐ **النواة هي من يقرّر**.
+ * ⭐ المدخلان: ⭐ **دور موثّق** + ⭐ **سقف مسجَّل** ⇒ ⇒ **النتيجة = تقاطعهما**.
+ * ⛔ المدخل من العميل **لا يدخل هنا إطلاقاً** ⇒ ⇒ ⇒ **الصلاحيات ليست قابلة للتزوير
+ *   من مدخل غير موثوق** ⇒ ⇒ ⇒ *وإن كان الدور `none` أو السقف فارغ ⇒ ⇒ ⇒ صفر*.
+ */
+function resolveGrantedCapabilities(
+  role             ,
+  grantCeiling                   ,
+)                    {
+  const ceiling = new Set(normalizeCapabilities(grantCeiling));
+  const granted = new Set        ();
+  for (const capability of ROLE_CAPABILITIES[role]) {
+    if (ceiling.has(capability)) granted.add(capability);
+  }
+  return Object.freeze([...granted].sort());
+}
+
+/**
+ * ⭐⭐ فحص الصلاحية المطلوبة عند عملية قراءة أو تعديل.
+ * ⛔ **الفحص قبل أي وصول للبيانات** ⇒ ⭐ بلا صلاحية = رفض صريح بلا تسريب.
+ * ⛔ لا يرفع ولا ينشئ صلاحية ⇒ ⭐ ولا يوسّع نطاق المستأجر.
+ */
+function assertCapability(context               , capability        )       {
+  const granted = context.capabilities ?? [];
+  if (!granted.includes(capability)) {
+    throw new CapabilityError(
+      'capability_missing',
+      capability,
+      `الصلاحية المطلوبة غير متاحة: ${capability}`,
+    );
+  }
+}
+return { CAPABILITY_PATTERN, TRUSTED_ROLES, ROLE_CAPABILITIES, isTrustedRole, CapabilityError, normalizeCapabilities, resolveGrantedCapabilities, assertCapability };
+})();
+
+const __m_tenant = (() => {
+const { normalizeCapabilities } = __m_capability;
+// ============================================================
+// WASL AI — سياق المستأجر الموثوق (المكوّن ٢ · الشريحة الأولى)
+// ------------------------------------------------------------
+// ⭐ المبدأ الحاكم: هوية المستأجر لا تُؤخذ من «ادّعاء» بل من «إثبات».
+//   ⛔ `authenticated: true` مكتوبة في كائن وارد ⇒ قيمتها إثباتية = صفر.
+//   ⇒ الادّعاءات الخام تُعالَج في `session.ts` عبر «مصدر جلسات»
+//     لا يمرّ منها شيء إلى هنا إلا بعد تحقّق المصدر نفسه.
+// ⛔ لا يوجد في هذا الملف أي مسار يقرأ من محتوى الرسالة.
+// ⭐⭐ **إصلاح حدّ الثقة (تصريح المالك · ٥ نوفمبر ٢٠٢٦ · D-055)**:
+//   ⭐ **الادّعاءات الموثوقة (`TrustedClaims`) تبنيها النواة بنفسها** ⇒
+//   ⇒ ⭐ **من (هوية موثّقة · دور مسجَّل · سقف مسجَّل)** ⇒ ⇒ ⇒
+//   ⇒⇒ **ولا حقل `capabilities` في حمولة العميل يُقرأ في أي مكان**.
+// ============================================================
+
+
+
+                              
+
+/** نمط معرّف المستأجر: أحرف صغيرة وأرقام وشرطة سفلية فقط. */
+const TENANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{2,63}$/;
+
+/** نمط معرّف المنفّذ (المستخدم/العملية) داخل المستأجر. */
+const ACTOR_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{1,63}$/;
+
+/** نمط معرّف الجلسة. */
+const SESSION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,127}$/;
+
+/**
+ * ⭐⭐ نمط معرّف المحادثة — محادثة داخل نطاق مستأجر واحد.
+ * ⛔ **الشكل الصحيح ≠ موثوقية** ⇒ ⭐ **الموثوقية تأتي من مصدر الجلسات (حدّ الثقة)**.
+ */
+const CONVERSATION_REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+
+class TenantContextError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'TenantContextError';
+    this.code = code;
+  }
+}
+
+/**
+ * ⛔ مُطالبات الجلسة الخام — «ادّعاءات واردة من طرف خارجي».
+ * ⛔ قيمها لا تُصدَّق بذاتها: `authenticated: true` كُتبت في كائن
+ *    يرسله الطرف الآخر ⇒ لا قيمة إثباتية لها إطلاقاً.
+ * ⇒ لا تُستخدم هذه الواجهة لإنشاء سياق تنفيذ — المسار الوحيد هو
+ *   `resolveTenantContext` في `session.ts`.
+ */
+                                
+                              
+                             
+                            
+     
+                                                                        
+                                                    
+     
+                                    
+                                  
+     
+                                                                       
+                                                                           
+                                                                              
+                                                                        
+                                                                    
+     
+                                            
+ 
+
+/**
+ * ⭐⭐⭐ الهوية الموثّقة — ⭐ **ناتج مصدر الجلسات بعد تحقّقه**.
+ * ⛔ **بلا صلاحيات وبلا دور** ⇒ ⭐ ⇒ ⇒ **مدخل العميل لا يحمل أي صلاحية هنا**.
+ * ⛔ يجب أن يبنيها المصدر **كائناً جديداً** (لا يمرّر حمولة العميل كما هي).
+ */
+                                   
+                              
+                             
+                            
+                                    
+                                  
+ 
+
+/**
+ * ⭐⭐⭐⭐ الادّعاءات الموثوقة — ⭐ **تبنيها النواة** (لا تصل من طرف خارجي).
+ * ⭐ `capabilities` هنا = **ناتج اشتقاق النواة** من (دور · سقف) ⇒ ⭐ **لا**
+ *   يمكن أن تأتي من مدخل العميل ⇒ ⇒ ⇒ (ويُثبت ذلك باختبار).
+ */
+                                
+                              
+                             
+                            
+                                    
+                               
+                                                                  
+                             
+                                                                        
+                                           
+ 
+
+/**
+ * ⭐ معرّف مصدر الجلسات (حدّ الثقة).
+ * ⭐ `auth-middleware` = المعرّف الإنتاجي الوحيد المعتمد اليوم.
+ * ⛔ أي معرّف آخر يجب أن يبدأ بـ`test-` ⇒ ⇒ لا يمكن التعبير عن
+ *   مصدر اختبار بمعرّف إنتاجي داخل هذا الملف.
+ */
+                                                                  
+
+/**
+ * ⭐ إثبات الجلسة — ناتج مصدر الجلسات **بعد** تحقّقه.
+ * لا يُبنى إلا عبر `issueSessionAttestation` (داخلية) ⇒ فأي كائن
+ * يحمل نفس الشكل لكن بدون تسجيل ⇒ مرفوض.
+ */
+                                     
+                                 
+                                   
+                            
+ 
+
+/**
+ * سياق التنفيذ — يُمرَّر مع كل عملية.
+ * يحوي معرّف المستأجر المعتمد (source of truth).
+ */
+                                
+                              
+                           
+                             
+     
+                                                                           
+                                                               
+     
+                                   
+     
+                                                                                  
+                                                          
+     
+                                           
+     
+                                                                  
+                                                                 
+     
+                             
+                            
+ 
+
+/** ساعة افتراضية — تُحقن في الاختبارات لنتائج قابلة للتكرار. */
+function defaultNow()         {
+  return new Date().toISOString();
+}
+
+// ⭐⭐ سجلّ الإثباتات — خاصة بالوحدة ولا تُصدَّر.
+//    ⇒ كائن إثبات مزوَّر (من خارج الوحدة) لا يمرّ.
+const TRUSTED_ATTESTATIONS = new WeakSet        ();
+
+function assertPattern(
+  field        ,
+  value         ,
+  pattern        ,
+  code        ,
+)         {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new TenantContextError(code, `${field}: قيمة مطلوبة غير فارغة`);
+  }
+  if (!pattern.test(value)) {
+    throw new TenantContextError(code, `${field}: لا يطابق النمط المسموح`);
+  }
+  return value;
+}
+
+/**
+ * ⭐ داخلي: يُصدر إثبات جلسة **مسجَّلاً** عند مصدر الجلسات فقط.
+ * ⛔ غير مُصدَّر من `index.ts` (السطح العام) — يُستدعى من `session.ts` وحده.
+ */
+function issueSessionAttestation(
+  claims               ,
+  source                 ,
+  issuedAt        ,
+)                     {
+  const attestation                     = { claims, source, issuedAt };
+  TRUSTED_ATTESTATIONS.add(attestation);
+  return attestation;
+}
+
+/**
+ * ⭐ يبني سياق التنفيذ من **إثبات جلسة** (لا من ادّعاءات خام).
+ * ⛔ لا يقبل أي حمولة رسالة — عمداً: لا يوجد أي مسار من الرسالة إلى السياق.
+ * ⛔ ولا يقبل ادّعاءات خام: لا إثبات ⇒ لا سياق.
+ */
+function tenantContextFromSession(
+  attestation                    ,
+  now               = defaultNow,
+)                {
+  if (!attestation || typeof attestation !== 'object') {
+    throw new TenantContextError('session_missing', 'إثبات الجلسة مفقود');
+  }
+  if (!TRUSTED_ATTESTATIONS.has(attestation)) {
+    throw new TenantContextError(
+      'session_unverified',
+      'إثبات الجلسة غير مُصدَر من مصدر الجلسات — لا يُبنى سياق تنفيذ',
+    );
+  }
+  const claims = attestation.claims;
+  if (!claims || typeof claims !== 'object') {
+    throw new TenantContextError('session_missing', 'مطالبات الجلسة مفقودة');
+  }
+  if (claims.authenticated !== true) {
+    throw new TenantContextError(
+      'session_not_authenticated',
+      'الجلسة غير مُصادَق عليها — لا يُبنى سياق تنفيذ',
+    );
+  }
+  const tenantId = assertPattern(
+    'tenant_id',
+    claims.tenant_id,
+    TENANT_ID_PATTERN,
+    'tenant_invalid',
+  );
+  const actorId = assertPattern('actor_id', claims.actor_id, ACTOR_ID_PATTERN, 'actor_invalid');
+  const sessionId = assertPattern(
+    'session_id',
+    claims.session_id,
+    SESSION_ID_PATTERN,
+    'session_invalid',
+  );
+  const conversationRef = assertPattern(
+    'conversation_ref',
+    claims.conversation_ref,
+    CONVERSATION_REF_PATTERN,
+    'conversation_invalid',
+  );
+  const capabilities = normalizeCapabilities(claims.capabilities);
+  return {
+    tenantId,
+    actorId,
+    sessionId,
+    conversationRef,
+    capabilities,
+    role: claims.role,
+    issuedAt: now(),
+  };
+}
+
+/**
+ * ⭐ فحص تطابق معرّف المستأجر المُعلن مع معرّف السياق الموثوق.
+ * أي اختلاف = محاولة انتحال ⇒ تُرفض العملية.
+ */
+function assertTenantMatches(
+  context               ,
+  declaredTenantId                    ,
+)       {
+  if (declaredTenantId === undefined) {
+    return; // غير مُعلن — المصدر المعتمد هو السياق نفسه
+  }
+  if (declaredTenantId !== context.tenantId) {
+    throw new TenantContextError(
+      'tenant_mismatch',
+      'معرّف المستأجر المُعلن لا يطابق سياق التنفيذ الموثوق',
+    );
+  }
+}
+
+/**
+ * ⭐⭐ فحص تطابق معرّف المحادثة المُعلن مع المحادثة الموثوقة في السياق.
+ * ⛔ **فحص صارم (بلا استثناء)**: ⭐ الحقل إجباري في العقد ⇒ ⭐ وأي اختلاف
+ *   = محاولة دخول محادثة أخرى ⇒ تُرفض العملية.
+ * ⭐ **والسياق نفسه يحمل محادثة واحدة موثوقة ⇒ ⇒ فلا خلط بين محادثات المستأجر الواحد.**
+ */
+function assertConversationMatches(
+  context               ,
+  declaredConversationRef                    ,
+)       {
+  if (declaredConversationRef === undefined) {
+    throw new TenantContextError(
+      'conversation_missing',
+      'معرّف المحادثة مفقود — المحادثة إلزامية في عقد الرسالة',
+    );
+  }
+  if (declaredConversationRef !== context.conversationRef) {
+    throw new TenantContextError(
+      'conversation_mismatch',
+      'معرّف المحادثة المُعلن لا يطابق المحادثة الموثوقة في سياق التنفيذ',
+    );
+  }
+}
+return { TENANT_ID_PATTERN, ACTOR_ID_PATTERN, SESSION_ID_PATTERN, CONVERSATION_REF_PATTERN, TenantContextError, defaultNow, issueSessionAttestation, tenantContextFromSession, assertTenantMatches, assertConversationMatches };
+})();
+
+const __m_envelope = (() => {
+const { CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } = __m_tenant;
+// ============================================================
+// WASL AI — عقد الرسالة الداخلي (المكوّن ١ · الشريحة الأولى)
+// ------------------------------------------------------------
+// عقد مستقل عن أي مزوّد خارجي:
+//   ⛔ لا حقل من Meta · ⛔ لا حقل Webhook · ⛔ لا منطق معالجة.
+// ⭐ الحقول والأنواع والصيغ معلنة في جدول قواعد واحد (ENVELOPE_RULES)
+//   ⇒ فأي رفض يكون بقاعدة معلنة، لا بذوق.
+// ⭐ message_ref هو معرّف idempotency داخلي نضعه نحن (لا اسم مزوّد)
+//   ⇒ وبه يكون بند «منع التكرار» من معايير القبول مُطبَّقاً صراحةً.
+// ============================================================
+
+
+
+const ENVELOPE_SCHEMA_VERSION = '1';
+
+/**
+ * ⭐⭐⭐ خط أساس العقد (تصريح المالك · ٥ نوفمبر ٢٠٢٦ · D-053).
+ * ⭐ **أي إصدار غير مذكور هنا = رفض صريح** — ⭐ لا تمرير صامت ولا ترقية مُ implicite.
+ * ⭐ أي تغيير كاسر مستقبلي = ⭐ **إصدار جديد + قرار مالك** (لا يُمرَّر تحت الإصدار 1).
+ */
+const ENVELOPE_SUPPORTED_SCHEMA_VERSIONS                    = Object.freeze([
+  ENVELOPE_SCHEMA_VERSION,
+]);
+
+                                                      
+
+                                                                 
+
+/** شكل الرسالة الداخلي بعد التحقق. */
+                                  
+                                  
+                               
+                           
+                                       
+                        
+                      
+                        
+                               
+                          
+                                         
+     
+                                               
+                                                                      
+                                                                        
+     
+                                    
+                                       
+ 
+
+/** خطأ تحقق واحد — يحمل اسم القاعدة المعلنة. */
+                                     
+                         
+                        
+                           
+ 
+
+class EnvelopeValidationError extends Error {
+           errors                               ;
+  constructor(errors                               ) {
+    super(`فشل التحقق من عقد الرسالة (${errors.length} خطأ)`);
+    this.name = 'EnvelopeValidationError';
+    this.errors = errors;
+  }
+}
+
+const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+const ADDRESS = /^[A-Za-z0-9._:+@-]{1,128}$/;
+const MESSAGE_REF = /^[A-Za-z0-9._:-]{1,64}$/;
+const CHANNEL = /^[a-z0-9_]{1,32}$/;
+const LOCALE = /^[a-z]{2,3}(-[A-Z]{2})?$/;
+const ATTR_KEY = /^[a-z][a-z0-9_]{0,31}$/;
+
+/**
+ * ⭐ جدول القواعد المعلنة — مصدر الحقيقة الوحيد للتحقق.
+ * مُستخدَم في: التحقق · رسائل الخطأ · اختبار «القاعدة المعلنة».
+ */
+const ENVELOPE_RULES = {
+  schema_version: { type: 'string', required: true, pattern: /^\d+$/ },
+  message_ref: { type: 'string', required: true, pattern: MESSAGE_REF },
+  channel: { type: 'string', required: true, pattern: CHANNEL },
+  direction: { type: 'string', required: true, oneOf: ['inbound', 'outbound'] },
+  from: { type: 'string', required: true, pattern: ADDRESS },
+  to: { type: 'string', required: true, pattern: ADDRESS },
+  body: { type: 'string', required: true, minLength: 1, maxLength: 4096 },
+  occurred_at: { type: 'string', required: true, pattern: ISO_UTC },
+  locale: { type: 'string', required: true, pattern: LOCALE },
+  attributes: { type: 'object', required: true, maxEntries: 16, keyPattern: ATTR_KEY, maxValueLength: 256 },
+  conversation_ref: { type: 'string', required: true, pattern: CONVERSATION_REF_PATTERN },
+  declared_tenant_id: { type: 'string', required: false, pattern: TENANT_ID_PATTERN },
+}         ;
+
+                                                           
+
+                                
+                                                          
+                                                                           
+
+function err(field        , rule        , message        )                     {
+  return { field, rule, message };
+}
+
+function isPlainObject(value         )                                   {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function checkScalar(
+  field        ,
+  value         ,
+  errors                      ,
+)       {
+  const rule = ENVELOPE_RULES[field]     
+                 
+                      
+                     
+                              
+                       
+                       
+   ;
+  if (value === undefined) {
+    if (rule.required) errors.push(err(field, 'required', `${field}: حقل مطلوب`));
+    return;
+  }
+  if (value === null) {
+    errors.push(err(field, 'type', `${field}: القيمة null غير مسموحة`));
+    return;
+  }
+  if (typeof value !== rule.type) {
+    errors.push(err(field, 'type', `${field}: النوع المتوقع ${rule.type}`));
+    return;
+  }
+  const text = value          ;
+  if (rule.minLength !== undefined && text.length < rule.minLength) {
+    errors.push(err(field, 'min_length', `${field}: أقصر من ${rule.minLength}`));
+    return;
+  }
+  if (rule.maxLength !== undefined && text.length > rule.maxLength) {
+    errors.push(err(field, 'max_length', `${field}: أطول من ${rule.maxLength}`));
+    return;
+  }
+  if (rule.oneOf !== undefined && !rule.oneOf.includes(text)) {
+    errors.push(err(field, 'enum', `${field}: القيمة خارج المجموعة المسموحة`));
+    return;
+  }
+  if (rule.pattern !== undefined && !rule.pattern.test(text)) {
+    errors.push(err(field, 'pattern', `${field}: لا يطابق الصيغة المسموحة`));
+  }
+}
+
+function checkAttributes(value         , errors                      )                    {
+  if (!isPlainObject(value)) {
+    errors.push(err('attributes', 'type', 'attributes: النوع المتوقع object'));
+    return {};
+  }
+  const keys = Object.keys(value);
+  if (keys.length > 16) {
+    errors.push(err('attributes', 'max_entries', 'attributes: عدد المدخلات أكبر من الحد'));
+    return {};
+  }
+  const out                         = {};
+  for (const key of keys) {
+    if (!ATTR_KEY.test(key)) {
+      errors.push(err(`attributes.${key}`, 'key_pattern', 'attributes: اسم المفتاح غير مسموح'));
+      continue;
+    }
+    const val = value[key];
+    if (typeof val !== 'string') {
+      errors.push(err(`attributes.${key}`, 'type', 'attributes: القيمة لازم تكون نص'));
+      continue;
+    }
+    if (val.length > 256) {
+      errors.push(err(`attributes.${key}`, 'max_length', 'attributes: القيمة أطول من الحد'));
+      continue;
+    }
+    out[key] = val;
+  }
+  return out;
+}
+
+/**
+ * ⭐ التحقق الخالص (بلا أثر) — يرجع إمّا الرسالة مُتحقَّقاً منها أو قائمة أخطاء بقواعد معلنة.
+ */
+function validateEnvelope(input         )                     {
+  const errors                       = [];
+  if (!isPlainObject(input)) {
+    return { ok: false, errors: [err('envelope', 'type', 'الرسالة ليست كائناً')] };
+  }
+  for (const field of Object.keys(ENVELOPE_RULES)) {
+    checkScalar(field, input[field], errors);
+  }
+  // ⭐⭐ خط الأساس: ⭐ إصدار غير مدعوم = رفض صريح (لا تمرير صامت تحت الإصدار 1).
+  const declaredVersion = input.schema_version;
+  if (
+    typeof declaredVersion === 'string' &&
+    !ENVELOPE_SUPPORTED_SCHEMA_VERSIONS.includes(declaredVersion)
+  ) {
+    errors.push(
+      err(
+        'schema_version',
+        'schema_version_unsupported',
+        `schema_version: الإصدار غير مدعوم (المدعوم: ${ENVELOPE_SUPPORTED_SCHEMA_VERSIONS.join(' , ')})`,
+      ),
+    );
+  }
+  if (input.occurred_at !== undefined && typeof input.occurred_at === 'string') {
+    if (ISO_UTC.test(input.occurred_at) && Number.isNaN(Date.parse(input.occurred_at))) {
+      errors.push(err('occurred_at', 'parse', 'occurred_at: تاريخ غير صالح'));
+    }
+  }
+  const attributes = checkAttributes(input.attributes, errors);
+  if (!errors.length) {
+    const value                  = {
+      schema_version: input.schema_version          ,
+      message_ref: input.message_ref          ,
+      channel: input.channel          ,
+      direction: input.direction                    ,
+      from: input.from          ,
+      to: input.to          ,
+      body: input.body          ,
+      occurred_at: input.occurred_at          ,
+      locale: input.locale          ,
+      attributes,
+      conversation_ref: input.conversation_ref          ,
+    };
+    const declared = input.declared_tenant_id;
+    if (declared !== undefined) {
+      return { ok: true, value: { ...value, declared_tenant_id: declared           } };
+    }
+    return { ok: true, value };
+  }
+  return { ok: false, errors };
+}
+
+/**
+ * ⭐ التحقق المُنتج — يرمي استثناءً يحمل قائمة الأخطاء.
+ */
+function parseEnvelope(input         )                  {
+  const result = validateEnvelope(input);
+  if (!result.ok) {
+    throw new EnvelopeValidationError(result.errors);
+  }
+  return result.value;
+}
+return { ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, ENVELOPE_RULES, validateEnvelope, parseEnvelope };
+})();
+
+const __m_session = (() => {
+const { issueSessionAttestation, tenantContextFromSession, defaultNow, ACTOR_ID_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError } = __m_tenant;
+const { isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities } = __m_capability;
+// ============================================================
+// WASL AI — حدّ الثقة: مصادر الجلسات (المكوّن ٢ · الشريحة الأولى)
+// ------------------------------------------------------------
+// ⭐ هذا الملف هو الحدّ الفاصل بين «إدخال غير موثوق» و«سياق موثوق».
+// ⛔ `authenticated: true` وحدها لا تُثبت صحة أي جلسة.
+// ⛔ لا يُبنى سياق مستأجر معتمد إلا من ادّعاءات مرّت عبر مصدر جلسات.
+// ⭐ المصادر:
+//   ① `auth-middleware` — ⭐ **العقد جاهز والتنفيذ خارج نطاق الشريحة**:
+//      طبقة المصادقة الحقيقية ستبني `SessionSource` بنفس العقد وتُعيد
+//      الهوية بعد تحقّقها أو ترفض (null) ⇒ ولا تُضاف أي صلاحية أخرى.
+//   ② ⭐ **لا مصدر اختبار هنا** — ⛔ أدوات الاختبار في `tests/support/`
+//      ⇒ خارج حزمة الإنتاج ⇒ ولا يمكن أن يعتمد عليها مسار إنتاجي.
+// ============================================================
+// ⭐⭐⭐ **إصلاح حدّ الثقة (تصريح المالك · ٥ نوفمبر ٢٠٢٦ · D-055)**:
+//   ⭐ **الثغرة**: ⭐ `SessionSource.verify` كان يُعيد ادّعاءات الجلسة كما هي ⇒
+//     ⇒ ⇒⇒ **ومن ثمّ كان بإمكان مصدر أن يمرّر حمولة العميل كما هي فيمنح العميل
+//     صلاحياته بنفسه** (أُثبت حيّاً في الجولة السابقة ⇒ ردّ #٢٣).
+//   ⭐ **الإصلاح (ثلاثة ضوابط بنيوية — كل واحد له أثر مُختبَر)**:
+//     ① ⭐ **سجلّ تسجيل معتمد** ⇒ ⭐ لا مصدر غير مسجَّل يبني سياقاً إطلاقاً
+//        ⇒ ⇒ ⇒ **المصدر الساذج يُرفض قبل أي تفاعل مع المدخل**.
+//     ② ⭐ **لا تمرير للحمولة** ⇒ ⭐ المصدر يبني «هوية موثّقة» جديدة ⇒
+//        ⇒ ⇒ ⇒ **ومن ثمّ لا يمكن أن يحمل حقل `capabilities` ولا دوراً من العميل**.
+//     ③ ⭐ **الصلاحيات = (دور · سقف) في النواة** ⇒ ⭐ الدور والسقف من **سجل
+//        التسجيل المعتمد** (سلطة المالك) ⇒ ⇒ ⇒⇒ **مدخل العميل لا يملك أي
+//        تأثير على الصلاحيات** ⇒ ⇒ ⇒⇒ **وإن كان الدور `none` ⇒ ⇒ ⇒⇒ صفر**.
+//   ⛔ **وملاحظة إجرائية**: ⭐ اختلاف هوية الكائن (المدخل ≠ الخرج) **ليس
+//     إثباتاً للثقة** ⇒ ⇒ ⭐ هو **مؤشّر خطر** (يُرفض) لا **دليل ثقة** ⇒
+//     ⇒ ⇒⇒ **والدليل الفعلي = (١) التسجيل المعتمد + (٣) اشتقاق النواة**.
+// ============================================================
+
+
+
+
+/**
+ * ⭐ نطاق مصدر الجلسات.
+ * ⛔ `test` = مصدر اختباري ⇒ أي مسار إنتاجي يرفضه بنيوياً.
+ * ⭐ `production` = مصدر قادم من طبقة مصادقة حقيقية.
+ */
+                                                 
+
+/**
+ * ⭐⭐ عقد مصدر الجلسات — نقطة الالتقاء بين «المصادقة» و«النواة».
+ * ⭐ **بعد إصلاح D-055**: ⭐ يُعيد **هوية موثّقة** (بلا صلاحيات وبلا دور).
+ *
+ * ⛔⭐⭐ **واجب إلزامي على `verify`**:
+ *   ⛔ **لا يعيد ادّعاءات العميل كما هي** ⇒ ⭐ يبني كائن هوية **جديداً**.
+ *   ⛔ **لا يمرّر `capabilities` ولا `role`** ⇒ ⭐ ⇒ ⇒ ولا يقول حقلونا في العقد.
+ *   ⛔ **لا يقرأ الدور من حمولة العميل** ⇒ ⭐ ⇒ ⇒ **الدور من سجل التسجيل** (سلطة المالك).
+ */
+                                
+                               
+                                                                      
+                               
+                               
+     
+                                                         
+                                                                      
+                                                                
+     
+                                                  
+ 
+
+/**
+ * ⭐⭐⭐ تسجيل مصدر الجلسات المعتمد — ⭐ **سلطة المالك على ما يُمنح**.
+ * ⭐ **لا يُبنى من مدخل العميل** ⇒ ⭐ ⇒ ⇒ **مدخل العميل لا يملك أي تأثير**.
+ */
+                                            
+                                 
+     
+                                                                          
+                                                     
+     
+                                    
+     
+                                                              
+                                                               
+     
+                                           
+ 
+
+/**
+ * ⭐⭐ سجلّ التسجيل — ⭐ **خاص بالوحدة** ⇒ ⭐ ⛔ لا يُكتب من الخارج.
+ * ⭐ مفتاحه = معرّف المصدر ⇒ ⭐ والتسجيل لازم يكون لنفس كائن المصدر تماماً.
+ */
+const SOURCE_REGISTRATIONS = new Map                                   ();
+
+/**
+ * ⭐⭐ تسجيل مصدر جلسات معتمد.
+ * ⛔ **غير مُصدَّر من `index.ts`** (السطح العام) ⇒ ⭐ يُستدعى من تمهيد التطبيق
+ *   ومن شجرة الاختبار فقط ⇒ ⇒ ⇒ **لا يمكن لعميل أن يسجّل مصدراً لنفسه**.
+ * ⛔ التسجيل مرفوض إن كان الدور خارج المجموعة المغلقة أو السقف غير صالح.
+ */
+function registerSessionSource(registration                           )       {
+  if (!registration || typeof registration !== 'object') {
+    throw new TenantContextError('source_registration_invalid', 'تسجيل مصدر الجلسات مفقود');
+  }
+  const { source, grantedRole, grantCeiling } = registration;
+  if (!source || typeof source !== 'object' || typeof source.id !== 'string') {
+    throw new TenantContextError('source_registration_invalid', 'مصدر الجلسات غير صالح');
+  }
+  if (!isTrustedRole(grantedRole)) {
+    throw new TenantContextError(
+      'source_role_invalid',
+      `دور المصدر «${source.id}» خارج المجموعة المغلقة ⇒ لا صلاحية`,
+    );
+  }
+  const ceiling = normalizeCapabilities(grantCeiling);
+  SOURCE_REGISTRATIONS.set(source.id, {
+    source,
+    grantedRole,
+    grantCeiling: ceiling,
+  });
+}
+
+/**
+ * ⭐⭐ المصادر المسجَّلة نطاقها إنتاجي — ⭐ **لقطة حيّة** (الدالة لا ثابتة).
+ * ⛔ **فارغة اليوم** ⇒ ⭐ ⇒ ⇒ **لا مصدر إنتاجي ⇒ لا مسار افتراضي**.
+ * ⭐ (تُقرأ من `src/core/index.ts` كواجهة تشخيص ⇒ ⭐ ولا تكشف أي صلاحية).
+ */
+function activeSessionSources()                           {
+  return Object.freeze(
+    [...SOURCE_REGISTRATIONS.values()]
+      .filter((registration) => registration.source.scope === 'production')
+      .map((registration) => registration.source),
+  );
+}
+
+/**
+ * ⭐⭐⭐ المسار العام الوحيد لإنشاء سياق مستأجر معتمد.
+ * ⛔ لا يُصدَّق `authenticated: true` ولا أي حقل من المُدخل مباشرة.
+ * ⛔ كل مُدخل يمرّ على مصدر جلسات **مسجَّل**، والمصدر هو من يُقرّر.
+ * ⛔ **مصدر الجلسات إلزامي** — لا افتراض افتراضي (خصوصاً لا مصدر اختبار).
+ * ⛔ **ومصدر غير مسجَّل ⇒ رفض** ⇒ ⭐ (هذا هو الحارس البنيوي الأول).
+ */
+function resolveTenantContext(
+  input         ,
+  options                                                 = {},
+)                {
+  const source = options.source;
+  if (!source) {
+    throw new TenantContextError(
+      'session_source_missing',
+      'لا يوجد مصدر جلسات محدَّد — المسار العام لا يفترض أي مصدر ' +
+        '(⇐ لا افتراض افتراضي لمصدر اختبار)',
+    );
+  }
+  const registration = SOURCE_REGISTRATIONS.get(source.id);
+  if (!registration || registration.source !== source) {
+    throw new TenantContextError(
+      'session_source_unregistered',
+      `مصدر الجلسات «${source.id}» غير مسجَّل ⇒ لا يُبنى سياق مستأجر معتمد ` +
+        '(⇐ التسجيل المعتمد هو سلطة المالك على ما يُمنح)',
+    );
+  }
+  const identity = source.verify(input);
+  if (!identity) {
+    throw new TenantContextError(
+      'session_unverified',
+      `مصدر الجلسات «${source.id}» لم يوثّق المُدخل ⇒ لا يُبنى سياق مستأجر معتمد ` +
+        '(و`authenticated: true` وحدها لا تُثبت صحة أي جلسة)',
+    );
+  }
+  // ⭐⭐ الحارس البنيوي الثاني — ⛔ **ليس إثبات ثقة** ⭐ بل مؤشّر خطر ⇒ رفض.
+  if (Object.is(identity, input)) {
+    throw new TenantContextError(
+      'session_claims_not_rebuilt',
+      `مصدر الجلسات «${source.id}» أعاد حمولة المُدخل كما هي ⇒ لا يُبنى سياق ` +
+        '(⇐ المصدر يبني هوية جديدة — لا تمرير لحمولة العميل)',
+    );
+  }
+  // ⭐⭐⭐ الحارس البنيوي الثالث — ⭐ **الصلاحيات من النواة لا من المدخل**.
+  const granted = resolveGrantedCapabilities(registration.grantedRole, registration.grantCeiling);
+  const now = options.now ?? defaultNow;
+  const claims                = {
+    session_id: identity.session_id,
+    tenant_id: identity.tenant_id,
+    actor_id: identity.actor_id,
+    conversation_ref: identity.conversation_ref,
+    authenticated: true,
+    role: registration.grantedRole,
+    capabilities: granted,
+  };
+  const attestation = issueSessionAttestation(claims, source.id, now());
+  return tenantContextFromSession(attestation, now);
+}
+
+/**
+ * ⭐⭐ نقطة الدخول الإنتاجية — ⛔ ترفض أي مصدر نطاقه `test` بنيوياً.
+ * ⇒ فلا يستطيع مسار إنتاجي أن يعتمد على جلسة اختبارية مهما استوردها.
+ * ⛔ **لا تنشئ نظام تسجيل دخول هنا** — هذا حارس فقط، والتنفيذ في `auth-middleware`.
+ */
+function resolveProductionTenantContext(
+  input         ,
+  source               ,
+  options                         = {},
+)                {
+  if (!source || source.scope !== 'production') {
+    throw new TenantContextError(
+      'session_source_not_production',
+      `مصدر الجلسات «${source?.id ?? 'غير محدَّد'}» ليس إنتاجياً ⇒ لا يُبنى سياق إنتاجي منه`,
+    );
+  }
+  return resolveTenantContext(input, { now: options.now, source });
+}
+
+// ⛔ `markLocalTestInput` و`localTestSessionSource` **ليسا هنا** —
+//    ⭐ نُقلا إلى شجرة الاختبار ⇒ خارج حزمة الإنتاج
+//    ⭐ والحاجز الثاني: `scope: 'test'` يرفضه `resolveProductionTenantContext`.
+// ⛔ و`registerSessionSource` **غير مُصدَّر من السطح العام** ⇒ ⭐
+//    ⇒ ⇒ **العميل لا يستطيع تسجيل مصدر لنفسه** ⇒ ⇒ ⇒ **سلطة المالك وحده**.
+return { registerSessionSource, activeSessionSources, resolveTenantContext, resolveProductionTenantContext };
+})();
+
+const __m_audit_log = (() => {
+// ============================================================
+// WASL AI — سجل التدقيق المحلي (المكوّن ٤ · الشريحة الأولى)
+// ------------------------------------------------------------
+// ⭐ سطر واحد لكل عملية: (المستأجر · المُحدِّد · العملية · الوقت).
+// ⛔ لا سر · ⛔ لا بيانات شخصية · ⛔ لا اتصال خارجي · ⛔ لا وصول شبكي.
+// ⭐ الحماية بنيوية: سجل التدقيق لا يقبل حقل نص الرسالة أصلاً —
+//   فالمحتوى (body) لا يستطيع الوصول إلى السجل لا من حيث النوع
+//   ولا من حيث المسار.
+// ⭐ حماية إضافية: قائمة سماح صريحة لمفاتيح التفاصيل + كاشف أسرار.
+// ============================================================
+
+                                                 
+
+// ⭐ 'deferred' أُضيف في Slice 02 (٥ نوفمبر ٢٠٢٦) ليشمل قرار التأجيل من طبقة المعالجة.
+// ⭐ **إضافة فقط** — ⭐ القيم القديمة لم تتغيّر سلوكياً.
+                                                                              
+
+                             
+                      
+                             
+                            
+                             
+                                 
+                                
+                                                   
+ 
+
+                             
+                             
+                            
+                             
+                                 
+                                
+                                                   
+ 
+
+/** ⭐ قائمة السماح: أي مفتاح خارجها = رفض الكتابة (إمكان تسرّب). */
+const AUDIT_META_ALLOWLIST                    = [
+  'message_ref',
+  'reason_code',
+  'field',
+  'count',
+  'limit',
+  // ⭐ أُضيف في الشريحة الثالثة (٥ نوفمبر ٢٠٢٦) — ⭐ إضافة فقط · ⭐ القيم القديمة لم تتغيّر.
+  // ⭐ **معرّف المحادثة الموثوق** ⇒ يربط قرار الرسالة (قبول/تأجيل/رفض) بمحادثته.
+  'conversation_ref',
+];
+
+/** ⭐ أنماط الأسرار — أي تطابق في التفاصيل = رفض الكتابة. */
+const SECRET_PATTERNS                    = [
+  /sk-[A-Za-z0-9_-]{16,}/,
+  /gh[pousr]_[A-Za-z0-9]{20,}/,
+  /AKIA[0-9A-Z]{12,}/,
+  /xox[baprs]-[A-Za-z0-9-]{10,}/,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /(?:api[_-]?key|secret|password|passwd|token|authorization)\s*[:=]\s*\S{8,}/i,
+];
+
+class AuditLogError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'AuditLogError';
+    this.code = code;
+  }
+}
+
+const OPERATION_PATTERN = /^[a-z][a-z0-9._]{1,47}$/;
+const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{1,63}$/;
+
+function containsSecret(text        )          {
+  return SECRET_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * ⭐ واجهة الإخراج — يوفّرها المستدعي (محلياً).
+ * مثال الاختبار: يكتب في ملف JSONL على القرص.
+ * (الوحدة نفسها تبقى صالحة للتشغيل على `Worker`: لا fs ولا node APIs.)
+ */
+                            
+                            
+ 
+
+/**
+ * ⭐ سجل تدقيق محلي (في الذاكرة) — اختيارياً يُصرَّف إلى مخرَج محلي.
+ */
+class AuditLog {
+           #entries               = [];
+           #now              ;
+           #sink                       ;
+
+  constructor(options                                           = {}) {
+    this.#now = options.now ?? (() => new Date().toISOString());
+    this.#sink = options.sink;
+  }
+
+  /**
+   * ⭐ يكتب سطراً واحداً لعملية واحدة.
+   * ⛔ يرفض أي مفتاح تفاصيل خارج قائمة السماح · ⛔ يرفض أي قيمة تشبه سرّاً.
+   */
+  record(input            )             {
+    if (!input || typeof input !== 'object') {
+      throw new AuditLogError('input_missing', 'مدخل السجل مفقود');
+    }
+    if (!ID_PATTERN.test(String(input.tenant_id ?? ''))) {
+      throw new AuditLogError('tenant_invalid', 'tenant_id غير صالح');
+    }
+    if (!ID_PATTERN.test(String(input.actor_id ?? ''))) {
+      throw new AuditLogError('actor_invalid', 'actor_id غير صالح');
+    }
+    if (!OPERATION_PATTERN.test(String(input.operation ?? ''))) {
+      throw new AuditLogError('operation_invalid', 'operation غير صالح');
+    }
+    if (!['accepted', 'rejected', 'duplicate', 'deferred'].includes(input.outcome)) {
+      throw new AuditLogError('outcome_invalid', 'outcome غير صالح');
+    }
+    const meta                         = {};
+    const rawMeta = input.meta;
+    if (rawMeta !== undefined) {
+      if (typeof rawMeta !== 'object' || rawMeta === null || Array.isArray(rawMeta)) {
+        throw new AuditLogError('meta_invalid', 'meta لازم يكون كائناً');
+      }
+      for (const [key, value] of Object.entries(rawMeta)) {
+        if (!AUDIT_META_ALLOWLIST.includes(key)) {
+          throw new AuditLogError(
+            'meta_key_forbidden',
+            `مفتاح تفاصيل خارج قائمة السماح: ${key}`,
+          );
+        }
+        const text = String(value);
+        if (containsSecret(text)) {
+          throw new AuditLogError('meta_secret_forbidden', 'قيمة تفاصيل تشبه سرّاً');
+        }
+        meta[key] = text;
+      }
+    }
+    if (input.reason_code !== undefined) {
+      if (!/^[a-z0-9_]{1,48}$/.test(input.reason_code)) {
+        throw new AuditLogError('reason_code_invalid', 'reason_code غير صالح');
+      }
+      if (containsSecret(input.reason_code)) {
+        throw new AuditLogError('reason_code_secret_forbidden', 'reason_code يشبه سرّاً');
+      }
+    }
+    const entry             = {
+      ts: this.#now(),
+      tenant_id: input.tenant_id,
+      actor_id: input.actor_id,
+      operation: input.operation,
+      outcome: input.outcome,
+      ...(input.reason_code !== undefined ? { reason_code: input.reason_code } : {}),
+      ...(Object.keys(meta).length ? { meta } : {}),
+    };
+    this.#entries.push(entry);
+    if (this.#sink) {
+      this.#sink.write(JSON.stringify(entry));
+    }
+    return entry;
+  }
+
+  /** ⭐ نسخة للقراءة — غير قابلة للتعديل. */
+  entries()                        {
+    return this.#entries.map((entry) => ({ ...entry }));
+  }
+
+  /**
+   * ⭐⭐⭐ قراءة **معزولة** بحسب المستأجر (الشريحة الثالثة · ٥ نوفمبر ٢٠٢٦).
+   * ⛔ **لا تُستخدم `entries()` في أي مسار قراءة خاص بالمستأجر** ⇒ لأنها تُرجع كل المستأجرين.
+   * ⭐ التصفية بالمستأجر من **سياق موثوق** — ⭐ لا معرّف مستأجر من العميل.
+   * ⭐ ويجوز تضييقها بمحادثة واحدة ⇒ ⭐ وبذلك تُقرأ قرارات الرسائل غير المخزَّنة.
+   */
+  entriesFor(
+    context               ,
+    options                               = {},
+  )                        {
+    const mine = this.#entries.filter((entry) => entry.tenant_id === context.tenantId);
+    if (options.conversationRef === undefined) {
+      return mine.map((entry) => ({ ...entry }));
+    }
+    const ref = options.conversationRef;
+    return mine
+      .filter((entry) => entry.meta?.conversation_ref === ref)
+      .map((entry) => ({ ...entry }));
+  }
+
+  /** ⭐ سطر JSONL لكل عملية (للعرض أو الحفظ). */
+  toJsonl()         {
+    return this.#entries.map((entry) => JSON.stringify(entry)).join('\n');
+  }
+
+  size()         {
+    return this.#entries.length;
+  }
+}
+return { AUDIT_META_ALLOWLIST, SECRET_PATTERNS, AuditLogError, AuditLog };
+})();
+
+const __m_store = (() => {
+const { EnvelopeValidationError, validateEnvelope } = __m_envelope;
+const { AuditLog } = __m_audit_log;
+const { assertTenantMatches, TenantContextError } = __m_tenant;
+// ============================================================
+// WASL AI — مخزن الرسائل المحلي (عزل المستأجر على مستوى التطبيق)
+// ------------------------------------------------------------
+// ⭐ القاعدة البنيوية: كل عملية تستقبل «سياق التنفيذ» وتقرأ/تكتب
+//   صفوف المستأجر الذي في السياق فقط.
+// ⛔ لا توجد أي دالة في هذا الملف تقبل معرّف مستأجر كوسائط —
+//   ⇒ استعلام مستأجر آخر غير ممكن بنيوياً، لا بالمصادفة.
+// ⛔ هذا عزل على مستوى التطبيق فقط — لا يعادل عزل الصفوف (DR-4)
+//   ولا يغلق بوابة DR-4.
+// ============================================================
+
+
+
+
+
+                                
+                               
+                             
+                                                                                        
+                                    
+                           
+                             
+                        
+                      
+                        
+                               
+                          
+                                                        
+                             
+ 
+
+                           
+                                                                    
+                                                                                                                 
+     
+                                  
+                                                                                              
+                                                     
+      
+
+const OPERATION = 'message.append';
+
+class MessageStore {
+           #rows                               = new Map();
+  /**
+   * ⭐⭐ فهرس المحادثات (الشريحة الثالثة) — ⭐ **فهرس داخل البنية نفسها لا مخزن موازٍ**.
+   * ⭐Map من (المستأجر ⇒ المحادثة ⇒ نفس كائنات الصفوف) ⇒ ⭐ **لا تكرار للبيانات**
+   *   (المصفوفة الثانية تحوي **مراجع** لنفس الكائنات ⇒ تعديل الصف يعدّل الاثنين معاً).
+   */
+           #byConversation                                            = new Map();
+           #audit          ;
+           #now              ;
+
+  constructor(options                                           = {}) {
+    this.#audit = options.audit ?? new AuditLog();
+    this.#now = options.now ?? (() => new Date().toISOString());
+  }
+
+  /**
+   * ⭐ إضافة رسالة لمستأجر السياق.
+   * الترتيب: التحقق من العقد ⇒ مطابقة المستأجر ⇒ منع التكرار ⇒ التخزين.
+   */
+  append(context                           , input         )                {
+    if (!context) {
+      throw new TenantContextError('tenant_context_missing', 'سياق التنفيذ مطلوب');
+    }
+    const validation = validateEnvelope(input);
+    if (!validation.ok) {
+      this.#audit.record({
+        tenant_id: context.tenantId,
+        actor_id: context.actorId,
+        operation: OPERATION,
+        outcome: 'rejected',
+        reason_code: 'envelope_invalid',
+        meta: { field: validation.errors[0]?.field ?? 'envelope' },
+      });
+      return { status: 'rejected', reason_code: 'envelope_invalid', errors: validation.errors };
+    }
+    const envelope = validation.value;
+    try {
+      assertTenantMatches(context, envelope.declared_tenant_id);
+    } catch (error) {
+      this.#audit.record({
+        tenant_id: context.tenantId,
+        actor_id: context.actorId,
+        operation: OPERATION,
+        outcome: 'rejected',
+        reason_code: 'tenant_mismatch',
+        meta: { field: 'declared_tenant_id' },
+      });
+      return {
+        status: 'rejected',
+        reason_code: 'tenant_mismatch',
+        errors: [
+          {
+            field: 'declared_tenant_id',
+            rule: 'tenant_match',
+            message: 'معرّف المستأجر المُعلن لا يطابق سياق التنفيذ الموثوق',
+          },
+        ],
+      };
+    }
+    const existing = this.#rows.get(context.tenantId) ?? [];
+    if (existing.some((row) => row.message_ref === envelope.message_ref)) {
+      this.#audit.record({
+        tenant_id: context.tenantId,
+        actor_id: context.actorId,
+        operation: OPERATION,
+        outcome: 'duplicate',
+        reason_code: 'message_ref_duplicate',
+        meta: { message_ref: envelope.message_ref },
+      });
+      return {
+        status: 'duplicate',
+        reason_code: 'message_ref_duplicate',
+        message_ref: envelope.message_ref,
+      };
+    }
+    const stored                = {
+      message_ref: envelope.message_ref,
+      tenant_id: context.tenantId,
+      conversation_ref: envelope.conversation_ref,
+      channel: envelope.channel,
+      direction: envelope.direction,
+      from: envelope.from,
+      to: envelope.to,
+      body: envelope.body,
+      occurred_at: envelope.occurred_at,
+      locale: envelope.locale,
+      attributes: envelope.attributes,
+      stored_at: this.#now(),
+    };
+    existing.push(stored);
+    this.#rows.set(context.tenantId, existing);
+    // ⭐⭐ فهرس المحادثات — ⭐ نفس كائن الصف (مرجع) ⇒ لا نسخة موازية.
+    const byConversation =
+      this.#byConversation.get(context.tenantId) ?? new Map                         ();
+    const conversationRows = byConversation.get(envelope.conversation_ref) ?? [];
+    conversationRows.push(stored);
+    byConversation.set(envelope.conversation_ref, conversationRows);
+    this.#byConversation.set(context.tenantId, byConversation);
+    this.#audit.record({
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: OPERATION,
+      outcome: 'accepted',
+      meta: { message_ref: stored.message_ref },
+    });
+    return { status: 'accepted', message: stored };
+  }
+
+  /**
+   * ⭐ قراءة صفوف المستأجر في السياق فقط.
+   * ⛔ لا معرّف مستأجر كوسيطة ⇒ لا استعلام عابر ممكن.
+   */
+  list(context               , options                     = {})                  {
+    const rows = this.#rows.get(context.tenantId) ?? [];
+    const limit = options.limit === undefined ? rows.length : options.limit;
+    return rows.slice(0, Math.max(0, limit)).map((row) => ({ ...row }));
+  }
+
+  /** ⭐ قراءة رسالة واحدة بمعرّفها داخل نطاق المستأجر فقط. */
+  getByRef(context               , messageRef        )                            {
+    const row = (this.#rows.get(context.tenantId) ?? []).find(
+      (item) => item.message_ref === messageRef,
+    );
+    return row ? { ...row } : undefined;
+  }
+
+  /** ⭐ عدّ صفوف المستأجر في السياق فقط. */
+  countFor(context               )         {
+    return (this.#rows.get(context.tenantId) ?? []).length;
+  }
+
+  /**
+   * ⭐⭐ قائمة معرّفات المحادثات في نطاق المستأجر فقط (الشريحة الثالثة).
+   * ⛔ **لا مدخل يقبل معرّف مستأجر** ⇒ ⭐ النطاق من السياق وحده.
+   */
+  conversationRefs(context               )                    {
+    const byConversation = this.#byConversation.get(context.tenantId);
+    return byConversation ? [...byConversation.keys()] : [];
+  }
+
+  /**
+   * ⭐⭐⭐ رسائل محادثة واحدة — ⭐ **في نطاق المستأجر فقط**.
+   * ⛔ محادثة لا تخص المستأجر ⇒ ⭐ **صفوف صفر** (ولا خطأ يكشف وجودها).
+   * ⭐ الترتيب = ترتيب القبول (ترتيب الإدراج) ⇒ ⭐ ترقيم مستقر.
+   */
+  messagesForConversation(
+    context               ,
+    conversationRef        ,
+  )                           {
+    const byConversation = this.#byConversation.get(context.tenantId);
+    const rows = byConversation?.get(conversationRef) ?? [];
+    return rows.map((row) => ({ ...row }));
+  }
+
+  /** ⭐ سجل التدقيق المرتبط. */
+  audit()           {
+    return this.#audit;
+  }
+}
+return { EnvelopeValidationError, MessageStore };
+})();
+
+const __m_ordering = (() => {
+// ============================================================
+// WASL AI — قاعدة ترتيب الرسائل (Slice 02 · طبقة المعالجة)
+// ------------------------------------------------------------
+// ⭐ مواصفة مقبولة: `docs/SLICE-02-ORDERING-RULE.md` (قرار المالك)
+// ⭐ المبدأ: ⭐ **النطاق = (المستأجر · المحادثة الموثوقة)** ⇒ ⭐ **وكلاهما
+//   من السياق الموثوق — لا من محتوى الرسالة** ⇒ ⭐ **فلا تسرب بين المستأجرين
+//   ولا خلط بين محادثات المستأجر الواحد**.
+// ⛔ `occurred_at` بتوقيت UTC — والعقد يفرض `Z` ويفحص صحته.
+// ⭐ الرسالة المؤجلة ⛔ لا تُغيّر آخر توقيت مقبول · ⛔ ولا تُعالَج تلقائياً.
+// ⛔ لا إعادة ترتيب · ⛔ لا مزامنة · ⛔ لا طابور جديد.
+// ============================================================
+
+                                                 
+
+/**
+ * ⭐ معرّف النطاق (محادثة) — ⭐ **قيمة موثوقة من السياق** (لا من الرسالة).
+ */
+                                   
+
+/** ⭐ أسباب التأجيل — قائمة مغلقة. */
+                                                                                                            
+
+/** ⭐ نتيجة فحص الترتيب. */
+                              
+                                                                               
+                                                                                
+
+/** ⭐ آخر نقطة مقبولة في نطاق واحد. */
+                                
+                               
+                               
+ 
+
+/**
+ * ⭐⭐ حالة الترتيب — نقطة مقبولة واحدة لكل (مستأجر · محادثة).
+ * ⛔ الحالة لا تُكتب إلا على القبول — ⭐ لا على التأجيل.
+ * ⛔ ولا تُقرأ نطاقاً لمستأجر آخر.
+ */
+class OrderingState {
+           #points                                          = new Map();
+
+  /** ⭐ آخر نقطة مقبولة في نطاق المستأجر — أو `undefined`. */
+  lastAccepted(context               , scope               )                            {
+    const scopes = this.#points.get(context.tenantId);
+    const point = scopes?.get(scope);
+    return point ? { ...point } : undefined;
+  }
+
+  /** ⭐ تسجيل نقطة مقبولة جديدة (على القبول فقط). */
+  recordAccepted(
+    context               ,
+    scope               ,
+    point               ,
+  )       {
+    const scopes = this.#points.get(context.tenantId) ?? new Map                       ();
+    scopes.set(scope, { ...point });
+    this.#points.set(context.tenantId, scopes);
+  }
+}
+
+/**
+ * ⭐⭐⭐ فحص الترتيب — تنفيذ قاعدة المالك كما هي.
+ *
+ * @param lastAccepted  آخر نقطة مقبولة في نفس النطاق (المستأجر · المحادثة) · أو `undefined` ⇒ أول رسالة.
+ *
+ * ⭐ القاعدة:
+ * ⭐ **الأقدم ⇒ تأجيل** (ولا رفض نهائي) · ⭐ **تساوي التوقيت لرسالة مختلفة ⇒ تأجيل الثانية**
+ * ⭐ **ولا ترتيب اعتباطي · ولا تحديث للنقطة المقبولة على التأجيل**.
+ */
+function evaluateOrdering(options   
+                     
+                     
+                                          
+ )                   {
+  const { occurredAt, messageRef, lastAccepted } = options;
+  if (!lastAccepted) {
+    return { outcome: 'in_order', reason_code: 'accepted_in_order' };
+  }
+  const current = Date.parse(occurredAt);
+  const last = Date.parse(lastAccepted.occurred_at);
+  if (Number.isNaN(current) || Number.isNaN(last)) {
+    // ⭐ حالة خارج القائمة المغلقة ⇒ تأجيل لا تخمين.
+    return { outcome: 'deferred', reason_code: 'deferred_unknown' };
+  }
+  if (current < last) {
+    return { outcome: 'deferred', reason_code: 'deferred_out_of_order' };
+  }
+  if (current === last && messageRef !== lastAccepted.message_ref) {
+    return { outcome: 'deferred', reason_code: 'deferred_equal_timestamp' };
+  }
+  return { outcome: 'in_order', reason_code: 'accepted_in_order' };
+}
+return { OrderingState, evaluateOrdering };
+})();
+
+const __m_processing = (() => {
+const { validateEnvelope } = __m_envelope;
+const { assertConversationMatches, assertTenantMatches } = __m_tenant;
+const { MessageStore } = __m_store;
+const { AuditLog } = __m_audit_log;
+const { evaluateOrdering, OrderingState } = __m_ordering;
+// ============================================================
+// WASL AI — طبقة المعالجة: عقد النتيجة + خط المعالجة (Slice 02)
+// ------------------------------------------------------------
+// ⭐ الوظيفة: ⭐ **طبقة نقلة خالقة** بين عقد الرسالة المُتحقَّق منه والسياق
+//   الموثوق ⇒ تقرّر: **قبول · رفض · تأجيل** بقواعد ثابتة مغلقة.
+// ⛔ بلا تصنيف · ⛔ بلا رد آلي · ⛔ بلا إسناد موظفين · ⛔ بلا ذكاء اصطناعي.
+// ⛔ بلا أي دالة تقبل معرّف مستأجر كوسيط ⇒ ⇒ **لا وصول عابر ممكن بنيوياً**.
+// ⭐ إعادة استخدام: ⭐ **منع التكرار = آلية Slice 01 نفسها** (المخزن +
+//   القاعدة داخل نطاق المستأجر) ⇒ ⭐ **و`reason_code` هنا يُعرَّف فوقها لا بجانبها**.
+// ⭐ الترتيب: ⭐ مواصفة `docs/SLICE-02-ORDERING-RULE.md` (قرار المالك).
+// ⭐⭐ النطاق = (المستأجر · المحادثة الموثوقة) ⇒ ⭐ **المحادثة من السياق
+//   الموثوق (حدّ الثقة) — لا من محتوى الرسالة** ⇒ ⭐ **ولا خلط بين المستأجرين
+//   ولا بين محادثات المستأجر الواحد**.
+// ============================================================
+
+
+
+
+
+
+
+/** ⭐ قرارات المعالجة الثلاثة. */
+                                                                      
+
+/**
+ * ⭐⭐ قائمة أسباب مغلقة — كل سبب مُعلَن وقابل للفحص.
+ * ⭐ **أسباب الرفض = أسماء أسباب `MessageStore` نفسها** ⇒ ⇒ **لا آلية موازية**.
+ */
+                                  
+                       
+                      
+                     
+                           
+                            
+                           
+                           
+                              
+                       
+
+/** ⭐⭐ عقد نتيجة المعالجة — الشكل المجمَّد. */
+                                    
+                                        
+                                             
+                             
+                                                             
+                                
+                                                                        
+                                
+                                                  
+ 
+
+/** ⭐ قواعد عقد النتيجة — مصدر الحقيقة الوحيد للتحقق من النتيجة. */
+const PROCESSING_OUTCOME_RULES = {
+  decision: { type: 'string', required: true, oneOf: ['accepted', 'rejected', 'deferred'] },
+  reason_code: { type: 'string', required: true, oneOf: [
+    'accepted_in_order',
+    'envelope_invalid',
+    'tenant_mismatch',
+    'conversation_mismatch',
+    'tenant_context_missing',
+    'message_ref_duplicate',
+    'deferred_out_of_order',
+    'deferred_equal_timestamp',
+    'deferred_unknown',
+  ] },
+  message_ref: { type: 'string', required: false, pattern: /^[A-Za-z0-9._:-]{1,64}$/ },
+  occurred_at: { type: 'string', required: false, pattern: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/ },
+  tenant_id: { type: 'string', required: true, pattern: /^[a-z0-9][a-z0-9_-]{2,63}$/ },
+  errors: { type: 'array', required: false },
+}         ;
+
+                                                                              
+
+                                         
+                                                            
+                                                                           
+
+/** ⭐ خطأ عقد النتيجة — يحمل قواعد الفشل. */
+class ProcessingOutcomeError extends Error {
+           errors                               ;
+  constructor(errors                               ) {
+    super(`نتيجة معالجة غير صالحة (${errors.length} خطأ)`);
+    this.name = 'ProcessingOutcomeError';
+    this.errors = errors;
+  }
+}
+
+function outcomeError(field        , rule        , message        )                     {
+  return { field, rule, message };
+}
+
+/**
+ * ⭐⭐ التحقق من عقد النتيجة — خالص بلا أثر.
+ * ⭐ **نتيجة صالحة تُقبل · ونتيجة غير صالحة تُرفض بقاعدة معلنة**.
+ */
+function validateProcessingOutcome(input         )                              {
+  const errors                       = [];
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return {
+      ok: false,
+      errors: [outcomeError('outcome', 'type', 'النتيجة ليست كائناً')],
+    };
+  }
+  const value = input                           ;
+  for (const field of Object.keys(PROCESSING_OUTCOME_RULES)) {
+    const rule = PROCESSING_OUTCOME_RULES[field]     
+                   
+                        
+                       
+                                
+     ;
+    const raw = value[field];
+    if (raw === undefined) {
+      if (rule.required) errors.push(outcomeError(field, 'required', `${field}: حقل مطلوب`));
+      continue;
+    }
+    if (typeof raw !== rule.type) {
+      errors.push(outcomeError(field, 'type', `${field}: النوع المتوقع ${rule.type}`));
+      continue;
+    }
+    const text = raw          ;
+    if (rule.oneOf && !rule.oneOf.includes(text)) {
+      errors.push(outcomeError(field, 'enum', `${field}: القيمة خارج المجموعة المسموحة`));
+      continue;
+    }
+    if (rule.pattern && !rule.pattern.test(text)) {
+      errors.push(outcomeError(field, 'pattern', `${field}: لا يطابق الصيغة المسموحة`));
+    }
+  }
+  if (value.occurred_at !== undefined && typeof value.occurred_at === 'string') {
+    if (Number.isNaN(Date.parse(value.occurred_at))) {
+      errors.push(outcomeError('occurred_at', 'parse', 'occurred_at: تاريخ غير صالح'));
+    }
+  }
+  if (!errors.length) {
+    const errorsField = value.errors;
+    const base = {
+      decision: value.decision                      ,
+      reason_code: value.reason_code                        ,
+      tenant_id: value.tenant_id          ,
+      ...(value.message_ref === undefined
+        ? {}
+        : { message_ref: value.message_ref           }),
+      ...(value.occurred_at === undefined
+        ? {}
+        : { occurred_at: value.occurred_at           }),
+    };
+    if (Array.isArray(errorsField)) {
+      return { ok: true, value: { ...base, errors: errorsField                         } };
+    }
+    return { ok: true, value: base };
+  }
+  return { ok: false, errors };
+}
+
+/** ⭐ التحقق المُنتج — يرمي استثناءً يحمل قائمة الأخطاء. */
+function parseProcessingOutcome(input         )                    {
+  const result = validateProcessingOutcome(input);
+  if (!result.ok) {
+    throw new ProcessingOutcomeError(result.errors);
+  }
+  return result.value;
+}
+
+/** ⭐ اعتماديات خط المعالجة — كلها محلية. */
+                                         
+                                                                                  
+                               
+                                                                   
+                           
+                                                          
+                                         
+ 
+
+const OPERATION = 'message.process';
+
+/** ⭐ اسم نظامي لغياب السياق — ⭐ وليس معرّف مستأجر حقيقياً. */
+const NO_TENANT = 'no_tenant_context';
+
+function auditOutcome(decision                    )                                       {
+  if (decision === 'accepted') return 'accepted';
+  if (decision === 'rejected') return 'rejected';
+  return 'deferred';
+}
+
+/**
+ * ⭐⭐⭐ طبقة المعالجة — كائن واحد يحمل حالة الترتيب.
+ * ⭐ **سبب الكائن**: ⭐ **حالة الترتيب (آخر توقيت مقبول) يجب أن تعيش بين
+ *   المعالجات المتتالية** ⇒ ⭐ **فلو كانت دالة تُنشئ الحالة في كل نداء
+ *   ⇒ ضاعت الذاكرة ⇒ ولم تُطبَّق قاعدة الترتيب أصلاً.**
+ */
+class ProcessingLayer {
+           #store              ;
+           #audit          ;
+           #orderingState               ;
+
+  constructor(deps                        ) {
+    this.#store = deps.store;
+    this.#audit = deps.audit;
+    this.#orderingState = deps.orderingState ?? new OrderingState();
+  }
+
+  /** ⭐ حالة الترتيب (للتشخيص والفحص). */
+  orderingState()                {
+    return this.#orderingState;
+  }
+
+  /**
+   * ⭐⭐⭐ معالجة رسالة واحدة — القرار الوحيد في الشريحة.
+   *
+   * ⭐ الترتيب المنفَّذ (كله داخل نطاق المستأجر من السياق الموثوق):
+   * ⭐ **١)** عقد الرسالة ⇒ **٢)** مطابقة المستأجر ⇒ **٣)** منع التكرار
+   * ⭐ **٤)** الترتيب ⇒ **٥)** القبول والتخزين.
+   *
+   * ⛔ **لا تقبل معرّف مستأجر كوسيط** ⇒ ⛔ **لا وصول عابر ممكن بنيوياً**.
+   * ⛔ **الرسالة المؤجلة لا تُخزَّن ولا تُعالَج تلقائياً**.
+   */
+  process(context                           , input         )                    {
+      const audit = this.#audit;
+        const orderingState = this.#orderingState;
+
+    const finish = (
+      decision                    ,
+      reason_code                      ,
+      tenant_id        ,
+      message_ref         ,
+      occurred_at         ,
+      errors                                ,
+      conversation_ref         ,
+    )                    => {
+      const outcome                    = {
+        decision,
+        reason_code,
+        tenant_id,
+        ...(message_ref ? { message_ref } : {}),
+        ...(occurred_at ? { occurred_at } : {}),
+        ...(errors && errors.length ? { errors } : {}),
+      };
+      audit.record({
+        tenant_id,
+        actor_id: context?.actorId ?? 'system',
+        operation: OPERATION,
+        outcome: auditOutcome(decision),
+        reason_code,
+        meta: {
+          ...(message_ref ? { message_ref } : {}),
+          // ⭐⭐ معرّف المحادثة **الموثوق من السياق** — ⭐ لا من الرسالة (غير موثوق).
+          // ⭐⇒ قرار الرسالة (قبول/تأجيل/رفض) يُربط بمحادثته ⇒⇒ والرسائل غير المخزَّنة
+          //   تُقرأ من سجل التدقيق (المصدر الوحيد الذي يحمل قرارها).
+          ...(conversation_ref ? { conversation_ref } : {}),
+        },
+      });
+      return outcome;
+    };
+
+    // ⓪ السياق الموثوق — غيابه = رفض صريح (لا مسار افتراضي).
+    if (!context) {
+      return finish('rejected', 'tenant_context_missing', NO_TENANT);
+  }
+
+  // ① عقد الرسالة — نفس تحقق Slice 01 (بلا نسخة ثانية).
+  const validation = validateEnvelope(input);
+  if (!validation.ok) {
+    // ⭐ الرسالة مخالفة للعقد ⇒ لا معرّف ولا توقيت موثوق ⇒ النتيجة بلا الحقلين.
+    return finish('rejected', 'envelope_invalid', context.tenantId, undefined, undefined, validation.errors);
+  }
+  const envelope                  = validation.value;
+
+  // ② مطابقة المستأجر — لا معرّف حر من الرسالة.
+  try {
+    assertTenantMatches(context, envelope.declared_tenant_id);
+  } catch {
+    return finish('rejected', 'tenant_mismatch', context.tenantId, envelope.message_ref, envelope.occurred_at);
+  }
+
+  // ②.ب مطابقة المحادثة — محادثة موثوقة واحدة في السياق ⇒ لا خلط.
+  try {
+    assertConversationMatches(context, envelope.conversation_ref);
+  } catch {
+    return finish(
+      'rejected',
+      'conversation_mismatch',
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
+  }
+
+  // ③ منع التكرار — قراءة من نفس مخزن Slice 01 (لا آلية ثانية).
+  if (this.#store.getByRef(context, envelope.message_ref)) {
+    return finish(
+      'rejected',
+      'message_ref_duplicate',
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
+  }
+
+  // ④ الترتيب — النطاق = (المستأجر · المحادثة الموثوقة) ⇒ لا افتراض ولا اشتقاق.
+  const scope                = context.conversationRef;
+  const decision = evaluateOrdering({
+    occurredAt: envelope.occurred_at,
+    messageRef: envelope.message_ref,
+    lastAccepted: orderingState.lastAccepted(context, scope),
+  });
+  if (decision.outcome === 'deferred') {
+    // ⭐ الرسالة المؤجلة: لا تُخزَّن · ولا تُغيّر آخر توقيت مقبول · ولا تُعالَج تلقائياً.
+    return finish(
+      'deferred',
+      decision.reason_code,
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
+  }
+
+  // ⑤ القبول والتخزين — نفس آلية Slice 01 (المخزن يفرض التحقق والتكرار مرة أخرى).
+  const appended = this.#store.append(context, envelope);
+  if (appended.status === 'duplicate') {
+    return finish(
+      'rejected',
+      appended.reason_code,
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
+  }
+  if (appended.status === 'rejected') {
+    return finish(
+      'rejected',
+      appended.reason_code,
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      appended.errors,
+      context.conversationRef,
+    );
+  }
+  orderingState.recordAccepted(context, scope, {
+    occurred_at: envelope.occurred_at,
+    message_ref: envelope.message_ref,
+  });
+  return finish(
+    'accepted',
+    decision.reason_code,
+    context.tenantId,
+    envelope.message_ref,
+    envelope.occurred_at,
+    undefined,
+    context.conversationRef,
+  );
+  }
+}
+return { PROCESSING_OUTCOME_RULES, ProcessingOutcomeError, validateProcessingOutcome, parseProcessingOutcome, ProcessingLayer };
+})();
+
+const __m_read_audit = (() => {
+const { SECRET_PATTERNS } = __m_audit_log;
+const { CONVERSATION_REF_PATTERN } = __m_tenant;
+// ============================================================
+// WASL AI — سجل أحداث القراءة (الشريحة الثالثة)
+// ------------------------------------------------------------
+// ⭐⭐ **مسار منفصل عن `AuditOutcome`** ⇒ ⭐ نوع قيمة مستقل + سجل مستقل.
+// ⭐ الغرض: توثيق **من قرأ ماذا ومتى وبأي صلاحية**.
+// ⛔ **لا محتوى رسائل ولا أسرار ولا بيانات حسّاسة** ⇒ ⭐ ما يُسجَّل:
+//   معرّفات (مستأجر · منفّذ · محادثة) + اسم العملية + الصلاحية + النتيجة + عدّاد.
+// ⛔ لا اتصال خارجي · ⛔ لا استيراد من أي مصدر خارجي.
+// ============================================================
+
+
+
+                                                 
+
+/** ⭐ نتيجة عملية قراءة — ⭐ **مستقلة عن `AuditOutcome`**. */
+                                                   
+
+/** ⭐ عمولات القراءة المعلنة — ⭐ أضيفت الشريحة الرابعة (⭐ إضافة قط — القيم القديمة لم تتغيّر). */
+                                
+                       
+                       
+                        
+                             
+                               
+                         
+                          
+                                                                  
+                             
+                                
+
+                                 
+                      
+                             
+                            
+                                         
+                              
+                                   
+                                                            
+                           
+                                            
+                          
+ 
+
+                                 
+                             
+                            
+                                         
+                              
+                                   
+                           
+                          
+ 
+
+class ReadAuditError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'ReadAuditError';
+    this.code = code;
+  }
+}
+
+const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{1,63}$/;
+const CAPABILITY_PATTERN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/;
+const OPERATIONS                                = [
+  'conversation.list',
+  'conversation.read',
+  'conversation.audit',
+  'conversation.state.read',
+  'conversation.state.update',
+  'conversation.assign',
+  'conversation.changes',
+  'conversation.queue.read',
+  'conversation.metrics.read',
+];
+
+function containsSecret(text        )          {
+  return SECRET_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * ⭐ سجل أحداث القراءة (في الذاكرة) — ⭐ **منفصل عن سجل تدقيق المعالجة**.
+ */
+class ReadAuditLog {
+           #events                   = [];
+           #now              ;
+
+  constructor(options                         = {}) {
+    this.#now = options.now ?? (() => new Date().toISOString());
+  }
+
+  /**
+   * ⭐ يسجّل عملية قراءة واحدة.
+   * ⛔ يرفض أي قيمة تشبه سرّاً · ⛔ يرفض أي عملية أو صلاحية خارج المُعلَن.
+   */
+  record(input                )                 {
+    if (!input || typeof input !== 'object') {
+      throw new ReadAuditError('input_missing', 'مدخل سجل القراءة مفقود');
+    }
+    if (!ID_PATTERN.test(String(input.tenant_id ?? ''))) {
+      throw new ReadAuditError('tenant_invalid', 'tenant_id غير صالح');
+    }
+    if (!ID_PATTERN.test(String(input.actor_id ?? ''))) {
+      throw new ReadAuditError('actor_invalid', 'actor_id غير صالح');
+    }
+    if (!OPERATIONS.includes(input.operation)) {
+      throw new ReadAuditError('operation_invalid', 'عملية قراءة غير معلنة');
+    }
+    if (!CAPABILITY_PATTERN.test(String(input.capability ?? ''))) {
+      throw new ReadAuditError('capability_invalid', 'اسم صلاحية غير صالح');
+    }
+    if (input.result !== 'allowed' && input.result !== 'denied') {
+      throw new ReadAuditError('result_invalid', 'نتيجة قراءة غير صالحة');
+    }
+    if (input.target !== undefined) {
+      if (!CONVERSATION_REF_PATTERN.test(input.target)) {
+        throw new ReadAuditError('target_invalid', 'هدف القراءة غير صالح');
+      }
+      if (containsSecret(input.target)) {
+        throw new ReadAuditError('target_secret_forbidden', 'هدف القراءة يشبه سرّاً');
+      }
+    }
+    if (input.count !== undefined) {
+      if (!Number.isInteger(input.count) || input.count < 0) {
+        throw new ReadAuditError('count_invalid', 'عدّاد القراءة غير صالح');
+      }
+    }
+    const event                 = {
+      ts: this.#now(),
+      tenant_id: input.tenant_id,
+      actor_id: input.actor_id,
+      operation: input.operation,
+      capability: input.capability,
+      result: input.result,
+      ...(input.target !== undefined ? { target: input.target } : {}),
+      ...(input.count !== undefined ? { count: input.count } : {}),
+    };
+    this.#events.push(event);
+    return event;
+  }
+
+  /**
+   * ⭐⭐ قراءة معزولة بحسب المستأجر — ⭐ `eventsFor` لا تكشف عن مستأجر آخر.
+   * ⛔ أحداث المستأجرين الآخرين لا تُعاد أبداً.
+   */
+  eventsFor(context               )                            {
+    return this.#events
+      .filter((event) => event.tenant_id === context.tenantId)
+      .map((event) => ({ ...event }));
+  }
+
+  size()         {
+    return this.#events.length;
+  }
+}
+return { ReadAuditError, ReadAuditLog };
+})();
+
+const __m_conversation_query = (() => {
+const { assertCapability } = __m_capability;
+const { CONVERSATION_REF_PATTERN } = __m_tenant;
+// ============================================================
+// WASL AI — طبقة قراءة محادثات المستأجر (الشريحة الثالثة)
+// ------------------------------------------------------------
+// ⭐⭐ المبدأ الحاكم: القراءة = عملية مُصرَّح بها داخل نطاق مستأجر واحد.
+//   ⇒ ⭐ المستأجر من **سياق جلسة موثوق** · ⭐ والصلاحية تُفحص **قبل** أي وصول.
+//   ⛔ لا مدخل في أي دالة هنا يقبل معرّف مستأجر من العميل.
+//   ⛔ ومعرّف المحادثة مُحدِّد داخل بيانات المستأجر — ⭐ **ليس دليل حق وصول**.
+// ⭐ قدرتان منفصلتان: ⭐ «قائمة المحادثات» ⭐ و«قراءة محادثة واحدة» ⭐ و«قراءة التدقيق».
+// ⛔ لا واجهة منشورة ولا API خارجي — ⭐ مسار قراءة محلي بالكامل.
+// ============================================================
+
+
+
+                                                 
+                                                           
+                                                              
+                                                    
+
+/** ⭐ صلاحية عرض قائمة محادثات المستأجر. */
+const CONVERSATION_LIST_CAPABILITY = 'conversation.list';
+/** ⭐ صلاحية قراءة محادثة واحدة. */
+const CONVERSATION_READ_CAPABILITY = 'conversation.read';
+/** ⭐ صلاحية قراءة أحداث التدقيق (قرارات القبول والتأجيل والرفض). */
+const CONVERSATION_AUDIT_CAPABILITY = 'conversation.audit';
+
+/** ⭐ أقصى حجم صفحة — ⭐ حدّ أعلى ثابت يمنع صفحة بلا حدّ. */
+const MAX_PAGE_SIZE = 100;
+/** ⭐ حجم الصفحة الافتراضي. */
+const DEFAULT_PAGE_SIZE = 50;
+
+                                      
+                                    
+                                 
+                                                                       
+                                     
+                                                                  
+                                    
+ 
+
+                                      
+                               
+                             
+                               
+                          
+                                                                                         
+                        
+                             
+ 
+
+                                     
+                                    
+                                                    
+                                            
+ 
+
+/** ⭐ معلومات الصفحة — ⭐ المؤشر (cursor) هو مفتاح الصفحة التالية. */
+                                       
+                         
+                            
+                         
+                                      
+ 
+
+                                        
+                                    
+                                          
+                                            
+ 
+
+                                                
+                               
+                           
+                                                                                      
+                                   
+ 
+
+class ConversationQueryError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'ConversationQueryError';
+    this.code = code;
+  }
+}
+
+                       
+                          
+                                                                                
+                           
+ 
+
+function clampLimit(limit                    )         {
+  if (limit === undefined) return DEFAULT_PAGE_SIZE;
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new ConversationQueryError('limit_invalid', 'حدّ الصفحة لازم يكون عدداً صحيحاً ≥ ١');
+  }
+  return Math.min(limit, MAX_PAGE_SIZE);
+}
+
+/** ⭐⭐ فحص الصلاحية + توثيق المحاولة — ⭐ الفحص قبل أي وصول للبيانات. */
+function requireCapability(
+  context               ,
+  capability        ,
+  operation                                                                  ,
+  deps                               ,
+  target         ,
+)       {
+  try {
+    assertCapability(context, capability);
+  } catch (error) {
+    deps.readAudit.record({
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation,
+      capability,
+      result: 'denied',
+      ...(target !== undefined ? { target } : {}),
+    });
+    throw error;
+  }
+}
+
+function summarize(
+  store              ,
+  context               ,
+  conversationRef        ,
+)                      {
+  const rows = store.messagesForConversation(context, conversationRef);
+  const first = rows[0];
+  const last = rows[rows.length - 1];
+  return {
+    conversation_ref: conversationRef,
+    message_count: rows.length,
+    first_occurred_at: first?.occurred_at ?? '',
+    last_occurred_at: last?.occurred_at ?? '',
+  };
+}
+
+/** ⭐ ترتيب حتمي: ⭐ أول توقيت (لا يتغيّر) تنازلياً · ⭐ ثم المعرّف تصاعدياً. */
+function compareSummaries(a                     , b                     )         {
+  if (a.first_occurred_at !== b.first_occurred_at) {
+    return a.first_occurred_at < b.first_occurred_at ? 1 : -1;
+  }
+  return a.conversation_ref < b.conversation_ref ? -1 : 1;
+}
+
+/**
+ * ⭐⭐ قائمة محادثات المستأجر.
+ * ⛔ لا تقبل معرّف مستأجر — ⭐ النطاق من السياق وحده.
+ * ⭐ المؤشر (cursor) = معرّف آخر محادثة في الصفحة السابقة.
+ */
+function listConversations(
+  context               ,
+  deps                               ,
+  options              = {},
+)                                                                                                    {
+  requireCapability(context, CONVERSATION_LIST_CAPABILITY, 'conversation.list', deps);
+  const limit = clampLimit(options.limit);
+
+  const all = deps.store
+    .conversationRefs(context)
+    .map((ref) => summarize(deps.store, context, ref))
+    .sort(compareSummaries);
+
+  let start = 0;
+  if (options.cursor !== undefined) {
+    const index = all.findIndex((item) => item.conversation_ref === options.cursor);
+    if (index === -1) {
+      throw new ConversationQueryError(
+        'cursor_invalid',
+        'مؤشر الصفحات غير معروف في نطاق المستأجر',
+      );
+    }
+    start = index + 1;
+  }
+
+  const items = all.slice(start, start + limit);
+  const next =
+    start + items.length < all.length && items.length > 0
+      ? items[items.length - 1].conversation_ref
+      : null;
+
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.list',
+    capability: CONVERSATION_LIST_CAPABILITY,
+    result: 'allowed',
+    count: items.length,
+  });
+
+  return {
+    summaries: items,
+    pagination: { limit, returned: items.length, total: all.length, next_cursor: next },
+  };
+}
+
+/**
+ * ⭐⭐ رسائل محادثة واحدة — ⭐ **المخزَّنة (المقبولة) فقط**.
+ * ⛔ محادثة لا تخص المستأجر ⇒ ⭐ صفوف صفر (ولا خطأ يكشف وجودها).
+ * ⭐ المؤشر (cursor) = معرّف آخر رسالة في الصفحة السابقة.
+ */
+function getConversation(
+  context               ,
+  conversationRef        ,
+  deps                               ,
+  options              = {},
+)                     {
+  if (!CONVERSATION_REF_PATTERN.test(conversationRef)) {
+    throw new ConversationQueryError('conversation_ref_invalid', 'معرّف المحادثة غير صالح');
+  }
+  requireCapability(context, CONVERSATION_READ_CAPABILITY, 'conversation.read', deps, conversationRef);
+  const limit = clampLimit(options.limit);
+
+  const rows = deps.store.messagesForConversation(context, conversationRef);
+  let start = 0;
+  if (options.cursor !== undefined) {
+    const index = rows.findIndex((row) => row.message_ref === options.cursor);
+    if (index === -1) {
+      throw new ConversationQueryError(
+        'cursor_invalid',
+        'مؤشر الصفحات غير معروف في نطاق المستأجر',
+      );
+    }
+    start = index + 1;
+  }
+
+  const page = rows.slice(start, start + limit);
+  const messages = page.map((row               ) => ({
+    message_ref: row.message_ref,
+    direction: row.direction,
+    occurred_at: row.occurred_at,
+    locale: row.locale,
+    body: row.body,
+    stored_at: row.stored_at,
+  }));
+  const next =
+    start + messages.length < rows.length && messages.length > 0
+      ? messages[messages.length - 1].message_ref
+      : null;
+
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.read',
+    capability: CONVERSATION_READ_CAPABILITY,
+    result: 'allowed',
+    target: conversationRef,
+    count: messages.length,
+  });
+
+  return {
+    conversation_ref: conversationRef,
+    messages,
+    pagination: { limit, returned: messages.length, total: rows.length, next_cursor: next },
+  };
+}
+
+/**
+ * ⭐⭐ أحداث تدقيق محادثة واحدة — ⭐ **المصدر الوحيد لقرارات الرسائل غير المخزَّنة**.
+ * ⛔ لا نص رسالة ولا أسرار — ⭐ السجل يحمل القرار وسببه فقط.
+ * ⭐ المؤشر (cursor) = ترتيب السطر داخل سجل التدقيق (السجل append-only ⇒ مستقر).
+ */
+function readConversationAudit(
+  context               ,
+  conversationRef        ,
+  deps                               ,
+  options              = {},
+)                        {
+  if (!CONVERSATION_REF_PATTERN.test(conversationRef)) {
+    throw new ConversationQueryError('conversation_ref_invalid', 'معرّف المحادثة غير صالح');
+  }
+  requireCapability(context, CONVERSATION_AUDIT_CAPABILITY, 'conversation.audit', deps, conversationRef);
+  const limit = clampLimit(options.limit);
+
+  const all = deps.audit.entriesFor(context, { conversationRef });
+  let start = 0;
+  if (options.cursor !== undefined) {
+    const parsed = Number.parseInt(options.cursor, 10);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new ConversationQueryError('cursor_invalid', 'مؤشر الصفحات غير صالح');
+    }
+    start = parsed;
+  }
+
+  const page = all.slice(start, start + limit);
+  const next =
+    start + page.length < all.length && page.length > 0
+      ? String(start + page.length)
+      : null;
+
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.audit',
+    capability: CONVERSATION_AUDIT_CAPABILITY,
+    result: 'allowed',
+    target: conversationRef,
+    count: page.length,
+  });
+
+  return {
+    conversation_ref: conversationRef,
+    entries: page,
+    pagination: { limit, returned: page.length, total: all.length, next_cursor: next },
+  };
+}
+return { CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, CONVERSATION_AUDIT_CAPABILITY, MAX_PAGE_SIZE, DEFAULT_PAGE_SIZE, ConversationQueryError, listConversations, getConversation, readConversationAudit };
+})();
+
+const __m_conversation_change_log = (() => {
+const { SECRET_PATTERNS } = __m_audit_log;
+const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } = __m_tenant;
+// ============================================================
+// WASL AI — سجل تغييرات المحادثات (الشريحة الرابعة)
+// ------------------------------------------------------------
+// ⭐⭐ **سجل مستقل تماماً** ⇒ ⭐ لا علاقة له بسجل تدقيق المعالجة
+//   (`AuditOutcome`) ولا بسجل أحداث القراءة (`ReadAuditLog`).
+// ⭐ الغرض: توثيق **من غيّر حالة أي محادثة ومتى ولماذا**.
+// ⛔ **بلا نص رسائل · بلا أسرار · بلا بيانات حسّاسة** ⇒ ⭐ ما يُسجَّل:
+//   معرّفات (مستأجر · منفّذ · محادثة · موظف) + العملية + من/إلى + السبب + الوقت.
+// ⛔ لا اتصال خارجي · ⛔ لا استيراد من أي مصدر خارجي.
+// ⭐ والقراءة **معزولة بالمستأجر** ⇒ ⭐ ولا `entries()` غير المعزولة في مسار القراءة.
+// ============================================================
+
+
+
+                                                 
+
+/** ⭐⭐ عمليات التغيير المعلنة — ⭐ **مجموعة مغلقة**. */
+const CONVERSATION_CHANGE_OPERATIONS = [
+  'state.update',
+  'assignment.set',
+  'assignment.transfer',
+  'assignment.clear',
+]         ;
+
+                                                                                          
+
+/** ⭐⭐ حالات المحادثة — ⭐ **مجموعة مغلقة** (نفس مجموعة الشريحة الرابعة). */
+const CONVERSATION_CHANGE_STATES = [
+  'new',
+  'open',
+  'assigned',
+  'pending',
+  'resolved',
+  'closed',
+]         ;
+
+                                                                                  
+
+/** ⭐ سطر تغيير واحد — ⭐ **(المستأجر · المنفّذ · العملية · من · إلى · السبب · الإسناد · الوقت)**. */
+                                          
+                      
+                             
+                            
+                                                  
+                                    
+                                               
+                                             
+                                                              
+                          
+                                                     
+                                        
+                                                     
+                                      
+ 
+
+                                          
+                             
+                            
+                                                  
+                                    
+                                               
+                                             
+                           
+                                         
+                                       
+ 
+
+class ConversationChangeError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'ConversationChangeError';
+    this.code = code;
+  }
+}
+
+/** ⭐ أقصى طول للسبب — ⭐ يمنع إخفاء بيانات حسّاسة في نص طويل. */
+const MAX_CHANGE_REASON_LENGTH = 200;
+
+function containsSecret(text        )          {
+  return SECRET_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function assertOptionalActor(value                           , field        )                {
+  if (value === undefined || value === null) return null;
+  if (!ACTOR_ID_PATTERN.test(value)) {
+    throw new ConversationChangeError('assignee_invalid', `${field}: معرّف موظف غير صالح`);
+  }
+  return value;
+}
+
+/**
+ * ⭐⬀ فحص سبب السبب — ⭐ يُستخدم **قبل** أي معاملة الحالة.
+ * ⛔ علامة في الاستخداع ⇒ ⭐ معاملة السبب (لا تعديل حالة ثم تسجيل السبب فيستور الحالة).
+ */
+function assertChangeReason(reason        )       {
+  if (reason.length > MAX_CHANGE_REASON_LENGTH) {
+    throw new ConversationChangeError(
+      'reason_too_long',
+      `سبب التعديل أطول من الحدّ (٠٠٠ حرفاً)`,
+    );
+  }
+  if (containsSecret(reason)) {
+    throw new ConversationChangeError('reason_secret_forbidden', 'سبب التعديل يشبه سرًّاً');
+  }
+}
+
+/**
+ * ⭐⭐⭐ التحقّق الكامل من مدخل سجل التغييرات — ⭐ **قبل أي كتابة**.
+ * ⭐ يُستدعى من `conversation-state.ts` **قبل** تعديل الحالة ⇒ ⇒
+ *   ⭐ لا تعديل حالة ولا إسناد قبل أن يتحقّق السجل من كل حقل ⇒ ⇒ ⇒
+ *   ⭐ **لا تغيير بلا سجل تغيير مطابق** (ضمان مُختبَر — تصريح المالك · D-057).
+ * ⭐ و`record()` تستدعيه أيضاً ⇒ ⇒ **قاعدة واحدة لا ازدواج في الفحوص**.
+ */
+function assertChangeEntry(input                         )       {
+  if (!input || typeof input !== 'object') {
+    throw new ConversationChangeError('input_missing', 'مدخل سجل التغييرات مفقود');
+  }
+  if (!ACTOR_ID_PATTERN.test(String(input.tenant_id ?? ''))) {
+    throw new ConversationChangeError('tenant_invalid', 'tenant_id غير صالح');
+  }
+  if (!ACTOR_ID_PATTERN.test(String(input.actor_id ?? ''))) {
+    throw new ConversationChangeError('actor_invalid', 'actor_id غير صالح');
+  }
+  if (!CONVERSATION_CHANGE_OPERATIONS.includes(input.operation)) {
+    throw new ConversationChangeError('operation_invalid', 'عملية تغيير غير معلنة');
+  }
+  if (!CONVERSATION_REF_PATTERN.test(String(input.conversation_ref ?? ''))) {
+    throw new ConversationChangeError('conversation_invalid', 'conversation_ref غير صالح');
+  }
+  if (!CONVERSATION_CHANGE_STATES.includes(input.from_state)) {
+    throw new ConversationChangeError('state_invalid', 'الحالة الأصلية غير معلنة');
+  }
+  if (!CONVERSATION_CHANGE_STATES.includes(input.to_state)) {
+    throw new ConversationChangeError('state_invalid', 'الحالة الجديدة غير معلنة');
+  }
+  assertChangeReason(input.reason ?? '');
+  assertOptionalActor(input.assignee_from, 'assignee_from');
+  assertOptionalActor(input.assignee_to, 'assignee_to');
+}
+
+/**
+ * ⭐ سجل تغييرات المحادثات (في الذاكرة) — ⭐ **append-only**.
+ * ⛔ يرفض أي قيمة تشبه سرّاً · ⛔ يرفض أي عملية أو حالة خارج المُعلَن.
+ */
+class ConversationChangeLog {
+           #entries                            = [];
+           #now              ;
+
+  constructor(options                         = {}) {
+    this.#now = options.now ?? (() => new Date().toISOString());
+  }
+
+  /** ⭐ يسجّل تغييراً واحداً — ⭐ **بتحقّق كامل قبل الكتابة**. */
+  record(input                         )                          {
+    // ⭐⭐ كل الفحوص في مكان واحد (`assertChangeEntry`) ⇒ ⇒ **نفس القاعدة** التي
+    // ⭐ تُستدعى قبل تعديل الحالة ⇒ ⇒ فلا كتابة بلا سجل.
+    assertChangeEntry(input);
+    const reason = input.reason ?? '';
+    const assigneeFrom = assertOptionalActor(input.assignee_from, 'assignee_from');
+    const assigneeTo = assertOptionalActor(input.assignee_to, 'assignee_to');
+    const entry                          = {
+      ts: this.#now(),
+      tenant_id: input.tenant_id,
+      actor_id: input.actor_id,
+      operation: input.operation,
+      conversation_ref: input.conversation_ref,
+      from_state: input.from_state,
+      to_state: input.to_state,
+      reason,
+      assignee_from: assigneeFrom,
+      assignee_to: assigneeTo,
+    };
+    this.#entries.push(entry);
+    return entry;
+  }
+
+  /**
+   * ⭐⭐ قراءة معزولة بحسب المستأجر — ⭐ **لا تُعيد أحداث مستأجر آخر أبداً**.
+   * ⭐ `conversationRef` اختياري ⇒ ⭐ تصفية على مستوى المحادثة أيضاً.
+   */
+  changesFor(context               , conversationRef         )                                     {
+    return this.#entries
+      .filter((entry) => entry.tenant_id === context.tenantId)
+      .filter((entry) => conversationRef === undefined || entry.conversation_ref === conversationRef)
+      .map((entry) => ({ ...entry }));
+  }
+
+  /** ⭐⭐ **لا `entries()` غير المعزولة** ⇒ ⭐ مسار القراءة معزول بنيوياً. */
+  size()         {
+    return this.#entries.length;
+  }
+}
+return { CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, MAX_CHANGE_REASON_LENGTH, assertChangeReason, assertChangeEntry, ConversationChangeLog };
+})();
+
+const __m_conversation_state = (() => {
+const { assertCapability } = __m_capability;
+const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } = __m_tenant;
+const { assertChangeEntry, assertChangeReason } = __m_conversation_change_log;
+const { CONVERSATION_CHANGE_STATES } = __m_conversation_change_log;
+// ============================================================
+// WASL AI — طبقة إدارة حالة المحادثة والإسناد المحلي (الشريحة الرابعة)
+// ------------------------------------------------------------
+// ⭐⭐ المبدأ الحاكم: تغيير حالة المحادثة = **عملية مُصرَّح بها داخل نطاق
+//   مستأجر واحد** ⇒ ⭐ المستأجر من **سياق جلسة موثوق** ⇒ ⭐ والصلاحية تُفحص
+//   **قبل** أي وصول ⇒ ⭐ والإسناد لموظف **داخل المستأجر نفسه**.
+// ⛔ لا مدخل في أي دالة هنا يقبل معرّف مستأجر من العميل.
+// ⛔ ومعرّف المحادثة ومعرّف الموظف **ليسا دليل حق وصول** ⇒ ⭐ يُفحصان.
+// ⭐ الحالات الست + انتقالات مغلقة ⇒ ⭐ **أي انتقال غير مدرَّج = رفض صريح**
+//   بصفر تغيير في الحالة.
+// ⛔ لا ذكاء اصطناعي ولا CRM ولا إشعارات ولا قاعدة بيانات ولا نشر.
+// ============================================================
+
+
+
+                                                 
+                                               
+                                                    
+
+
+
+// ============================================================
+// ⭐⭐ الصلاحيات الثلاث (مفصولة) — ⭐ **نمط الشريحة الثالثة**
+// ============================================================
+
+/** ⭐ صلاحية قراءة حالة المحادثة ومُسنَدها. */
+const CONVERSATION_STATE_READ_CAPABILITY = 'conversation.state.read';
+/** ⭐ صلاحية تغيير الحالة (بانتقالات مسموحة فقط). */
+const CONVERSATION_STATE_UPDATE_CAPABILITY = 'conversation.state.update';
+/** ⭐ صلاحية الإسناد ونقله وإلغاؤه. */
+const CONVERSATION_ASSIGN_CAPABILITY = 'conversation.assign';
+
+/** ⭐⭐ أسماء عمليات الحالة — ⭐ **مجموعة مغلقة**. */
+const CONVERSATION_STATE_OPERATIONS = [
+  'conversation.state.read',
+  'conversation.state.update',
+  'conversation.assign',
+  'conversation.changes',
+]         ;
+
+                                                                                        
+
+// ============================================================
+// ⭐⭐ الحالات والانتقالات (قائمة مغلقة)
+// ============================================================
+
+/** ⭐⭐ الحالات الست — ⭐ **مجموعة مغلقة**. */
+const CONVERSATION_STATES = CONVERSATION_CHANGE_STATES;
+
+                                                                     
+
+/**
+ * ⭐⭐⭐ الانتقالات المسموحة — ⭐⭐ **خريطة مغلقة** (١٢ انتقالاً — بعد `D-056`).
+ * ⭐⭐ `closed` = **نهائية** ⇒ ⭐⭐ **لا انتقال إليها من أي حالة** ⇒ ⭐⭐ **ولا إسناد ولا تعديل حالة ولا إعادة موظف بعد الإغلاق**.
+ * ⭐⭐ **الإغلاق** (تصريح المالك — `D-056`): ⭐⭐ `resolved ⇒ closed` هو الإغلاق الوحيد ⇒ ⭐⭐ وليس إغلاقً من حالة أخرى ⇒ ⭐⭐ ولا تعديل لمحادثة مغلقة بعد الإغلاق.
+ */
+const ALLOWED_TRANSITIONS           
+                                                         
+  = Object.freeze({
+  new: Object.freeze(['open']),
+  open: Object.freeze(['assigned', 'pending', 'resolved']),
+  assigned: Object.freeze(['open', 'pending', 'resolved', 'assigned']),
+  pending: Object.freeze(['assigned', 'resolved']),
+  resolved: Object.freeze(['open', 'closed']),
+  closed: Object.freeze([]),
+});
+
+/**
+ * ⭐⭐ الحالات النهائية — ⭐⭐ **مجموعة مغلقة**.
+ * ⭐⭐ حالة `closed` انتهاء من كل طريق ⇒ ⭐⭐ ولا تُعدَّل ولا تُسند.
+ */
+const TERMINAL_CONVERSATION_STATES                               = Object.freeze(['closed']);
+
+/**
+ * ⭐⭐ فحص النهائية — ⭐⭐ **الحالة لا تُعدَّل ولا تُسند منها**.
+ */
+function isTerminalState(state                   )          {
+  return TERMINAL_CONVERSATION_STATES.includes(state);
+}
+
+/** ⭐⭐ حالة المحادثة كما يراها المستخدم. */
+                                        
+                                    
+                                    
+                                                 
+                                            
+                              
+                                                           
+                           
+ 
+
+/** ⭐⭐ سجلّ الحالات (في الذاكرة) — ⭐ **معزول بالمستأجر بنيوياً**. */
+class ConversationStateStore {
+           #rows                                                  = new Map();
+           #now              ;
+
+  constructor(options                         = {}) {
+    this.#now = options.now ?? (() => new Date().toISOString());
+  }
+
+  /** ⭐ قراءة حالة — ⭐ **لنطاق مستأجر واحد فقط**. */
+  get(tenantId        , conversationRef        )                                    {
+    const row = this.#rows.get(tenantId)?.get(conversationRef);
+    return row ? { ...row } : undefined;
+  }
+
+  /**
+   * ⭐ إنشاء صف الحالة (لو لم يوجد) — ⭐ الحالة الابتدائية `new`.
+   * ⭐ **لا يُنشئ صفاً لمحادثة لا تخص المستأجر** ⇒ ⭐ (الم existence يُفحص قبل).
+   */
+  ensure(tenantId        , conversationRef        )                        {
+    const existing = this.get(tenantId, conversationRef);
+    if (existing) return existing;
+    const row                        = {
+      conversation_ref: conversationRef,
+      state: 'new',
+      assignee_actor_id: null,
+      updated_at: this.#now(),
+      version: 1,
+    };
+    const tenantRows = this.#rows.get(tenantId) ?? new Map                               ();
+    tenantRows.set(conversationRef, row);
+    this.#rows.set(tenantId, tenantRows);
+    return { ...row };
+  }
+
+  /** ⭐⭐ تحديث الحالة — ⭐ **ما لم تتغيّر حالة أخرى** (كاشف التعارض). */
+  setState(
+    tenantId        ,
+    conversationRef        ,
+    next                                                                                 ,
+  )                        {
+    const current = this.get(tenantId, conversationRef);
+    if (!current) {
+      throw new ConversationStateError('conversation_not_found', 'لا يوجد صف حالة لهذه المحادثة');
+    }
+    if (next.expectedVersion !== undefined && next.expectedVersion !== current.version) {
+      throw new ConversationStateError(
+        'state_conflict',
+        'الحالة تغيّرت قبل هذا التعديل ⇒ أُلغي (لا الكتابة فوق تغيير آخر)',
+      );
+    }
+    const row                        = {
+      conversation_ref: conversationRef,
+      state: next.state,
+      assignee_actor_id: next.assignee,
+      updated_at: this.#now(),
+      version: current.version + 1,
+    };
+    const tenantRows = this.#rows.get(tenantId) ?? new Map                               ();
+    tenantRows.set(conversationRef, row);
+    this.#rows.set(tenantId, tenantRows);
+    return { ...row };
+  }
+
+  /**
+   * ⭐⭐⭐ تراجع مُعوَّض — ⭐ **يستعيد الصف السابق تماماً** (بلا أثر في السجل).
+   * ⭐⭐ **يُستخدم فقط عند فشل تسجيل التغيير** ⇒ ⇒ ⇒ **لا تغيير حالة بلا سجل**.
+   * ⛔ لا يُنشئ صفاً ولا يحذف شيئاً — ⭐ يستعيد ما كان موجوداً فقط.
+   */
+  restore(
+    tenantId        ,
+    conversationRef        ,
+    previous                       ,
+  )       {
+    const tenantRows = this.#rows.get(tenantId);
+    if (!tenantRows || !tenantRows.has(conversationRef)) return;
+    tenantRows.set(conversationRef, { ...previous });
+  }
+
+  /**
+   * ⭐⭐⭐ تجاهل صف لم يكن موجوداً — ⭐ **يُستخدم مع التراجع المعوَّض**
+   * ⭐ (حين أُنشئ الصف لأول مرة في محاولة فاشلة ⇒ ⇒ يُحذف ⇒ ⇒ ولا أثر).
+   */
+  discard(tenantId        , conversationRef        )       {
+    this.#rows.get(tenantId)?.delete(conversationRef);
+  }
+
+  /** ⭐ عدد الصفوف لمستخدم واحد — ⭐ (تشخيص محلي فقط). */
+  sizeFor(tenantId        )         {
+    return this.#rows.get(tenantId)?.size ?? 0;
+  }
+}
+
+// ============================================================
+// ⭐⭐ الأخطاء (أكواد معلنة — ⭐ لا تسريب لوجود بيانات مستأجر آخر)
+// ============================================================
+
+class ConversationStateError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'ConversationStateError';
+    this.code = code;
+  }
+}
+
+/**
+ * ⭐⭐⭐ دليل الموظفين — ⭐ **سلطة خارجية موثوقة** (يوفّرها التطبيق).
+ * ⛔ **لا يُبنى في هذه الطبقة** ⇒ ⭐ ولا نظام مستخدمين إنتاجي.
+ * ⛔ **لا معرّفات من العميل** ⇒ ⭐ ⇒⇒ المعيار هو نطاق المستأجر لا المُدخل.
+ */
+                                    
+                                            
+                                                         
+ 
+
+                                                
+                                                            
+                               
+                                 
+                                          
+                                                     
+                                          
+                                                           
+                                   
+                                                        
+                                        
+ 
+
+// ============================================================
+// ⭐⭐⭐ الأدوات الداخلية
+// ============================================================
+
+function isConversationState(value         )                             {
+  return typeof value === 'string' && (CONVERSATION_STATES                     ).includes(value);
+}
+
+function isTransitionAllowed(from                   , to                   )          {
+  return ALLOWED_TRANSITIONS[from].includes(to);
+}
+
+function auditDenied(
+  context               ,
+  operation                            ,
+  capability        ,
+  deps                               ,
+  target        ,
+)       {
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation,
+    capability,
+    result: 'denied',
+    target,
+  });
+}
+
+/**
+ * ⭐⭐⭐ وجود المحادثة — ⭐ **ضمن نطاق المستأجر فقط**.
+ * ⛔ محادثة لا تخص المستأجر ⇒ ⭐ **نفس الرمز** (لا كشف وجود) ⇒ ⭐ صفر تسريب.
+ */
+function requireConversation(
+  context               ,
+  conversationRef        ,
+  deps                               ,
+)       {
+  const exists = deps.store.messagesForConversation(context, conversationRef).length > 0;
+  if (!exists) {
+    throw new ConversationStateError(
+      'conversation_not_found',
+      'لا توجد محادثة بهذا المعرّف في نطاق المستأجر',
+    );
+  }
+}
+
+function requireCapability(
+  context               ,
+  capability        ,
+  operation                            ,
+  deps                               ,
+  target        ,
+)       {
+  try {
+    assertCapability(context, capability);
+  } catch (error) {
+    auditDenied(context, operation, capability, deps, target);
+    throw error;
+  }
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **الالتزام الذرّي** — ⭐ **تعديل الحالة + سجل التغيير أو لا شيء**.
+ * ⭐ **الترتيب**: ⭐ (١) تحقّق كامل من مدخل السجل **قبل** أي كتابة ⇒
+ *   (٢) إنشاء صف الحالة (إن لم يكن موجوداً) ⇒ (٣) تعديل الحالة ⇒
+ *   (٤) تسجيل التغيير ⇒ ⭐ ولو فشل (٤) ⇒
+ *   ⭐ **تراجع مُعوَّض** ⇒ ⇒ ⇒ **النتيجة: لا تغيير حالة ولا إسناد بلا سجل تغيير مطابق**.
+ * ⭐ **سبب التراجع**: ⭐ لو فشل التسجيل (فشل كتابة دائم مثلاً) ⇒ كانت الحالة
+ *   تغيّرت وتغيّرها بلا أثر في أي سجل ⇒ ⇒ **التراجع يُبطل ذلك بالكامل**.
+ * ⛔ التراجع **لا يُسجّل** (لأنه لا تغيير في النهاية) ⇒ ⇒ ولا سجل بلا تغيير.
+ *
+ * ⭐⭐⭐ **حدود الضمان (C4 · تصريح ٥ نوفمبر ٢٠٢٦)** — ⭐ الضمان **محليّ**
+ *   ويعتمد على **افتراضين مُصمَّمين**:
+ *   ⭐ **① التشغيل متسلسل**: ⭐ المسار **بلا `await`** ⇒ ⇒ فلا تداخل بين
+ *     الكتابة والتسجيل (حدث واحد = نداء متزامن) ⇒ ⇒ **لو أُضيف `await`
+ *     (مثلاً لربط سجل دائم) ⇒ يفقد التراجع أمانه** ⇒⇒⇒ **ولذلك حارس
+ *     اختبار** في `tests/conversation-atomicity.test.ts` **يُسقط الاختبار
+ *     فور ظهور `await` داخل `commitStateChange` أو داخل سجل التغييرات**.
+ *   ⭐ **② التخزين في الذاكرة**: ⭐ مخزن الحالة وسجل التغييرات **خرائط في
+ *     الذاكرة** ⇒ ⇒ **التراجع يُعيد ما لم يعد موجوداً** ⇒⇒⇒ **فلا يُعلن
+ *     ضمان معاملات إنتاجية (Transaction)**.
+ * ⛔ **الانتقال إلى تخزين دائم أو تنفيذ متزامن** ⇒ ⇒ **مراجعة + تصريح
+ *   مستقل من المالك** ⇒ ⇒ ولا يُفترض ضمن هذا التصريح.
+ */
+function commitStateChange(
+  context               ,
+  conversationRef        ,
+  current                       ,
+  existedBefore         ,
+  next                                                                                 ,
+  input                         ,
+  deps                               ,
+)                        {
+  // ⭐⬀ (١) كل فحوص السجل قبل أي كتابة ⇒ ⇒ لا كتابة على مدخل مرفوض
+  // (ولا حتى إنشاء صف الحالة ⇒ ⇒ ولا أثر متبقٍّ بعد الرفض).
+  assertChangeEntry(input);
+  // ⭐ (٢) صف الحالة — ⭐ **بعد** كل الفحوص ⇒ ⇒ رفضٌ لا يترك صفاً خلفه.
+  deps.states.ensure(context.tenantId, conversationRef);
+  const updated = deps.states.setState(context.tenantId, conversationRef, next);
+  try {
+    // ⭐ (٤) تسجيل التغيير — ⭐ نفس المدخل الذي تحقّق منه قبل الكتابة.
+    deps.changes.record(input);
+  } catch (error) {
+    // ⭐⬀ (٤ب) تراجع مُعوَّض ⇒ ⇒ **لا تغيير بلا سجل**.
+    if (existedBefore) {
+      deps.states.restore(context.tenantId, conversationRef, current);
+    } else {
+      deps.states.discard(context.tenantId, conversationRef);
+    }
+    throw error;
+  }
+  return updated;
+}
+
+/**
+ * ⭐⭐ الحالة الابتدائية — ⭐ **للمحادثة التي لا يوجد لها صف بعد**.
+ * ⭐ تُستخدم **قبل** إنشاء الصف ⇒ ⇒ **فحص بحت بلا أثر** ⇒ ⇒ ورفضٌ لا يترك أثراً.
+ */
+function initialConversationState(conversationRef        )                        {
+  return {
+    conversation_ref: conversationRef,
+    state: 'new',
+    assignee_actor_id: null,
+    updated_at: '',
+    version: 0,
+  };
+}
+
+// ============================================================
+// ⭐⭐⭐ العمليات العامة
+// ============================================================
+
+/**
+ * ⭐⭐⭐ قراءة حالة المحادثة ومُسنَدها.
+ * ⛔ **الفحص قبل أي وصول** ⇒ ⭐ بلا صلاحية = رفض صريح بلا تسريب.
+ */
+function getConversationState(
+  context               ,
+  conversationRef        ,
+  deps                               ,
+)                        {
+  if (!CONVERSATION_REF_PATTERN.test(conversationRef)) {
+    throw new ConversationStateError('conversation_ref_invalid', 'معرّف المحادثة غير صالح');
+  }
+  requireCapability(
+    context,
+    CONVERSATION_STATE_READ_CAPABILITY,
+    'conversation.state.read',
+    deps,
+    conversationRef,
+  );
+  requireConversation(context, conversationRef, deps);
+  const row = deps.states.ensure(context.tenantId, conversationRef);
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.state.read',
+    capability: CONVERSATION_STATE_READ_CAPABILITY,
+    result: 'allowed',
+    target: conversationRef,
+  });
+  return { ...row };
+}
+
+/**
+ * ⭐⭐⭐ تغيير حالة المحادثة — ⭐ **بانتقالات مسموحة فقط**.
+ * ⛔ `to = 'assigned'` ⇒ ⭐ **مرفوض دائماً** ⇒ ⭐ (الإسناد شرط لا أثر جانبي ⇒
+ *   الإسناد عبر `assignConversation` وحده).
+ * ⛔ `resolved ⇒ open` ⇒ ⭐ **سبب مُسجَّل إلزامي**.
+ * ⛔ `expectedVersion` ⇒ ⭐ كاشف تعارض (لا الكتابة فوق تغيير آخر).
+ */
+function updateConversationState(
+  context               ,
+  conversationRef        ,
+  to                   ,
+  deps                               ,
+  options                                                = {},
+)                        {
+  if (!CONVERSATION_REF_PATTERN.test(conversationRef)) {
+    throw new ConversationStateError('conversation_ref_invalid', 'معرّف المحادثة غير صالح');
+  }
+  requireCapability(
+    context,
+    CONVERSATION_STATE_UPDATE_CAPABILITY,
+    'conversation.state.update',
+    deps,
+    conversationRef,
+  );
+  if (!isConversationState(to)) {
+    throw new ConversationStateError('state_invalid', 'الحالة المطلوبة خارج المجموعة المغلقة');
+  }
+  requireConversation(context, conversationRef, deps);
+  // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
+  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const current = existedBefore
+    ? (deps.states.get(context.tenantId, conversationRef)                         )
+    : initialConversationState(conversationRef);
+
+  // ⭐⬀ حارس النهائية — ⭐ المحادثة المغلقة لا تُعدل ولا تُسند (ولا حتى إغلاقً مريرًاً).
+  if (isTerminalState(current.state)) {
+    throw new ConversationStateError(
+      'state_terminal',
+      `المحادثة مغلقة (${current.state}) ⇒ لا تغيير ولا إسناد`,
+    );
+  }
+
+  if (to === 'assigned') {
+    throw new ConversationStateError(
+      'transition_requires_assignee',
+      'الانتقال إلى «مسندة» يتم عبر الإسناد وحده (شرط لا أثر جانبي)',
+    );
+  }
+  if (!isTransitionAllowed(current.state, to)) {
+    throw new ConversationStateError(
+      'transition_not_allowed',
+      `انتقال غير مسموح: ${current.state} ⇒ ${to}`,
+    );
+  }
+  const reason = options.reason ?? '';
+  // ⭐⬀ فحص السبب **قبل أي معاملة الحالة** ⇒ ⬀ لا تموت قابل أو تسجيل السبب.
+  assertChangeReason(reason);
+  if (current.state === 'resolved' && to === 'open' && reason.trim() === '') {
+    throw new ConversationStateError(
+      'transition_requires_reason',
+      'إعادة الفتح تتطلّب سبباً مُسجَّلاً',
+    );
+  }
+  // ⭐ «open» = غير مسندة ⇒ ⇒ الإسناد يُلغى تلقائياً عند الانتقال إليها.
+  const assignee = to === 'open' ? null : current.assignee_actor_id;
+  // ⭐⭐⭐ التزام ذرّي — ⭐ تعديل الحالة + سجل التغيير أو لا شيء.
+  const updated = commitStateChange(
+    context,
+    conversationRef,
+    current,
+    existedBefore,
+    {
+      state: to,
+      assignee,
+      ...(options.expectedVersion === undefined ? {} : { expectedVersion: options.expectedVersion }),
+    },
+    {
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: 'state.update',
+      conversation_ref: conversationRef,
+      from_state: current.state,
+      to_state: to,
+      reason,
+      assignee_from: current.assignee_actor_id,
+      assignee_to: assignee,
+    },
+    deps,
+  );
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.state.update',
+    capability: CONVERSATION_STATE_UPDATE_CAPABILITY,
+    result: 'allowed',
+    target: conversationRef,
+  });
+  return updated;
+}
+
+/**
+ * ⭐⭐⭐ إسناد المحادثة لموظف — ⭐ **داخل المستأجر نفسه فقط**.
+ * ⛔ **الموظف من دليل الموظفين** (سلطة موثوقة) ⇒ ⭐ لا معرّف من العميل يُعتمد.
+ * ⛔ **موظف من مستأجر آخر ⇒ نفس رمز الرفض** (لا كشف وجود).
+ * ⛔ إسناد لنفس الموظف ⇒ ⭐ رفض صريح (لا صمت).
+ */
+function assignConversation(
+  context               ,
+  conversationRef        ,
+  assigneeActorId        ,
+  deps                               ,
+  options                      = {},
+)                        {
+  if (!CONVERSATION_REF_PATTERN.test(conversationRef)) {
+    throw new ConversationStateError('conversation_ref_invalid', 'معرّف المحادثة غير صالح');
+  }
+  requireCapability(context, CONVERSATION_ASSIGN_CAPABILITY, 'conversation.assign', deps, conversationRef);
+  if (typeof assigneeActorId !== 'string' || !ACTOR_ID_PATTERN.test(assigneeActorId)) {
+    throw new ConversationStateError('assignee_invalid', 'معرّف الموظف غير صالح');
+  }
+  requireConversation(context, conversationRef, deps);
+  // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
+  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const current = existedBefore
+    ? (deps.states.get(context.tenantId, conversationRef)                         )
+    : initialConversationState(conversationRef);
+
+  // ⭐⬀ حارس النهائية — ⭐ لا إسناد لمحادثة مغلقة أبداً.
+  if (isTerminalState(current.state)) {
+    throw new ConversationStateError(
+      'state_terminal',
+      `المحادثة مغلقة (${current.state}) ⇒ لا إسناد`,
+    );
+  }
+
+  if (!deps.employees.isEmployee(context.tenantId, assigneeActorId)) {
+    throw new ConversationStateError(
+      'assignee_not_in_tenant',
+      'الموظف غير موجود في نطاق المستأجر ⇒ لا إسناد',
+    );
+  }
+  if (!isTransitionAllowed(current.state, 'assigned')) {
+    throw new ConversationStateError(
+      'transition_not_allowed',
+      `انتقال غير مسموح: ${current.state} ⇒ assigned`,
+    );
+  }
+  if (current.assignee_actor_id === assigneeActorId) {
+    throw new ConversationStateError(
+      'assignment_unchanged',
+      'المحادثة مسندة للموظف نفسه ⇒ لا تغيير (رفض صريح لا صمت)',
+    );
+  }
+  // ⭐⬀ فحص السبب قبل أي معاملة الإسناد.
+  assertChangeReason(options.reason ?? '');
+  const operation                              =
+    current.state === 'assigned' ? 'assignment.transfer' : 'assignment.set';
+  // ⭐⭐⭐ التزام ذرّي — ⭐ إسناد + سجل التغيير أو لا شيء.
+  const updated = commitStateChange(
+    context,
+    conversationRef,
+    current,
+    existedBefore,
+    { state: 'assigned', assignee: assigneeActorId },
+    {
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation,
+      conversation_ref: conversationRef,
+      from_state: current.state,
+      to_state: 'assigned',
+      reason: options.reason ?? '',
+      assignee_from: current.assignee_actor_id,
+      assignee_to: assigneeActorId,
+    },
+    deps,
+  );
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.assign',
+    capability: CONVERSATION_ASSIGN_CAPABILITY,
+    result: 'allowed',
+    target: conversationRef,
+  });
+  return updated;
+}
+
+/**
+ * ⭐⭐⭐ إلغاء الإسناد — ⭐ (`assigned ⇒ open`).
+ * ⛔ إن لم تكن مسندة ⇒ ⭐ رفض صريح.
+ */
+function unassignConversation(
+  context               ,
+  conversationRef        ,
+  deps                               ,
+  options                      = {},
+)                        {
+  if (!CONVERSATION_REF_PATTERN.test(conversationRef)) {
+    throw new ConversationStateError('conversation_ref_invalid', 'معرّف المحادثة غير صالح');
+  }
+  requireCapability(context, CONVERSATION_ASSIGN_CAPABILITY, 'conversation.assign', deps, conversationRef);
+  requireConversation(context, conversationRef, deps);
+  // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
+  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const current = existedBefore
+    ? (deps.states.get(context.tenantId, conversationRef)                         )
+    : initialConversationState(conversationRef);
+  // ⭐⬀ حارس النهائية — ⭐ لا إلغاء إسناد لمحادثة مغلقة.
+  if (isTerminalState(current.state)) {
+    throw new ConversationStateError(
+      'state_terminal',
+      `المحادثة مغلقة (${current.state}) ⇒ لا إلغاء إسناد`,
+    );
+  }
+  if (current.state !== 'assigned' || current.assignee_actor_id === null) {
+    throw new ConversationStateError(
+      'transition_not_allowed',
+      `المحادثة غير مسندة ⇒ لا إلغاء إسناد (الحالة: ${current.state})`,
+    );
+  }
+  // ⭐⭐⭐ التزام ذرّي — ⭐ إلغاء الإسناد + سجل التغيير أو لا شيء.
+  const updated = commitStateChange(
+    context,
+    conversationRef,
+    current,
+    existedBefore,
+    { state: 'open', assignee: null },
+    {
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: 'assignment.clear',
+      conversation_ref: conversationRef,
+      from_state: 'assigned',
+      to_state: 'open',
+      reason: options.reason ?? '',
+      assignee_from: current.assignee_actor_id,
+      assignee_to: null,
+    },
+    deps,
+  );
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.assign',
+    capability: CONVERSATION_ASSIGN_CAPABILITY,
+    result: 'allowed',
+    target: conversationRef,
+  });
+  return updated;
+}
+
+/** ⭐⭐ صفحة سجل التغييرات — ⭐ **معزولة بالمستأجر + الصلاحية**. */
+                                         
+                                    
+                                                       
+                                                                                                                                          
+ 
+
+/** ⭐ أقصى حجم صفحة في سجل التغييرات. */
+const MAX_CHANGE_PAGE_SIZE = 100;
+
+/**
+ * ⭐⭐⭐ قراءة سجل تغييرات محادثة — ⭐ **معزولة بالمستأجر** (نمط الشريحة الثالثة).
+ * ⛔ بلا `entries()` غير المعزولة ⇒ ⭐ العزل بنيوي.
+ */
+function readConversationChanges(
+  context               ,
+  conversationRef        ,
+  deps                               ,
+  options                                      = {},
+)                         {
+  if (!CONVERSATION_REF_PATTERN.test(conversationRef)) {
+    throw new ConversationStateError('conversation_ref_invalid', 'معرّف المحادثة غير صالح');
+  }
+  requireCapability(
+    context,
+    CONVERSATION_STATE_READ_CAPABILITY,
+    'conversation.changes',
+    deps,
+    conversationRef,
+  );
+  const limit = Math.min(
+    options.limit === undefined ? 50 : Math.max(1, Math.floor(options.limit)),
+    MAX_CHANGE_PAGE_SIZE,
+  );
+  const all = deps.changes.changesFor(context, conversationRef);
+  let start = 0;
+  if (options.cursor !== undefined) {
+    const parsed = Number.parseInt(options.cursor, 10);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new ConversationStateError('cursor_invalid', 'مؤشر الصفحات غير صالح');
+    }
+    start = parsed;
+  }
+  const page = all.slice(start, start + limit);
+  const next =
+    start + page.length < all.length && page.length > 0 ? String(start + page.length) : null;
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.changes',
+    capability: CONVERSATION_STATE_READ_CAPABILITY,
+    result: 'allowed',
+    target: conversationRef,
+    count: page.length,
+  });
+  return {
+    conversation_ref: conversationRef,
+    entries: page,
+    pagination: { limit, returned: page.length, total: all.length, next_cursor: next },
+  };
+}
+return { CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATES, ALLOWED_TRANSITIONS, TERMINAL_CONVERSATION_STATES, isTerminalState, ConversationStateStore, ConversationStateError, getConversationState, updateConversationState, assignConversation, unassignConversation, MAX_CHANGE_PAGE_SIZE, readConversationChanges };
+})();
+
+const __m_agent_queue = (() => {
+const { assertCapability } = __m_capability;
+// ============================================================
+// WASL AI — مركز عمل الوكيل (الشريحة الخامسة)
+// ------------------------------------------------------------
+// ⭐⭐ **قراءة فقط فوق الشريحتين ٣ و ٤** ⇒ ⭐ لا تُنشأ حالة ولا يُسند ولا
+//   يُعدَّل سجل تغييرات ⇒ ⭐ **الشريحة لا توسّع سطح الكتابة**.
+// ⛔ **بلا نص رسائل** ⇒ ⭐ المخرجات: معرّفات + أرقام + توقيتات فقط.
+// ⭐ **عزل بالمستأجر** ⇒ ⭐ والصلاحية تُفحص **قبل** أي وصول.
+// ⭐ **نطاق الجمهور (قرار المالك · ٥ نوفمبر ٢٠٢٦)**: ⭐ «الموظف يرى محادثاته
+//   فقط» · ⭐ «المشرف يرى طابور فريق شركته» ⇒ ⭐ **الفصل بنطاق الدور**.
+// ⭐ **معيار الخمول**: ⭐ **٣٠ دقيقة** (افتراضي — قابل للضبط بالمعامل). ⭐ ⛔ **ليس** معيار تأخّر العميل.
+// ⛔ لا اتصال خارجي · ⛔ لا تخزين دائم · ⛔ لا نشر.
+// ============================================================
+
+
+                                                 
+                                               
+             
+                    
+                         
+                        
+                                 
+                                                                          
+                                                    
+
+/** ⭐ صلاحية قراءة مركز عمل الوكيل. */
+const CONVERSATION_QUEUE_CAPABILITY = 'conversation.queue.read';
+
+/** ⭐⭐ معيار الخمول الافتراضي — ⭐ **٣٠ دقيقة** (قرار المالك · ٥ نوفمبر ٢٠٢٦). ⭐ ⛔ **ليس** معيار تأخّر العميل. */
+const DEFAULT_IDLE_THRESHOLD_MINUTES = 30;
+
+/** ⭐ أقصى حجم صفحة في الطابور. */
+const MAX_QUEUE_PAGE_SIZE = 100;
+
+/** ⭐ حجم الصفحة الافتراضي. */
+const DEFAULT_QUEUE_PAGE_SIZE = 50;
+
+/** ⭐⭐ تصنيف عنصر الطابور — ⭐ **مجموعة مغلقة** (لا قيمة خارجها). */
+                                                                             
+
+/** ⭐⭐ عنصر واحد في طابور العمل — ⭐ **بلا نص رسالة**. */
+                                
+                                    
+                         
+                                    
+                                                 
+                                            
+                                                       
+                                       
+                                                        
+                                 
+                           
+                                     
+                                                       
+                                    
+     
+                                                            
+                                                                                
+                                                                         
+     
+                                
+     
+                                                                  
+                                                              
+     
+                                           
+ 
+
+                                    
+                         
+                            
+                         
+                                      
+                                                    
+                                          
+ 
+
+                                             
+                               
+                                          
+                                          
+                                                                    
+                                   
+ 
+
+                                        
+                          
+                                                              
+                           
+                                                                                
+                        
+                                                                                    
+                                           
+ 
+
+class AgentWorkQueueError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'AgentWorkQueueError';
+    this.code = code;
+  }
+}
+
+function clampLimit(limit                    )         {
+  if (limit === undefined) return DEFAULT_QUEUE_PAGE_SIZE;
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new AgentWorkQueueError('limit_invalid', 'حدّ الصفحة لازم يكون عدداً صحيحاً ≥ ١');
+  }
+  return Math.min(limit, MAX_QUEUE_PAGE_SIZE);
+}
+
+function clampThreshold(value                    )         {
+  if (value === undefined) return DEFAULT_IDLE_THRESHOLD_MINUTES;
+  if (!Number.isFinite(value) || value < 1) {
+    throw new AgentWorkQueueError(
+      'idle_threshold_invalid',
+      'معيار الخمول لازم يكون رقماً ≥ ١ دقيقة',
+    );
+  }
+  return Math.floor(value);
+}
+
+function requireCapability(
+  context               ,
+  deps                            ,
+)       {
+  try {
+    assertCapability(context, CONVERSATION_QUEUE_CAPABILITY);
+  } catch (error) {
+    deps.readAudit.record({
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: 'conversation.queue.read',
+      capability: CONVERSATION_QUEUE_CAPABILITY,
+      result: 'denied',
+    });
+    throw error;
+  }
+}
+
+/**
+ * ⭐⭐⭐ نطاق الدور — ⭐ **«الوكيل يرى محادثاته» · «المشرف يرى فريقه»**.
+ * ⭐⭐ **قرار نطاق المالك (C2(أ) · تصريح ٥ نوفمبر ٢٠٢٦)**: ⭐ **المشرف يرى
+ *   جميع موظفي ومحادثات المستأجر نفسه** ⇒ ⭐ **وليس فريقاً فرعياً**.
+ * ⛔ **دعم الفرق الفرعية غير متاح حالياً** — ⭐ **لا يوجد كيان «فريق» في
+ *   النموذج** (`EmployeeDirectory` = `isEmployee(tenantId, actorId)` فقط).
+ * ⛔ **هذا قرار نطاق — وليس تصريحاً بالوصول إلى مستأجر آخر**: ⭐ كل قراءة
+ *   تبقى مقيَّدة بـ`context.tenantId` ⇒ ⇒ **العزل بالمستأجر غير مُمساس**.
+ * ⭐ ⇒ ⇒ **فرق فرعية = كيان جديد ⇒ شريحة/قرار مستقل — لا تعديل في هذه الشريحة**.
+ */
+function scopeIsOwnOnly(context               )          {
+  return context.role === 'agent';
+}
+
+/** ⭐⭐⭐ نشاط محادثة واحد — ⭐ **أرقام وتوقيتات فقط (بلا نصوص)**. */
+                                       
+                                    
+                                 
+                                     
+                                    
+                                                                          
+                                
+                                                           
+                                           
+ 
+
+/** ⭐⭐ حساب نشاط محادثة — ⭐ **آخر رسالة أو آخر تغيير في الحالة** (الأحدث). */
+function computeConversationActivity(
+  context               ,
+  conversationRef        ,
+  deps                            ,
+  options                                                                   ,
+)                       {
+  const rows = deps.store.messagesForConversation(context, conversationRef);
+  const first = rows[0];
+  const last = rows[rows.length - 1];
+  const changes = deps.changes.changesFor(context, conversationRef);
+  const lastChange = changes[changes.length - 1];
+
+  let lastActivity = '';
+  if (last) lastActivity = last.occurred_at;
+  if (lastChange && lastChange.ts > lastActivity) lastActivity = lastChange.ts;
+
+  const nowMs = Date.parse(options.now);
+  const lastMs = lastActivity ? Date.parse(lastActivity) : Number.NaN;
+  // ⭐ مدة الانتظار = الآن − آخر نشاط ⇒ ⭐ **لا تُقدَّر** ⇒ ⭐ ولو تعذّر الحساب
+  // (لا نشاط ولا توقيت صالح) ⇒ ٠ ⇒ ⭐ **والمحادثة بلا رسائل لا تدخل الطابور أصلاً**.
+  const idleMinutes =
+    Number.isFinite(nowMs) && Number.isFinite(lastMs) && nowMs >= lastMs
+      ? Math.floor((nowMs - lastMs) / 60000)
+      : 0;
+
+  return {
+    conversation_ref: conversationRef,
+    message_count: rows.length,
+    first_occurred_at: first?.occurred_at ?? '',
+    last_activity_at: lastActivity,
+    idle_minutes: idleMinutes,
+    is_idle_over_threshold: idleMinutes >= options.idle_threshold_minutes,
+  };
+}
+
+/** ⭐⭐ التصنيف — ⭐ من الحالة والإسناد الفعلي (لا تقدير). */
+function categorize(
+  context               ,
+  state                   ,
+  assignee               ,
+)                    {
+  if (state === 'resolved' || state === 'closed') return 'closed';
+  if (assignee === context.actorId) return 'mine';
+  if (assignee === null) return 'unassigned';
+  return 'pending';
+}
+
+/** ⭐⭐⭐ الترتيب — ⭐ **الأكثر انتظاراً أولاً** ⇒ ثم المعرّف تصاعدياً (حتمي). */
+function compareItems(a               , b               )         {
+  if (a.idle_minutes !== b.idle_minutes) {
+    return b.idle_minutes - a.idle_minutes;
+  }
+  return a.conversation_ref < b.conversation_ref ? -1 : 1;
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **مركز عمل الوكيل** — ⭐ **الطابور التشغيلي** (قراءة فقط).
+ * ⛔ لا تقبل معرّف مستأجر — ⭐ النطاق من السياق وحده.
+ * ⛔ لا تُعيد نص رسالة — ⭐ معرّفات وأرقام وتوقيتات فقط.
+ */
+function listWorkQueue(
+  context               ,
+  deps                            ,
+  options                        = {},
+)                                                                                       {
+  requireCapability(context, deps);
+  const limit = clampLimit(options.limit);
+  const threshold = clampThreshold(options.idle_threshold_minutes);
+  const now = options.now ?? new Date().toISOString();
+  const ownOnly = scopeIsOwnOnly(context);
+
+  const refs = deps.store.conversationRefs(context);
+  const items                  = [];
+  for (const ref of refs) {
+    const row                                    = deps.states.get(context.tenantId, ref);
+    const state                    = row?.state ?? 'new';
+    const assignee = row?.assignee_actor_id ?? null;
+    // ⭐⭐ نطاق الدور: ⭐ الوكيل يرى **محادثاته فقط**.
+    if (ownOnly && assignee !== context.actorId) continue;
+    const activity = computeConversationActivity(context, ref, deps, {
+      now,
+      idle_threshold_minutes: threshold,
+    });
+    items.push({
+      conversation_ref: ref,
+      state,
+      assignee_actor_id: assignee,
+      category: categorize(context, state, assignee),
+      message_count: activity.message_count,
+      first_occurred_at: activity.first_occurred_at,
+      last_activity_at: activity.last_activity_at,
+      idle_minutes: activity.idle_minutes,
+      is_idle_over_threshold: activity.is_idle_over_threshold,
+    });
+  }
+
+  items.sort(compareItems);
+
+  let start = 0;
+  if (options.cursor !== undefined) {
+    const index = items.findIndex((item) => item.conversation_ref === options.cursor);
+    if (index === -1) {
+      throw new AgentWorkQueueError(
+        'cursor_invalid',
+        'مؤشر الصفحات غير معروف في نطاق المستأجر',
+      );
+    }
+    start = index + 1;
+  }
+
+  const page = items.slice(start, start + limit);
+  const next =
+    start + page.length < items.length && page.length > 0
+      ? page[page.length - 1].conversation_ref
+      : null;
+
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.queue.read',
+    capability: CONVERSATION_QUEUE_CAPABILITY,
+    result: 'allowed',
+    count: page.length,
+  });
+
+  return {
+    items: page,
+    pagination: {
+      limit,
+      returned: page.length,
+      total: items.length,
+      next_cursor: next,
+      idle_threshold_minutes: threshold,
+    },
+  };
+}
+return { CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, MAX_QUEUE_PAGE_SIZE, DEFAULT_QUEUE_PAGE_SIZE, AgentWorkQueueError, computeConversationActivity, listWorkQueue };
+})();
+
+const __m_service_metrics = (() => {
+const { assertCapability } = __m_capability;
+const { computeConversationActivity, DEFAULT_IDLE_THRESHOLD_MINUTES } = __m_agent_queue;
+// ============================================================
+// WASL AI — مؤشرات الخدمة (الشريحة الخامسة)
+// ------------------------------------------------------------
+// ⭐⭐ **قراءة فقط** ⇒ ⭐ محسوبة لحظياً من الشريحتين ٣ و ٤ ⇒ ⭐
+//   **بلا تخزين دائم** (لا جداول مجمّعة · لا حالة جديدة).
+// ⛔ **بلا نص رسائل ولا أسرار** ⇒ ⭐ المخرجات: معرّفات + أرقام.
+// ⛔ **لا قيمة مخترَعة** ⇒ ⭐ أي مؤشر لا تسمح البيانات بحسابه يُعيد
+//   `undefined` **صراحةً** (لا صفر بديل ولا تقدير).
+// ⭐ **الجمهور (قرار المالك · ٥ نوفمبر ٢٠٢٦)**: ⭐ **المشرف والمالك فقط**
+//   ⇒ ⭐ صلاحية صريحة `conversation.metrics.read`.
+// ⛔ لا اتصال خارجي · ⛔ لا نشر.
+// ============================================================
+
+
+                                                 
+                                               
+                                                                                         
+                                                                          
+                                                    
+
+
+/** ⭐ صلاحية قراءة مؤشرات الخدمة — ⭐ **المشرف والمالك فقط**. */
+const CONVERSATION_METRICS_CAPABILITY = 'conversation.metrics.read';
+
+                                                                                
+                               
+                                          
+                                          
+                                   
+ 
+
+                                        
+                                                   
+                        
+                                                                                                        
+                                           
+ 
+
+/** ⭐⭐⭐ مؤشرات الخدمة — ⭐ **أرقام فقط** (لا نصوص ولا أسرار). */
+                                 
+                                   
+                                       
+                                                                               
+                                                                 
+                              
+                                    
+                                                                                                                
+                                             
+                                                                                
+                                                      
+                                                                              
+                                                  
+                                                               
+                                                                                                    
+ 
+
+class ServiceMetricsError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'ServiceMetricsError';
+    this.code = code;
+  }
+}
+
+function requireCapability(
+  context               ,
+  deps                            ,
+)       {
+  try {
+    assertCapability(context, CONVERSATION_METRICS_CAPABILITY);
+  } catch (error) {
+    deps.readAudit.record({
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: 'conversation.metrics.read',
+      capability: CONVERSATION_METRICS_CAPABILITY,
+      result: 'denied',
+    });
+    throw error;
+  }
+}
+
+function emptyStateCounts()                                    {
+  return {
+    new: 0,
+    open: 0,
+    assigned: 0,
+    pending: 0,
+    resolved: 0,
+    closed: 0,
+  };
+}
+
+function average(values                   )                     {
+  if (values.length === 0) return undefined;
+  const sum = values.reduce((total, value) => total + value, 0);
+  return Math.round((sum / values.length) * 100) / 100;
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **مؤشرات الخدمة** — ⭐ **قراءة فقط + لا قيمة مخترَعة**.
+ * ⛔ لا تُعيد نص رسالة — ⭐ أرقام ومعرّفات فقط.
+ * ⛔ النطاق من السياق وحده — ⭐ ولا مدخل مستأجر من العميل.
+ */
+function getServiceMetrics(
+  context               ,
+  deps                            ,
+  options                        = {},
+)                 {
+  requireCapability(context, deps);
+  const now = options.now ?? new Date().toISOString();
+  const threshold =
+    options.idle_threshold_minutes === undefined
+      ? DEFAULT_IDLE_THRESHOLD_MINUTES
+      : Math.floor(options.idle_threshold_minutes);
+  if (!Number.isFinite(threshold) || threshold < 1) {
+    throw new ServiceMetricsError(
+      'idle_threshold_invalid',
+      'معيار الخمول لازم يكون رقماً ≥ ١ دقيقة',
+    );
+  }
+
+  const refs = deps.store.conversationRefs(context);
+  const byState = emptyStateCounts();
+  const load = new Map                ();
+  const firstResponseSamples           = [];
+  const resolutionSamples           = [];
+  let unassignedTotal = 0;
+  let idleOverThresholdTotal = 0;
+
+  for (const ref of refs) {
+    const row = deps.states.get(context.tenantId, ref);
+    const state                    = row?.state ?? 'new';
+    const assignee = row?.assignee_actor_id ?? null;
+    byState[state] += 1;
+    if (assignee === null) unassignedTotal += 1;
+
+    const activity = computeConversationActivity(context, ref, deps, {
+      now,
+      idle_threshold_minutes: threshold,
+    });
+    if (activity.is_idle_over_threshold) idleOverThresholdTotal += 1;
+
+    // ⭐ العبء = محادثات **غير مغلقة** لكل موظف.
+    if (assignee !== null && state !== 'resolved' && state !== 'closed') {
+      load.set(assignee, (load.get(assignee) ?? 0) + 1);
+    }
+
+    // ⭐⭐ زمن أول رد — ⭐ **التصحيح C1 (تصريح المالك · D-059 · بعد ملاحظة M4)**:
+    // ⭐ ① **أول رسالة واردة** من العميل هي نقطة البداية.
+    // ⭐ ② **أول رسالة صادرة _بعد_ تلك الواردة** هي الردّ الصحيح.
+    // ⭐ ③ **أي رسالة صادرة سبقت الواردة تُتجاهل** (ترحيب استباقي أو ردّ على غيرها).
+    // ⭐ ④ الزمن = الفرق بين timestamp الواردة والردّ الصحيح.
+    // ⭐ ⑤ **لا قيمة** إن لم يوجد ردّ صحيح ⇒ `undefined` (لا صفر بديل ولا تقدير).
+    const rows = deps.store.messagesForConversation(context, ref);
+    const firstInbound = rows.find((row) => row.direction === 'inbound');
+    const firstOutbound = firstInbound
+      ? rows.find(
+          (row) =>
+            row.direction === 'outbound' &&
+            Date.parse(row.occurred_at) > Date.parse(firstInbound.occurred_at),
+        )
+      : undefined;
+    if (firstInbound && firstOutbound) {
+      const delta = Date.parse(firstOutbound.occurred_at) - Date.parse(firstInbound.occurred_at);
+      if (Number.isFinite(delta) && delta >= 0) {
+        firstResponseSamples.push(Math.floor(delta / 60000));
+      }
+    }
+
+    // ⭐ زمن الحل = ⭐ **قيد التغيير الذي بلغ `resolved`/`closed` − أول رسالة واردة**.
+    const changes = deps.changes.changesFor(context, ref);
+    const solved = changes.find(
+      (entry) => entry.to_state === 'resolved' || entry.to_state === 'closed',
+    );
+    if (firstInbound && solved) {
+      const delta = Date.parse(solved.ts) - Date.parse(firstInbound.occurred_at);
+      if (Number.isFinite(delta) && delta >= 0) {
+        resolutionSamples.push(Math.floor(delta / 60000));
+      }
+    }
+  }
+
+  const loadPerEmployee = [...load.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([actor_id, open_count]) => ({ actor_id, open_count }));
+
+  deps.readAudit.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: 'conversation.metrics.read',
+    capability: CONVERSATION_METRICS_CAPABILITY,
+    result: 'allowed',
+    count: refs.length,
+  });
+
+  return {
+    conversations_total: refs.length,
+    by_state: byState,
+    unassigned_total: unassignedTotal,
+    idle_over_threshold_total: idleOverThresholdTotal,
+    first_response_minutes: average(firstResponseSamples),
+    resolution_minutes: average(resolutionSamples),
+    load_per_employee: loadPerEmployee,
+  };
+}
+return { CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics };
+})();
+
+const __m_index = (() => {
+// ============================================================
+// WASL AI — النواة الداخلية للشريحة الأولى (تصدير موحّد)
+// ------------------------------------------------------------
+// المكوّنات الأربعة المعتمدة في تصريح المالك (MISSION 004):
+//   ١) عقد الرسالة الداخلي  → envelope.ts
+//   ٢) عزل المستأجر        → tenant.ts + store.ts
+//   ٣) البيانات الاصطناعية → ⛔ NOT HERE (tests/support/synthetic.ts)
+//   ٤) سجل التدقيق المحلي  → audit-log.ts
+// ⛔ لا تكامل خارجي · ⛔ لا شبكة · ⛔ لا حساب · ⛔ لا نشر.
+// ============================================================
+// ⭐⭐ هذا هو السطح العام الإنتاجي الوحيد.
+// ⛔ لا يُصدَّر منه أي أداة اختبار · ولا مولّد بيانات اصطناعية.
+// ⛔ ولا `localTestSessionSource` ولا `markLocalTestInput`.
+// ⛔ ولا أي دالة تُنتج ادّعاءات خام أو تُصدر إثبات جلسة.
+// ⭐ ⇒ المصدر الوحيد لإنشاء سياق مستأجر معتمد = `resolveTenantContext`
+//    (بمصدر جلسات إلزامي) و`resolveProductionTenantContext` (يرفض مصدر الاختبار).
+// ============================================================
+
+const { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope } = __m_envelope;
+
+// ⭐ Slice 03 — الصلاحيات المحلية (حدّ الثقة نفسه · ⭐ الافتراضي = المنع)
+// ⭐ الدور وسياسة الأدوار (حدّ الثقة — الاصلاحية من النواة)
+const { CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities } = __m_capability;
+
+const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow } = __m_tenant;
+
+// ⛔ `tenantContextFromSession` و`issueSessionAttestation` و`registerSessionSource`
+//    و`markLocalTestInput`
+//    **غير مُصدرة من السطح العام** ⇒ المسار العام الوحيد = `resolveTenantContext`
+//    (بمصدر جلسات إلزامي **مسجّل**) و`resolveProductionTenantContext` (يرفض مصدر الاختبار).
+
+const { activeSessionSources, resolveProductionTenantContext, resolveTenantContext } = __m_session;
+
+const { AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS } = __m_audit_log;
+
+const { MessageStore } = __m_store;
+
+// ⭐ Slice 02 — طبقة المعالجة (عقد النتيجة + خط المعالجة)
+const { PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome } = __m_processing;
+
+// ⭐ Slice 02 — قاعدة الترتيب (قرار المالك: `docs/SLICE-02-ORDERING-RULE.md`)
+const { OrderingState, evaluateOrdering } = __m_ordering;
+
+// ⭐ Slice 03 — سجل أحداث القراءة (⭐ مسار منفصل عن `AuditOutcome`)
+const { ReadAuditError, ReadAuditLog } = __m_read_audit;
+
+// ⭐ Slice 03 — طبقة قراءة محادثات المستأجر (⭐ قدرتان منفصلتان · ⭐ بلا واجهة منشورة)
+const { CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit } = __m_conversation_query;
+
+// ⭐ Slice 04 — سجل تغييرات المحادثات (⭐ مستقل عن سجل المعالجة وسجل أحداث القراءة)
+const { CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH } = __m_conversation_change_log;
+
+// ⭐ Slice 04 — طبقة إدارة حالة المحادثة والإسناد
+const { ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState } = __m_conversation_state;
+
+// ⭐ Slice 05 — مركز عمل الوكيل (⭐ قراءة فقط · بلا نص رسائل · عزل بالمستأجر)
+const { AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue } = __m_agent_queue;
+
+// ⭐ Slice 05 — مؤشرات الخدمة (⭐ قراءة فقط · لا قيمة مخترَعة · المشرف والمالك فقط)
+const { CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics } = __m_service_metrics;
+
+// ⛔⛔ لا مولّد بيانات اصطناعية هنا.
+// ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
+// ⛔ لا مصدر جلسات اختباري هنا — ولا حتى واحد.
+// ⛔ ولا مصدر إنتاجي مسجَّل ⇒ لا افتراض افتراضي لمصدر الجلسات.
+return { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope, CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities, ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow, activeSessionSources, resolveProductionTenantContext, resolveTenantContext, AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS, MessageStore, PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome, OrderingState, evaluateOrdering, ReadAuditError, ReadAuditLog, CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit, CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH, ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState, AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue, CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics };
+})();
+
+const __m_wasl_workbench_preview_runtime = (() => {
+const { AuditLog, ConversationChangeLog, ConversationStateStore, MessageStore, OrderingState, ProcessingLayer, ReadAuditLog, ALLOWED_TRANSITIONS, CONVERSATION_STATES, TERMINAL_CONVERSATION_STATES, assignConversation, isTerminalState, listWorkQueue, readConversationChanges, resolveTenantContext, unassignConversation, updateConversationState } = __m_index;
+const { registerSessionSource } = __m_session;
+// ============================================================
+// WASL AI — مُشغِّل المعاينة التفاعلية (Slice 07 · P0)
+// ------------------------------------------------------------
+// ⭐ **هذا هو قلب المعاينة** ⇒ ⭐ وهو **يستدعي منطق النواة نفسه**
+//   (قواعد الصلاحيات · خريطة الانتقالات · عمليات التعديل · سجل التغييرات)
+//   ⇒ ⇒⇒ **وليس نسخة موازية**.
+// ⭐ ⭐ **محاكاة الأدوار (M11)**: ⭐ **مصدر لكل دور** بنطاق `test`
+//   ⇒ ⇒⇒ والدور **يُقرأ من سجلّ المصدر داخلياً** ولا يُقرأ من حمولة
+//   العميل أبداً ⇒ ⇒⇒ ⇒ **تبديل الدور = اختيار مصدر آخر**، لا ادّعاء هوية.
+// ⭐ ⛔ كل شيء **في الذاكرة** ⇒ ⭐ إغلاق الصفحة = ضياع كل شيء.
+// ⛔ لا شبكة · لا تخزين دائم · لا بيانات حقيقية · لا مفاتيح.
+// ============================================================
+
+
+// ⭐ `registerSessionSource` ليس في السطح العام ⇒ ⭐ استيراده مباشرة.
+
+             
+                                
+                  
+                
+                
+              
+                   
+                              
+
+// ============================================================
+// ⭐ الثوابت
+// ============================================================
+
+/** ⭐ لحظة القياس المثبَّتة — ⇒ نفس المدخل ⇒ نفس النتيجة. */
+const PREVIEW_NOW = '2026-01-05T12:00:00.000Z';
+
+/** ⭐ الأدوار التجريبية المتاحة (وفق الأدوار الموجودة بالنواة). */
+const PREVIEW_ROLES                         = ['supervisor', 'agent', 'owner', 'viewer'];
+
+/** ⭐ **الدور الافتراضي عند الفتح — مشرف تجريبي** (قرار المالك). */
+const PREVIEW_DEFAULT_ROLE              = 'supervisor';
+
+/** ⭐ المستأجر الأساسي للتجربة. */
+const PREVIEW_TENANT = 'tnt_preview_0001';
+
+/** ⭐ مستأجر ثانٍ — لاختبار العزل. */
+const PREVIEW_OTHER_TENANT = 'tnt_preview_0002';
+
+/** ⭐ موظفو المستأجر الأول. */
+const PREVIEW_EMPLOYEES                    = ['actor_preview_0007', 'actor_preview_0008'];
+
+/** ⭐ موظف المستأجر الثاني — ⭐ إسناده من المستأجر الأول **مرفوض**. */
+const PREVIEW_OTHER_TENANT_EMPLOYEE = 'actor_preview_0009';
+
+/** ⭐ ⭐ محادثة المستأجر الثاني — ⭐ **يجب ألا تظهر إطلاقاً** في رؤية المستأجر الأول. */
+const PREVIEW_OTHER_TENANT_CONVERSATION = 'conv_preview_0009';
+
+// ============================================================
+// ⭐ مصادر الجلسات الاصطناعية — ⭐ **مصدر لكل دور** (نطاق `test`)
+// ============================================================
+
+/** ⭐ ⭐ سجلّ الأدوار الداخلية — ⭐ **لا يُقرأ من العميل أبداً**. */
+const ROLE_BINDINGS = new WeakMap                     ();
+
+function markSynthetic                  (claims   , role             )    {
+  ROLE_BINDINGS.set(claims, role);
+  return claims;
+}
+
+function buildSyntheticSource(role             )                {
+  return {
+    id: `preview-synthetic-${role}`,
+    scope: 'test',
+    description: `مصدر اصطناعي للمعاينة التجريبية فقط (دور: ${role}) — بيانات صناعية بالكامل`,
+    verify(input         )                          {
+      if (!input || typeof input !== 'object') return null;
+      // ⭐ **السجلّ الداخلي هو مصدر الحقيقة** ⇒ ⭐ لا دور من حمولة العميل.
+      if (ROLE_BINDINGS.get(input          ) !== role) return null;
+      const claims = input     
+                           
+                          
+                         
+                                 
+                               
+       ;
+      if (claims.authenticated !== true) return null;
+      // ⭐ كائن هوية **جديد** ⇒ ⭐ لا تمرير لحمولة العميل.
+      return {
+        session_id: claims.session_id,
+        tenant_id: claims.tenant_id,
+        actor_id: claims.actor_id,
+        conversation_ref: claims.conversation_ref,
+        authenticated: true,
+      };
+    },
+  };
+}
+
+/** ⭐ السقوف — ⭐ **سلطة المالك على ما يُمنح** (نفس السقوف في `tests/support/local-session.ts`). */
+const CEILINGS                                                   = Object.freeze({
+  owner: Object.freeze([
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.state.update',
+    'conversation.assign',
+    'conversation.queue.read',
+    'conversation.metrics.read',
+  ]),
+  supervisor: Object.freeze([
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.state.update',
+    'conversation.queue.read',
+    'conversation.metrics.read',
+  ]),
+  agent: Object.freeze([
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.queue.read',
+  ]),
+  viewer: Object.freeze(['conversation.list', 'conversation.read', 'conversation.audit']),
+  none: Object.freeze([]),
+});
+
+const SOURCES                                               = Object.freeze({
+  owner: buildSyntheticSource('owner'),
+  supervisor: buildSyntheticSource('supervisor'),
+  agent: buildSyntheticSource('agent'),
+  viewer: buildSyntheticSource('viewer'),
+  none: buildSyntheticSource('none'),
+});
+
+for (const role of Object.keys(SOURCES)                 ) {
+  registerSessionSource({
+    source: SOURCES[role],
+    grantedRole: role,
+    grantCeiling: CEILINGS[role],
+  });
+}
+
+// ============================================================
+// ⭐ أنواع الواجهة العامة للمعاينة
+// ============================================================
+
+                                         
+                       
+                        
+                           
+                                
+                                            
+ 
+
+                                  
+                                    
+                         
+                                            
+                            
+                                 
+                                
+                                    
+ 
+
+                                   
+                      
+                             
+                              
+                            
+                          
+                                        
+                                      
+                            
+ 
+
+                                
+                                    
+                         
+                                            
+                           
+                                
+                                                                                       
+                                           
+                                        
+                               
+                                 
+                               
+                                                                 
+                                           
+                                                
+ 
+
+                                 
+                                         
+                                     
+                       
+                         
+                                   
+                                 
+                               
+                                                           
+                                                                                               
+                                                                                                   
+                                                                            
+                                                          
+                                                                                                            
+                                 
+                                         
+                                                                     
+                                       
+                                                 
+                                    
+                                                       
+                               
+ 
+
+// ============================================================
+// ⭐ بناء المحرّك
+// ============================================================
+
+function syntheticEnvelope(options   
+                     
+                          
+                     
+                                     
+ )                  {
+  return {
+    schema_version: '1',
+    message_ref: options.messageRef,
+    channel: 'preview',
+    direction: options.direction ?? 'inbound',
+    from: 'participant-preview-0001@example.invalid',
+    to: 'participant-preview-0101@example.invalid',
+    body: 'preview-body',
+    occurred_at: options.occurredAt,
+    locale: 'ar-EG',
+    attributes: { synthetic: 'true' },
+    conversation_ref: options.conversationRef,
+  };
+}
+
+/**
+ * ⭐⭐ يُنشئ بيئة المعاينة كاملة — ⭐ **بالحالة في الذاكرة فقط**.
+ */
+function createPreviewRuntime()                 {
+  const audit = new AuditLog({ now: () => PREVIEW_NOW });
+  const readAudit = new ReadAuditLog({ now: () => PREVIEW_NOW });
+  const store = new MessageStore({ now: () => PREVIEW_NOW, audit });
+  const layer = new ProcessingLayer({ store, audit, orderingState: new OrderingState() });
+  const states = new ConversationStateStore({ now: () => PREVIEW_NOW });
+  // ⭐ ساعة تدرّج ⇒ أزمنة متنوّعة (بلا تجميد).
+  const CHANGE_TIMES = [
+    '2026-01-05T11:00:00.000Z',
+    '2026-01-05T11:10:00.000Z',
+    '2026-01-05T11:20:00.000Z',
+    '2026-01-05T11:30:00.000Z',
+    '2026-01-05T11:40:00.000Z',
+    '2026-01-05T11:50:00.000Z',
+    '2026-01-05T12:00:00.000Z',
+  ];
+  let changeClock = 0;
+  const changes = new ConversationChangeLog({
+    now: () => CHANGE_TIMES[Math.min(changeClock++, CHANGE_TIMES.length - 1)],
+  });
+
+  const roster                                    = {
+    [PREVIEW_TENANT]: PREVIEW_EMPLOYEES,
+    [PREVIEW_OTHER_TENANT]: [PREVIEW_OTHER_TENANT_EMPLOYEE],
+  };
+
+  const deps                                = {
+    store,
+    states,
+    changes,
+    readAudit,
+    employees: {
+      isEmployee(tenantId        , actorId        )          {
+        return (roster[tenantId] ?? []).includes(actorId);
+      },
+    },
+  };
+
+  // ⭐ ⭐ **الدور لا يُمرَّر في الحمولة** ⇒ ⭐ `markSynthetic` يسجّله داخلياً.
+  const contextFor = (role             , tenantId        , actorId        , conversationRef        )                => {
+    const claims = markSynthetic(
+      {
+        session_id: `sess_preview_${role}`,
+        tenant_id: tenantId,
+        actor_id: actorId,
+        conversation_ref: conversationRef,
+        authenticated: true,
+      },
+      role,
+    );
+    return resolveTenantContext(claims, { source: SOURCES[role] });
+  };
+
+  const ownerCtx = contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001');
+  const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, 'actor_preview_0002', PREVIEW_OTHER_TENANT_CONVERSATION);
+
+  // ── ⭐ التوليد: كل محادثة تُبنى عبر **عمليات النواة نفسها** ──
+  const seed = (ref        , actorId        , msgs                                                     )       => {
+    const ctx = contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', ref);
+    msgs.forEach((msg, index) => {
+      layer.process(
+        ctx,
+        syntheticEnvelope({
+          messageRef: `preview-msg-${ref}-${String(index + 1).padStart(3, '0')}`,
+          conversationRef: ref,
+          occurredAt: msg.at,
+          direction: msg.dir ?? 'inbound',
+        }),
+      );
+    });
+    void actorId;
+  };
+
+  // ① محادثة مُسندة — عامل.
+  seed('conv_preview_0001', 'actor_preview_0007', [{ at: '2026-01-05T08:00:00.000Z' }]);
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001'), 'conv_preview_0001', 'open', deps, { reason: 'فتح الطلب' });
+  assignConversation(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001'), 'conv_preview_0001', 'actor_preview_0007', deps, { reason: 'توزيع على خدمة العملاء' });
+
+  // ② محادثة قيد المعالجة.
+  seed('conv_preview_0002', 'actor_preview_0008', [
+    { at: '2026-01-05T09:00:00.000Z' },
+    { at: '2026-01-05T09:30:00.000Z', dir: 'outbound' },
+  ]);
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0002'), 'conv_preview_0002', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0002'), 'conv_preview_0002', 'pending', deps, { reason: 'بانتظار رد العميل' });
+
+  // ③ محادثة مفتوحة بلا إسناد.
+  seed('conv_preview_0003', 'actor_preview_0001', [{ at: '2026-01-05T11:50:00.000Z' }]);
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0003'), 'conv_preview_0003', 'open', deps, { reason: 'فتح الطلب' });
+
+  // ④ محادثة قابلة للإغلاق (`resolved`).
+  seed('conv_preview_0004', 'actor_preview_0001', [{ at: '2026-01-05T10:00:00.000Z' }]);
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0004'), 'conv_preview_0004', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0004'), 'conv_preview_0004', 'resolved', deps, { reason: 'تم الحل' });
+
+  // ⑤ محادثة مغلقة — **نهائية** (لا تُعدَّل ولا تُسند).
+  seed('conv_preview_0005', 'actor_preview_0001', [{ at: '2026-01-05T07:00:00.000Z' }]);
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'resolved', deps, { reason: 'تم الحل' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'closed', deps, { reason: 'إغلاق نهائي' });
+
+  // ⑥ محادثة المستأجر الثاني — **يجب ألا تظهر في رؤية المستأجر الأول**.
+  layer.process(
+    otherCtx,
+    syntheticEnvelope({
+      messageRef: 'preview-msg-other-0001',
+      conversationRef: PREVIEW_OTHER_TENANT_CONVERSATION,
+      occurredAt: '2026-01-05T10:00:00.000Z',
+    }),
+  );
+
+  // ── ⭐ حالة الدور الحالي ──
+  let currentRole              = PREVIEW_DEFAULT_ROLE;
+
+  const context = (role             , conversationRef        )                =>
+    role === 'agent'
+      ? contextFor('agent', PREVIEW_TENANT, 'actor_preview_0007', conversationRef)
+      : role === 'viewer'
+        ? contextFor('viewer', PREVIEW_TENANT, 'actor_preview_0001', conversationRef)
+        : role === 'owner'
+          ? contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', conversationRef)
+          : contextFor('supervisor', PREVIEW_TENANT, 'actor_preview_0002', conversationRef);
+
+  const toRows = (items                    )                    =>
+    (items                                  ).map((item) => ({
+      conversation_ref: String(item.conversation_ref),
+      state: String(item.state),
+      assignee_actor_id: (item.assignee_actor_id                 ) ?? null,
+      category: String(item.category),
+      message_count: Number(item.message_count),
+      idle_minutes: Number(item.idle_minutes),
+      last_activity_at: String(item.last_activity_at),
+    }));
+
+  const changeRows = (entries                    )                     =>
+    (entries                                  ).map((entry) => ({
+      ts: String(entry.ts),
+      operation: String(entry.operation),
+      from_state: String(entry.from_state),
+      to_state: String(entry.to_state),
+      reason: String(entry.reason ?? ''),
+      assignee_from: (entry.assignee_from                 ) ?? null,
+      assignee_to: (entry.assignee_to                 ) ?? null,
+      actor_id: String(entry.actor_id),
+    }));
+
+  const fail = (error         )                         => {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error                     ).code)
+        : 'unknown_error';
+    const message =
+      error instanceof Error ? error.message : 'خطأ غير متوقع أثناء تنفيذ العملية';
+    return { ok: false, code, message, state: null, assignee_actor_id: null };
+  };
+
+  const runtime                 = {
+    roles: PREVIEW_ROLES,
+    default_role: PREVIEW_DEFAULT_ROLE,
+    now: PREVIEW_NOW,
+
+    getRole()              {
+      return currentRole;
+    },
+
+    setRole(role             )       {
+      if (!PREVIEW_ROLES.includes(role)) return;
+      currentRole = role;
+    },
+
+    listQueue()                    {
+      try {
+        const page = listWorkQueue(context(currentRole, 'conv_preview_0001'), deps, { now: PREVIEW_NOW });
+        return toRows(page.items);
+      } catch {
+        return [];
+      }
+    },
+
+    listAll()                    {
+      try {
+        const page = listWorkQueue(
+          context(currentRole === 'agent' ? 'supervisor' : currentRole, 'conv_preview_0001'),
+          deps,
+          { now: PREVIEW_NOW },
+        );
+        return toRows(page.items);
+      } catch {
+        return [];
+      }
+    },
+
+    getDetail(conversationRef        )                       {
+      const ctx = context(currentRole, conversationRef);
+      const view = states.get(PREVIEW_TENANT, conversationRef);
+      if (!view) return null;
+      const queue = runtime.listQueue();
+      const row = queue.find((item) => item.conversation_ref === conversationRef);
+      // ⭐⭐ **الانتقالات المسموحة من خريطة النواة نفسها** (M12 · §1).
+      const allowed = ALLOWED_TRANSITIONS[view.state] ?? [];
+      const terminal = isTerminalState(view.state);
+      // ⭐⭐ **الصلاحية من قدرات السياق المعتمدة** (من النواة) — ⭐ لا قائمة موازية.
+      const capabilities = ctx.capabilities;
+      const canUpdate = capabilities.includes('conversation.state.update');
+      const canAssign = capabilities.includes('conversation.assign');
+      const changesForRef = changeRows(
+        changes.changesFor(ctx, conversationRef)                                 ,
+      );
+      return {
+        conversation_ref: view.conversation_ref,
+        state: view.state,
+        assignee_actor_id: view.assignee_actor_id,
+        version: view.version,
+        is_terminal: terminal,
+        allowed_next: allowed,
+        employees: PREVIEW_EMPLOYEES,
+        can_assign: canAssign && !terminal && allowed.includes('assigned'),
+        can_unassign: canAssign && !terminal && view.assignee_actor_id !== null,
+        can_update: canUpdate && !terminal && allowed.length > 0,
+        capabilities,
+        changes: changesForRef,
+      };
+    },
+
+    applyTransition(conversationRef        , to        , reason        )                         {
+      try {
+        const ctx = context(currentRole, conversationRef);
+        const view = updateConversationState(ctx, conversationRef, to         , deps, { reason });
+        return {
+          ok: true,
+          code: 'ok',
+          message: 'تم تنفيذ الانتقال',
+          state: view.state,
+          assignee_actor_id: view.assignee_actor_id,
+        };
+      } catch (error) {
+        return fail(error);
+      }
+    },
+
+    assign(conversationRef        , assigneeActorId        , reason        )                         {
+      try {
+        const ctx = context(currentRole, conversationRef);
+        const view = assignConversation(ctx, conversationRef, assigneeActorId, deps, { reason });
+        return {
+          ok: true,
+          code: 'ok',
+          message: 'تم الإسناد',
+          state: view.state,
+          assignee_actor_id: view.assignee_actor_id,
+        };
+      } catch (error) {
+        return fail(error);
+      }
+    },
+
+    unassign(conversationRef        , reason        )                         {
+      try {
+        const ctx = context(currentRole, conversationRef);
+        const view = unassignConversation(ctx, conversationRef, deps, { reason });
+        return {
+          ok: true,
+          code: 'ok',
+          message: 'تم إلغاء الإسناد',
+          state: view.state,
+          assignee_actor_id: view.assignee_actor_id,
+        };
+      } catch (error) {
+        return fail(error);
+      }
+    },
+
+    getChanges(conversationRef        )                     {
+      try {
+        const ctx = context(currentRole, conversationRef);
+        const page = readConversationChanges(ctx, conversationRef, deps, { limit: 50 });
+        return changeRows(page.entries                                 );
+      } catch {
+        return [];
+      }
+    },
+
+    getIsolationProof()   
+                                 
+                                     
+                           
+      {
+      const firstTenantRefs = new Set(
+        runtime.listAll().map((item) => item.conversation_ref),
+      );
+      const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, 'actor_preview_0002', PREVIEW_OTHER_TENANT_CONVERSATION);
+      let otherTotal = 0;
+      try {
+        otherTotal = listWorkQueue(otherCtx, deps, { now: PREVIEW_NOW }).pagination.total;
+      } catch {
+        otherTotal = 0;
+      }
+      const leaked = firstTenantRefs.has(PREVIEW_OTHER_TENANT_CONVERSATION) ? 1 : 0;
+      return {
+        first_tenant_total: firstTenantRefs.size,
+        other_tenant_own_total: otherTotal,
+        leaked_total: leaked,
+      };
+    },
+
+    getStates()                    {
+      return CONVERSATION_STATES;
+    },
+
+    getTerminalStates()                    {
+      return TERMINAL_CONVERSATION_STATES;
+    },
+
+    getCapabilities()                    {
+      return context(currentRole, 'conv_preview_0001').capabilities;
+    },
+
+    getEmployees()                    {
+      return PREVIEW_EMPLOYEES;
+    },
+
+    getForeignEmployee()         {
+      return PREVIEW_OTHER_TENANT_EMPLOYEE;
+    },
+  };
+
+  return runtime;
+}
+return { PREVIEW_NOW, PREVIEW_ROLES, PREVIEW_DEFAULT_ROLE, PREVIEW_TENANT, PREVIEW_OTHER_TENANT, PREVIEW_EMPLOYEES, PREVIEW_OTHER_TENANT_EMPLOYEE, PREVIEW_OTHER_TENANT_CONVERSATION, createPreviewRuntime };
+})();
+
+const __m_wasl_workbench_preview_ui = (() => {
+// ============================================================
+// WASL AI — واجهة المعاينة التفاعلية (Slice 07 · P0)
+// ------------------------------------------------------------
+// ⭐ ⭐ **الواجهة لا تحسم أي قرار** ⇒ ⭐ هي تستدعي مُشغِّل المعاينة
+//   (الذي يستدعي **منطق النواة**) ⇒ ⇒⇒ **كل قبول/رفض من النواة**.
+// ⭐ ⭐ **الأزرار المعطَّلة تُعطَّل بناءً على ability حقيقية من النواة**
+//   (`allowed_next` من `ALLOWED_TRANSITIONS` + قدرات الدور من حدّ الثقة)
+//   ⇒ ⇒⇒ **وإخفاء الزر ليس ضماناً — النقر يمرّ على النواة دائماً**.
+// ⛔ لا طلبات شبكة · لا مكتبات خارجية · لا تخزين دائم · لا نصوص رسائل.
+// ============================================================
+
+                                                                                                          
+
+                          
+                             
+                    
+                    
+                
+                    
+                
+                                  
+                                           
+                                                       
+                                                          
+                                                        
+                                                            
+                                            
+                                                  
+                                      
+                                                                     
+                                             
+ 
+
+const doc = (globalThis                                           ).document;
+
+/** ⭐ ⭐ خرائط أسماء الأدوار (ترجمة فقط — ⭐ **لا منطق**). */
+const ROLE_LABELS                         = {
+  supervisor: 'مشرف تجريبي',
+  agent: 'موظف تجريبي',
+  owner: 'مالك تجريبي',
+  viewer: 'دور قراءة فقط',
+};
+
+/** ⭐ ⭐ ترجمة أسماء الحالات (ترجمة فقط — ⭐ **لا منطق**). */
+const STATE_LABELS                         = {
+  new: 'جديدة',
+  open: 'مفتوحة',
+  assigned: 'مُسندة',
+  pending: 'قيد المعالجة',
+  resolved: 'تم حلّها',
+  closed: 'مغلقة',
+};
+
+/** ⭐ ⭐ ترجمة تصنيفات الطابور (ترجمة فقط — ⭐ **لا منطق**). */
+const CATEGORY_LABELS                         = {
+  mine: 'مُسندة إليّ',
+  unassigned: 'بلا إسناد',
+  pending: 'قيد المعالجة',
+  closed: 'مغلقة',
+};
+
+/** ⭐ ⭐ ترجمة رموز الأخطاء (ترجمة فقط — ⭐ **لا منطق**). */
+const CODE_LABELS                         = {
+  state_terminal: 'المحادثة مغلقة — لا تُعدَّل ولا تُسند',
+  transition_not_allowed: 'انتقال غير مسموح',
+  capability_missing: 'الدور الحالي لا يملك الصلاحية المطلوبة',
+  assignee_not_in_tenant: 'الموظف خارج نطاق المستأجر — رُفض الإسناد',
+  assignee_invalid: 'معرّف الموظف غير صالح',
+  assignment_unchanged: 'المحادثة مسندة لنفس الموظف — لا تغيير',
+  conversation_ref_invalid: 'معرّف المحادثة غير صالح',
+  state_invalid: 'حالة خارج المجموعة المغلقة',
+  reason_too_long: 'سبب التعديل أطول من الحدّ',
+  reason_secret_forbidden: 'سبب التعديل يشبه سرّاً — رُفض',
+  conversation_not_found: 'المحادثة غير موجودة',
+  tenant_mismatch: 'المحادثة لا تخصّ المستأجر — رُفض',
+};
+
+function el(tag        , className         , text         )                 {
+  const node = doc.createElement(tag)                             ;
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function translate(map                        , key        )         {
+  return map[key] ?? key;
+}
+
+/**
+ * ⭐ ⭐ يثبّت واجهة المعاينة على مُشغّل معيّن.
+ */
+function installPreviewUi(runtime                )       {
+  const root = doc.getElementById('preview-root')                             ;
+  if (!root) return;
+
+  // ── ⭐ شريط الأدوار ──
+  const roleBar = el('div', 'role-bar');
+  const roleButtons = new Map                        ();
+  for (const role of runtime.roles) {
+    const button = el('button', 'role-btn', translate(ROLE_LABELS, role));
+    button.setAttribute('data-role', role);
+    button.setAttribute('type', 'button');
+    button.addEventListener('click', () => {
+      runtime.setRole(role);
+      render();
+    });
+    roleButtons.set(role, button);
+    roleBar.appendChild(button);
+  }
+  root.appendChild(roleBar);
+
+  const capabilities = el('div', 'capabilities');
+  root.appendChild(capabilities);
+
+  // ── ⭐ العمودان ──
+  const columns = el('div', 'columns');
+
+  const queuePanel = el('section', 'panel');
+  queuePanel.appendChild(el('h2', undefined, 'طابور المحادثات (رؤية الدور الحالي)'));
+  const queueTable = el('table', 'grid');
+  const queueHead = el('thead');
+  const queueHeadRow = el('tr');
+  for (const label of ['المحادثة', 'الحالة', 'الموظف', 'التصنيف', 'الرسائل', 'الخمول (دقيقة)']) {
+    queueHeadRow.appendChild(el('th', undefined, label));
+  }
+  queueHead.appendChild(queueHeadRow);
+  queueTable.appendChild(queueHead);
+  const queueBody = el('tbody');
+  queueBody.setAttribute('id', 'queue-body');
+  queueTable.appendChild(queueBody);
+  const queueScroll = el('div', 'scroll');
+  queueScroll.appendChild(queueTable);
+  queuePanel.appendChild(queueScroll);
+  columns.appendChild(queuePanel);
+
+  const detailPanel = el('section', 'panel');
+  detailPanel.setAttribute('id', 'detail-panel');
+  columns.appendChild(detailPanel);
+  root.appendChild(columns);
+
+  // ── ⭐ سجل التغييرات ──
+  const changesPanel = el('section', 'panel');
+  changesPanel.appendChild(el('h2', undefined, 'سجل التغييرات (الناجحة فقط)'));
+  const changesTable = el('table', 'grid');
+  const changesHead = el('thead');
+  const changesHeadRow = el('tr');
+  for (const label of ['الوقت', 'العملية', 'من', 'إلى', 'السبب', 'الإسناد من', 'الإسناد إلى']) {
+    changesHeadRow.appendChild(el('th', undefined, label));
+  }
+  changesHead.appendChild(changesHeadRow);
+  changesTable.appendChild(changesHead);
+  const changesBody = el('tbody');
+  changesBody.setAttribute('id', 'changes-body');
+  changesTable.appendChild(changesBody);
+  const changesScroll = el('div', 'scroll');
+  changesScroll.appendChild(changesTable);
+  changesPanel.appendChild(changesScroll);
+  root.appendChild(changesPanel);
+
+  // ── ⭐ إثبات العزل ──
+  const isolationPanel = el('section', 'panel');
+  isolationPanel.setAttribute('id', 'isolation-panel');
+  root.appendChild(isolationPanel);
+
+  // ── ⭐ الحالة المختارة ──
+  let selectedRef                = null;
+  let lastOperation                                                        = null;
+
+  const renderQueue = (rows                   )       => {
+    queueBody.replaceChildren();
+    if (rows.length === 0) {
+      const row = el('tr');
+      const cell = el('td', 'empty', 'لا عناصر في الطابور لهذا الدور.');
+      cell.setAttribute('colspan', '6');
+      row.appendChild(cell);
+      queueBody.appendChild(row);
+      return;
+    }
+    for (const item of rows) {
+      const row = el('tr');
+      row.setAttribute('data-ref', item.conversation_ref);
+      if (item.conversation_ref === selectedRef) row.classList.add('selected');
+      const refCell = el('td', 'ref', item.conversation_ref);
+      row.appendChild(refCell);
+      row.appendChild(el('td', undefined, translate(STATE_LABELS, item.state)));
+      row.appendChild(el('td', undefined, item.assignee_actor_id ?? 'بلا إسناد'));
+      row.appendChild(el('td', undefined, translate(CATEGORY_LABELS, item.category)));
+      row.appendChild(el('td', 'num', String(item.message_count)));
+      row.appendChild(el('td', 'num', String(item.idle_minutes)));
+      row.addEventListener('click', () => {
+        selectedRef = item.conversation_ref;
+        render();
+      });
+      queueBody.appendChild(row);
+    }
+  };
+
+  const renderDetail = (detail                      )       => {
+    detailPanel.replaceChildren();
+    detailPanel.appendChild(el('h2', undefined, 'تفاصيل المحادثة + الإجراءات'));
+    if (!detail) {
+      detailPanel.appendChild(el('p', 'empty', 'اختر محادثة من الطابور.'));
+      return;
+    }
+
+    const meta = el('div', 'meta');
+    meta.appendChild(el('span', undefined, `المحادثة: ${detail.conversation_ref}`));
+    meta.appendChild(el('span', undefined, `الحالة: ${translate(STATE_LABELS, detail.state)}`));
+    meta.appendChild(
+      el('span', undefined, `الموظف: ${detail.assignee_actor_id ?? 'بلا إسناد'}`),
+    );
+    meta.appendChild(el('span', undefined, `النسخة: ${String(detail.version)}`));
+    if (detail.is_terminal) {
+      meta.appendChild(el('span', 'terminal', 'حالة نهائية — لا تُعدَّل ولا تُسند'));
+    }
+    detailPanel.appendChild(meta);
+
+    // ── ⭐ ⭐ أزرار الانتقالات — ⭐ **من `allowed_next` في النواة** ──
+    const transitionSection = el('div', 'actions');
+    transitionSection.appendChild(el('h3', undefined, 'انتقالات الحالة المسموحة (من خريطة النواة)'));
+    const transitionRow = el('div', 'btn-row');
+    for (const state of runtime.getStates()) {
+      const allowed = detail.allowed_next.includes(state);
+      const button = el('button', 'state-btn', translate(STATE_LABELS, state));
+      button.setAttribute('data-to', state);
+      button.setAttribute('type', 'button');
+      if (!allowed) {
+        button.disabled = true;
+        button.title = `انتقال غير مسموح من «${translate(STATE_LABELS, detail.state)}»`;
+        button.classList.add('blocked');
+      } else if (!detail.can_update) {
+        button.disabled = true;
+        button.title = 'الدور الحالي لا يملك صلاحية conversation.state.update';
+        button.classList.add('blocked');
+      } else {
+        button.addEventListener('click', () => {
+          const result = runtime.applyTransition(detail.conversation_ref, state, 'تجربة تفاعلية من المعاينة');
+          lastOperation = { ok: result.ok, message: result.message, code: result.code };
+          render();
+        });
+      }
+      transitionRow.appendChild(button);
+    }
+    transitionSection.appendChild(transitionRow);
+    detailPanel.appendChild(transitionSection);
+
+    // ── ⭐ ⭐ الإسناد ──
+    const assignSection = el('div', 'actions');
+    assignSection.appendChild(el('h3', undefined, 'الإسناد'));
+    const assignRow = el('div', 'btn-row');
+    const employeeSelect = doc.createElement('select')                             ;
+    employeeSelect.setAttribute('id', 'assign-select');
+    employeeSelect.setAttribute('name', 'assign-select');
+    for (const employee of detail.employees) {
+      const option = doc.createElement('option')                             ;
+      option.setAttribute('value', employee);
+      option.textContent = employee;
+      employeeSelect.appendChild(option);
+    }
+    assignRow.appendChild(employeeSelect);
+
+    const assignButton = el('button', 'action-btn', 'إسناد');
+    assignButton.setAttribute('id', 'assign-btn');
+    assignButton.setAttribute('type', 'button');
+    if (!detail.can_assign) {
+      assignButton.disabled = true;
+      assignButton.title = detail.is_terminal
+        ? 'المحادثة مغلقة — لا إسناد'
+        : 'الدور الحالي لا يملك صلاحية conversation.assign';
+      assignButton.classList.add('blocked');
+    } else {
+      assignButton.addEventListener('click', () => {
+        const result = runtime.assign(
+          detail.conversation_ref,
+          employeeSelect.value,
+          'تجربة تفاعلية من المعاينة',
+        );
+        lastOperation = { ok: result.ok, message: result.message, code: result.code };
+        render();
+      });
+    }
+    assignRow.appendChild(assignButton);
+
+    const unassignButton = el('button', 'action-btn', 'إلغاء الإسناد');
+    unassignButton.setAttribute('id', 'unassign-btn');
+    unassignButton.setAttribute('type', 'button');
+    if (!detail.can_unassign) {
+      unassignButton.disabled = true;
+      unassignButton.title = detail.is_terminal
+        ? 'المحادثة مغلقة — لا إلغاء إسناد'
+        : 'الدور الحالي لا يملك صلاحية conversation.assign';
+      unassignButton.classList.add('blocked');
+    } else {
+      unassignButton.addEventListener('click', () => {
+        const result = runtime.unassign(
+          detail.conversation_ref,
+          'تجربة تفاعلية من المعاينة',
+        );
+        lastOperation = { ok: result.ok, message: result.message, code: result.code };
+        render();
+      });
+    }
+    assignRow.appendChild(unassignButton);
+    assignSection.appendChild(assignRow);
+    detailPanel.appendChild(assignSection);
+
+    // ── ⭐ نتيجة آخر عملية ──
+    const resultBox = el('div', 'result');
+    resultBox.setAttribute('id', 'result-box');
+    if (lastOperation) {
+      resultBox.classList.add(lastOperation.ok ? 'ok' : 'err');
+      resultBox.textContent = lastOperation.ok
+        ? `✅ ${lastOperation.message}`
+        : `⛔ ${translate(CODE_LABELS, lastOperation.code)} — ${lastOperation.message}`;
+    } else {
+      resultBox.textContent = 'لم تُنفَّذ أي عملية بعد.';
+    }
+    detailPanel.appendChild(resultBox);
+  };
+
+  const renderChanges = (rows                    )       => {
+    changesBody.replaceChildren();
+    const list = rows                                        ;
+    if (list.length === 0) {
+      const row = el('tr');
+      const cell = el('td', 'empty', 'لا تغييرات مسجَّلة.');
+      cell.setAttribute('colspan', '7');
+      row.appendChild(cell);
+      changesBody.appendChild(row);
+      return;
+    }
+    for (const entry of list) {
+      const row = el('tr');
+      row.appendChild(el('td', 'ltr', String(entry.ts)));
+      row.appendChild(el('td', undefined, String(entry.operation)));
+      row.appendChild(el('td', undefined, translate(STATE_LABELS, String(entry.from_state))));
+      row.appendChild(el('td', undefined, translate(STATE_LABELS, String(entry.to_state))));
+      row.appendChild(el('td', undefined, String(entry.reason ?? '')));
+      row.appendChild(el('td', undefined, String(entry.assignee_from ?? '—')));
+      row.appendChild(el('td', undefined, String(entry.assignee_to ?? '—')));
+      changesBody.appendChild(row);
+    }
+  };
+
+  const renderIsolation = ()       => {
+    const proof = runtime.getIsolationProof();
+    isolationPanel.replaceChildren();
+    isolationPanel.appendChild(el('h2', undefined, 'إثبات العزل (رقمي)'));
+    const list = el('ul', 'proof');
+    list.appendChild(
+      el('li', undefined, `محادثات المستأجر الأول: ${String(proof.first_tenant_total)}`),
+    );
+    list.appendChild(
+      el('li', undefined, `محادثات المستأجر الثاني (رؤيته هو): ${String(proof.other_tenant_own_total)}`),
+    );
+    list.appendChild(el('li', 'leak', `تسريب عبر المستأجر: ${String(proof.leaked_total)}`));
+    isolationPanel.appendChild(list);
+  };
+
+  const render = ()       => {
+    for (const [role, button] of roleButtons) {
+      if (role === runtime.getRole()) {
+        button.classList.add('active');
+      } else {
+        button.classList.remove('active');
+      }
+      button.setAttribute('aria-pressed', role === runtime.getRole() ? 'true' : 'false');
+    }
+
+    const caps = runtime.getCapabilities();
+    capabilities.replaceChildren();
+    capabilities.appendChild(
+      el('span', 'role-now', `الدور الحالي: ${translate(ROLE_LABELS, runtime.getRole())}`),
+    );
+    capabilities.appendChild(el('span', 'caps', `الصلاحيات: ${caps.join(' · ') || 'لا شيء'}`));
+
+    const rows = runtime.listQueue();
+    if (selectedRef && !rows.some((row) => row.conversation_ref === selectedRef)) {
+      selectedRef = null;
+    }
+    renderQueue(rows);
+    const detail = selectedRef ? runtime.getDetail(selectedRef) : null;
+    renderDetail(detail);
+    renderChanges(detail ? detail.changes : []);
+    renderIsolation();
+  };
+
+  render();
+}
+return { installPreviewUi };
+})();
+
+const __m_wasl_workbench_preview_entry = (() => {
+const { createPreviewRuntime } = __m_wasl_workbench_preview_runtime;
+const { installPreviewUi } = __m_wasl_workbench_preview_ui;
+// ============================================================
+// WASL AI — نقطة دخول المعاينة التفاعلية (Slice 07 · P0)
+// ------------------------------------------------------------
+// ⭐ يجمع: ⭐ المُشغِّل (منطق النواة) + ⭐ الواجهة ⇒ ⭐ ويعرض.
+// ⭐ ⛔ لا يقرّر شيئاً بنفسه ⇒ ⭐ كل قبول/رعب من النواة.
+// ============================================================
+
+
+
+
+/** ⭐ ⭐ يثبّت المعاينة كاملة على الصفحة. */
+function bootPreview()       {
+  const runtime = createPreviewRuntime();
+  installPreviewUi(runtime);
+  // ⭐⭐ **خطّاف اختبار** ⇒ ⭐ يتيح إثبات أن **النواة هي المرجع النهائي**
+    //   (أن استدعاء المحرّك مباشرةً يُنتج نفس الرفض الذي تُظهره الواجهة).
+  // ⭐ محلي بالكامل · ⭐ لا مفاتيح · ⭐ لا أثر على أي قرار أمني.
+  (globalThis                                               ).waslPreviewRuntime = runtime;
+}
+return { bootPreview };
+})();
+__m_wasl_workbench_preview_entry.bootPreview();
+</script>
+</body>
+</html>
