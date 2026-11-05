@@ -1,0 +1,11 @@
+{
+  "name": "wasl-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WASL AI — نواة الشريحة الأولى (محلية فقط · بلا اتصال شبكي · بلا اعتماد خارجي)",
+  "scripts": {
+    "test:slice": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts",
+    "test": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts"
+  }
+}
