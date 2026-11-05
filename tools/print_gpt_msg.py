@@ -89,14 +89,38 @@ def reply_block(sha: str, link: str) -> str:
     )
 
 
+AR_DIGITS = "٠١٢٣٤٥٦٧٨٩"
+
+
+def ar_num(value: int) -> str:
+    """⭐ رقم عربي-هندي (لتسق مع أرقام المستودع) — الأرقام النصوصية تُترك كما هي."""
+    return "".join(AR_DIGITS[int(d)] for d in str(value))
+
+
 def summary_block(sha: str) -> str:
     """⭐ «ما الذي تم» — يُشتق آلياً من حالة الريبو ⇒ لا يتقادم ولا يُكتب يدوياً."""
     lines: list[str] = []
     dec = (REPO / "DECISIONS.md").read_text(encoding="utf-8") if (REPO / "DECISIONS.md").exists() else ""
     cs = (REPO / "CURRENT-STATE.md").read_text(encoding="utf-8") if (REPO / "CURRENT-STATE.md").exists() else ""
-    if "إغلاق المهمة" in dec:
-        m = re.search(r"##\s*(D-\d+)[^\n]*", dec[dec.find("إغلاق المهمة") - 4000:] if dec.find("إغلاق المهمة") > 4000 else dec)
-        lines.append(f"- ⭐ **آخر قرار مُغلق**: {m.group(1) if m else 'D-048'} = ✅ منجَز ومغلَق (المخرَج موثَّق في السجل).")
+    tracked = git("ls-files").splitlines()
+    n_code = len([f for f in tracked if f.startswith("src/")])
+    n_tests = len([f for f in tracked if f.startswith("tests/")])
+
+    # ① آخر قرار مُعتمد = آخر صف في فهرس DECISIONS.md حالته ✅
+    last_ok = ""
+    for ln in dec.splitlines():
+        m = re.match(r"^\|\s*(?:⭐\s*)?(?:\*\*)?(D-\d+)", ln)
+        if m and "✅" in ln:
+            last_ok = m.group(1)
+    if last_ok:
+        closed = False
+        idx = dec.find(f"## {last_ok}")
+        if idx > 0:
+            nxt = dec.find("\n## ", idx + 1)
+            section = dec[idx: nxt if nxt > 0 else len(dec)]
+            closed = "إغلاق المهمة" in section
+        tail = " = ✅ منجَز ومغلَق (المخرَج موثَّق في السجل)." if closed else " (المخرَج موثَّق في السجل)."
+        lines.append(f"- ⭐ **آخر قرار مُعتمد**: {last_ok}{tail}")
     card = REPO / "docs/FIRST-SLICE-DECISION-CARD.md"
     if card.exists():
         lines.append(
@@ -105,20 +129,32 @@ def summary_block(sha: str) -> str:
         )
     # ⭐ الجاهزية تُقرأ من سطر درجات EA-001..EA-007 تحديداً ⇒ لا تُلتقط أي «ن/م» عشوائي
     ready = ""
+    moved = False
     for ln in cs.splitlines():
-        if "EA-001..EA-007" in ln or "EA-001..EA-007" in ln.replace("..", ".."):
+        if "EA-001..EA-007" in ln:
             m2 = re.search(r"(\d+)/(\d+)", ln)
             if m2:
                 ready = f"{m2.group(1)}/{m2.group(2)}"
+                moved = "لم تتحرك" not in ln
                 break
     if ready:
+        if n_code:
+            state = f"✔ كود الشريحة الأولى ({ar_num(n_code)} ملفات) · ✔ اختبارات محلية ({ar_num(n_tests)} ملفات اختبار)"
+        else:
+            state = "بلا كود · بلا اختبار"
+        tail = "" if moved else " (درجات EA-001..EA-007 لم تتحرك)"
+        lines.append(f"- ⭐ **الجاهزية {ready}** — {state} · بلا حساب · بلا نشر{tail}.")
+    n_md = len([f for f in tracked if f.endswith(".md")])
+    lines.append(f"- ⭐ **الريبو**: {ar_num(len(tracked))} ملف متتبَّع ({ar_num(n_md)} ملف `.md`) · العدّادات في `CURRENT-STATE.md` مصحَّحة.")
+    if n_code:
         lines.append(
-            f"- ⭐ **الجاهزية {ready}** — بلا كود · بلا اختبار · بلا حساب · بلا نشر "
-            "(درجات EA-001..EA-007 لم تتحرك)."
+            "- ⭐ **⛔ لم يُنفَّذ**: لا تكامل خارجي · لا حسابات · لا تواصل خارجي · لا تعاقد · لا دفعة · لا نشر "
+            "· ولا اعتماد نهائي لمسار واتساب · ⭐ **والكود الموجود = الشريحة الأولى فقط (محلي بالكامل)**."
         )
-    n_md = len([f for f in git("ls-files").splitlines() if f.endswith(".md")])
-    lines.append(f"- ⭐ **الريبو**: {len(git('ls-files').splitlines())} ملف متتبَّع ({n_md} ملف `.md`) · العدّادات في `CURRENT-STATE.md` مصحَّحة.")
-    lines.append("- ⭐ **⛔ لم يُنفَّذ**: لا كود · لا اختبارات فعلية · لا حسابات · لا تواصل خارجي · لا تعاقد · لا دفعة · لا نشر · ولا اعتماد نهائي لمسار واتساب.")
+    else:
+        lines.append(
+            "- ⭐ **⛔ لم يُنفَّذ**: لا كود · لا اختبارات فعلية · لا حسابات · لا تواصل خارجي · لا تعاقد · لا دفعة · لا نشر · ولا اعتماد نهائي لمسار واتساب."
+        )
     return "\n".join(lines)
 
 
