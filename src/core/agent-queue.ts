@@ -7,7 +7,7 @@
 // ⭐ **عزل بالمستأجر** ⇒ ⭐ والصلاحية تُفحص **قبل** أي وصول.
 // ⭐ **نطاق الجمهور (قرار المالك · ٥ نوفمبر ٢٠٢٦)**: ⭐ «الموظف يرى محادثاته
 //   فقط» · ⭐ «المشرف يرى طابور فريق شركته» ⇒ ⭐ **الفصل بنطاق الدور**.
-// ⭐ **معيار التأخير**: ⭐ **٣٠ دقيقة** (افتراضي — قابل للضبط بالمعامل).
+// ⭐ **معيار الخمول**: ⭐ **٣٠ دقيقة** (افتراضي — قابل للضبط بالمعامل). ⭐ ⛔ **ليس** معيار تأخّر العميل.
 // ⛔ لا اتصال خارجي · ⛔ لا تخزين دائم · ⛔ لا نشر.
 // ============================================================
 
@@ -25,8 +25,8 @@ import type { ReadAuditLog } from './read-audit.ts';
 /** ⭐ صلاحية قراءة مركز عمل الوكيل. */
 export const CONVERSATION_QUEUE_CAPABILITY = 'conversation.queue.read';
 
-/** ⭐⭐ معيار التأخير الافتراضي — ⭐ **٣٠ دقيقة** (قرار المالك · ٥ نوفمبر ٢٠٢٦). */
-export const DEFAULT_LATE_THRESHOLD_MINUTES = 30;
+/** ⭐⭐ معيار الخمول الافتراضي — ⭐ **٣٠ دقيقة** (قرار المالك · ٥ نوفمبر ٢٠٢٦). ⭐ ⛔ **ليس** معيار تأخّر العميل. */
+export const DEFAULT_IDLE_THRESHOLD_MINUTES = 30;
 
 /** ⭐ أقصى حجم صفحة في الطابور. */
 export const MAX_QUEUE_PAGE_SIZE = 100;
@@ -52,10 +52,17 @@ export interface WorkQueueItem {
   readonly first_occurred_at: string;
   /** ⭐ آخر نشاط (آخر رسالة أو آخر تغيير في الحالة). */
   readonly last_activity_at: string;
-  /** ⭐ مدة الانتظار بالدقائق (مقرّبة للأرض). */
-  readonly waiting_minutes: number;
-  /** ⭐ هل تجاوزت مدة الانتظار المعيارَ المعتمد؟ */
-  readonly is_late: boolean;
+  /**
+   * ⭐⭐ **الخمول منذ آخر نشاط** — ⭐ بالدقائق (مقرّبة للأرض).
+   * ⛔ **ليس «زمن انتظار العميل»** ⇒ ⭐ وليس قياساً لسرعة الرد ولا لتقييم الموظف.
+   * ⭐ التعريف: ⭐ **الآن − آخر نشاط** (آخر رسالة أو آخر تغيير في الحالة).
+   */
+  readonly idle_minutes: number;
+  /**
+   * ⭐⭐ هل تجاوز **الخمول** المعيارَ المعتمد (٣٠ دقيقة افتراضياً)؟
+   * ⛔ **ليس «تأخّر العميل»** ⇒ ⭐ ولا يُستعمل لقياس سرعة الرد.
+   */
+  readonly is_idle_over_threshold: boolean;
 }
 
 export interface WorkQueuePageInfo {
@@ -63,8 +70,8 @@ export interface WorkQueuePageInfo {
   readonly returned: number;
   readonly total: number;
   readonly next_cursor: string | null;
-  /** ⭐ معيار التأخير المستخدَم في هذه الصفحة. */
-  readonly late_threshold_minutes: number;
+  /** ⭐ **معيار الخمول** المستخدَم في هذه الصفحة. */
+  readonly idle_threshold_minutes: number;
 }
 
 export interface AgentWorkQueueDependencies {
@@ -81,8 +88,8 @@ export interface AgentWorkQueueOptions {
   readonly cursor?: string;
   /** ⭐ لحظة القياس (ISO) — ⭐ **deterministic** ⇒ نفس البيانات ⇒ نفس الأرقام. */
   readonly now?: string;
-  /** ⭐ معيار التأخير بالدقائق — ⭐ افتراضي ٣٠. */
-  readonly late_threshold_minutes?: number;
+  /** ⭐ **معيار الخمول** بالدقائق — ⭐ افتراضي ٣٠. ⭐ ⛔ **ليس** معيار تأخّر العميل. */
+  readonly idle_threshold_minutes?: number;
 }
 
 export class AgentWorkQueueError extends Error {
@@ -103,11 +110,11 @@ function clampLimit(limit: number | undefined): number {
 }
 
 function clampThreshold(value: number | undefined): number {
-  if (value === undefined) return DEFAULT_LATE_THRESHOLD_MINUTES;
+  if (value === undefined) return DEFAULT_IDLE_THRESHOLD_MINUTES;
   if (!Number.isFinite(value) || value < 1) {
     throw new AgentWorkQueueError(
-      'late_threshold_invalid',
-      'معيار التأخير لازم يكون رقماً ≥ ١ دقيقة',
+      'idle_threshold_invalid',
+      'معيار الخمول لازم يكون رقماً ≥ ١ دقيقة',
     );
   }
   return Math.floor(value);
@@ -131,7 +138,16 @@ function requireCapability(
   }
 }
 
-/** ⭐⭐ نطاق الدور — ⭐ **«الوكيل يرى محادثاته» · «المشرف يرى فريقه»**. */
+/**
+ * ⭐⭐⭐ نطاق الدور — ⭐ **«الوكيل يرى محادثاته» · «المشرف يرى فريقه»**.
+ * ⭐⭐ **قرار نطاق المالك (C2(أ) · تصريح ٥ نوفمبر ٢٠٢٦)**: ⭐ **المشرف يرى
+ *   جميع موظفي ومحادثات المستأجر نفسه** ⇒ ⭐ **وليس فريقاً فرعياً**.
+ * ⛔ **دعم الفرق الفرعية غير متاح حالياً** — ⭐ **لا يوجد كيان «فريق» في
+ *   النموذج** (`EmployeeDirectory` = `isEmployee(tenantId, actorId)` فقط).
+ * ⛔ **هذا قرار نطاق — وليس تصريحاً بالوصول إلى مستأجر آخر**: ⭐ كل قراءة
+ *   تبقى مقيَّدة بـ`context.tenantId` ⇒ ⇒ **العزل بالمستأجر غير مُمساس**.
+ * ⭐ ⇒ ⇒ **فرق فرعية = كيان جديد ⇒ شريحة/قرار مستقل — لا تعديل في هذه الشريحة**.
+ */
 function scopeIsOwnOnly(context: TenantContext): boolean {
   return context.role === 'agent';
 }
@@ -142,8 +158,10 @@ export interface ConversationActivity {
   readonly message_count: number;
   readonly first_occurred_at: string;
   readonly last_activity_at: string;
-  readonly waiting_minutes: number;
-  readonly is_late: boolean;
+  /** ⭐⭐ **الخمول منذ آخر نشاط** (دقائق) — ⭐ **ليس** زمن انتظار العميل. */
+  readonly idle_minutes: number;
+  /** ⭐⭐ تجاوز الخمول المعيارَ ⇒ ⭐ **ليس** تأخّر العميل. */
+  readonly is_idle_over_threshold: boolean;
 }
 
 /** ⭐⭐ حساب نشاط محادثة — ⭐ **آخر رسالة أو آخر تغيير في الحالة** (الأحدث). */
@@ -151,7 +169,7 @@ export function computeConversationActivity(
   context: TenantContext,
   conversationRef: string,
   deps: AgentWorkQueueDependencies,
-  options: { readonly now: string; readonly late_threshold_minutes: number },
+  options: { readonly now: string; readonly idle_threshold_minutes: number },
 ): ConversationActivity {
   const rows = deps.store.messagesForConversation(context, conversationRef);
   const first = rows[0];
@@ -167,7 +185,7 @@ export function computeConversationActivity(
   const lastMs = lastActivity ? Date.parse(lastActivity) : Number.NaN;
   // ⭐ مدة الانتظار = الآن − آخر نشاط ⇒ ⭐ **لا تُقدَّر** ⇒ ⭐ ولو تعذّر الحساب
   // (لا نشاط ولا توقيت صالح) ⇒ ٠ ⇒ ⭐ **والمحادثة بلا رسائل لا تدخل الطابور أصلاً**.
-  const waitingMinutes =
+  const idleMinutes =
     Number.isFinite(nowMs) && Number.isFinite(lastMs) && nowMs >= lastMs
       ? Math.floor((nowMs - lastMs) / 60000)
       : 0;
@@ -177,8 +195,8 @@ export function computeConversationActivity(
     message_count: rows.length,
     first_occurred_at: first?.occurred_at ?? '',
     last_activity_at: lastActivity,
-    waiting_minutes: waitingMinutes,
-    is_late: waitingMinutes >= options.late_threshold_minutes,
+    idle_minutes: idleMinutes,
+    is_idle_over_threshold: idleMinutes >= options.idle_threshold_minutes,
   };
 }
 
@@ -196,8 +214,8 @@ function categorize(
 
 /** ⭐⭐⭐ الترتيب — ⭐ **الأكثر انتظاراً أولاً** ⇒ ثم المعرّف تصاعدياً (حتمي). */
 function compareItems(a: WorkQueueItem, b: WorkQueueItem): number {
-  if (a.waiting_minutes !== b.waiting_minutes) {
-    return b.waiting_minutes - a.waiting_minutes;
+  if (a.idle_minutes !== b.idle_minutes) {
+    return b.idle_minutes - a.idle_minutes;
   }
   return a.conversation_ref < b.conversation_ref ? -1 : 1;
 }
@@ -214,7 +232,7 @@ export function listWorkQueue(
 ): { readonly items: readonly WorkQueueItem[]; readonly pagination: WorkQueuePageInfo } {
   requireCapability(context, deps);
   const limit = clampLimit(options.limit);
-  const threshold = clampThreshold(options.late_threshold_minutes);
+  const threshold = clampThreshold(options.idle_threshold_minutes);
   const now = options.now ?? new Date().toISOString();
   const ownOnly = scopeIsOwnOnly(context);
 
@@ -228,7 +246,7 @@ export function listWorkQueue(
     if (ownOnly && assignee !== context.actorId) continue;
     const activity = computeConversationActivity(context, ref, deps, {
       now,
-      late_threshold_minutes: threshold,
+      idle_threshold_minutes: threshold,
     });
     items.push({
       conversation_ref: ref,
@@ -238,8 +256,8 @@ export function listWorkQueue(
       message_count: activity.message_count,
       first_occurred_at: activity.first_occurred_at,
       last_activity_at: activity.last_activity_at,
-      waiting_minutes: activity.waiting_minutes,
-      is_late: activity.is_late,
+      idle_minutes: activity.idle_minutes,
+      is_idle_over_threshold: activity.is_idle_over_threshold,
     });
   }
 
@@ -279,7 +297,7 @@ export function listWorkQueue(
       returned: page.length,
       total: items.length,
       next_cursor: next,
-      late_threshold_minutes: threshold,
+      idle_threshold_minutes: threshold,
     },
   };
 }

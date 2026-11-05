@@ -240,7 +240,7 @@ test('٣) ⭐⭐ الترتيب الحتمي (الأكثر انتظاراً أو
       ['conv_synth_0002', 'conv_synth_0001', 'conv_synth_0003'],
     );
     assert.deepEqual(
-      first.items.map((item) => item.waiting_minutes),
+      first.items.map((item) => item.idle_minutes),
       [270, 180, 40],
     );
   });
@@ -284,7 +284,7 @@ test('٤) ⭐⭐⭐ صحّة المؤشرات (حساب يدوي على بيان
     // ⭐⭐ الانتظار = الآن − **آخر نشاط** ⇒ ⭐ **وقيد التغيير نشاطٌ** ⇒
     // ⭐ ⇒ محادثتا ١ و ٢ تحدّثتا الآن (١٢:٣٠) ⇒ انتظارهما ٠ ⇒
     // ⭐ ⇒ والمتأخرة (≥ ٣٠ دقيقة) = محادثة ٣ فقط (آخر نشاط ١١:٥٠ ⇒ ٤٠ دقيقة).
-    assert.equal(metrics.late_total, 1);
+    assert.equal(metrics.idle_over_threshold_total, 1);
     // ⭐ أول رد: محادثة ١ فقط (٣٠ دقيقة) ⇒ المتوسط ٣٠.
     assert.equal(metrics.first_response_minutes, 30);
     // ⭐ زمن الحل: لا محادثة محلولة ⇒ ⭐ undefined صريح (لا صفر مخترع).
@@ -462,23 +462,23 @@ test('١٢) ⭐⭐⭐⭐⭐ نطاق الجمهور (قرار المالك)', as
     assert.equal(team.pagination.total, 3);
   });
 
-  await t.test('⭐⭐⭐⭐⭐ معيار التأخير ٣٠ دقيقة (والافتراضي مُعلن)', () => {
+  await t.test('⭐⭐⭐⭐⭐ معيار الخمول ٣٠ دقيقة (والافتراضي مُعلن) — ⭐ «الخمول منذ آخر نشاط» لا تأخّر العميل', () => {
     const { layer, deps } = scenario();
     const ctxA = context('supervisor');
     const ctxB = context('supervisor', 2, 21, 9);
     seed(layer, ctxA, ctxB);
     const page = listWorkQueue(ctxA, deps, { now: NOW });
-    assert.equal(page.pagination.late_threshold_minutes, 30);
-    // ⭐ محادثة آخر نشاط ١١:٥٠ ⇒ ٤٠ دقيقة ⇒ متأخرة.
+    assert.equal(page.pagination.idle_threshold_minutes, 30);
+    // ⭐ محادثة آخر نشاط ١١:٥٠ ⇒ ٤٠ دقيقة ⇒ خمولها تجاوز المعيار.
     const third = page.items.find((item) => item.conversation_ref === 'conv_synth_0003');
-    assert.equal(third?.waiting_minutes, 40);
-    assert.equal(third?.is_late, true);
-    // ⭐ تغيير المعيار ⇒ ٦٠ دقيقة ⇒ نفس المحادثة ليست متأخرة.
-    const relaxed = listWorkQueue(ctxA, deps, { now: NOW, late_threshold_minutes: 60 });
+    assert.equal(third?.idle_minutes, 40);
+    assert.equal(third?.is_idle_over_threshold, true);
+    // ⭐ تغيير المعيار ⇒ ٦٠ دقيقة ⇒ نفس المحادثة خمولها لم يتجاوز المعيار.
+    const relaxed = listWorkQueue(ctxA, deps, { now: NOW, idle_threshold_minutes: 60 });
     const thirdRelaxed = relaxed.items.find(
       (item) => item.conversation_ref === 'conv_synth_0003',
     );
-    assert.equal(thirdRelaxed?.is_late, false);
+    assert.equal(thirdRelaxed?.is_idle_over_threshold, false);
   });
 });
 

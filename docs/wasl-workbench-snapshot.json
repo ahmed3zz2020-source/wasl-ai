@@ -1,0 +1,134 @@
+{
+  "schema_version": "1",
+  "synthetic": true,
+  "product": "WASL AI",
+  "generated_at": "2026-01-05T12:00:00.000Z",
+  "notice": "معاينة صناعية بالكامل — بيانات اصطناعية بالكامل — لا حساب ولا خادم ولا شبكة خلف هذه الصفحة",
+  "idle_threshold_minutes": 30,
+  "agent_queue": {
+    "title": "طابور الوكيل — «محادثاته فقط»",
+    "scope_note": "نطاق الموظف = محادثاته المسنَدة إليه فقط (قرار المالك · D-058) — صلاحية «conversation.queue.read»",
+    "items": [
+      {
+        "conversation_ref": "conv_preview_0001",
+        "state": "assigned",
+        "assignee_actor_id": "actor_preview_0007",
+        "category": "mine",
+        "message_count": 1,
+        "first_occurred_at": "2026-01-05T08:00:00.000Z",
+        "last_activity_at": "2026-01-05T11:10:00.000Z",
+        "idle_minutes": 50,
+        "is_idle_over_threshold": true
+      }
+    ],
+    "pagination": {
+      "returned": 1,
+      "total": 1,
+      "idle_threshold_minutes": 30
+    }
+  },
+  "supervisor_queue": {
+    "title": "طابور المشرف — «كل موظفي المستأجر نفسه»",
+    "scope_note": "نطاق المشرف = كل موظفي ومحادثات المستأجر نفسه (قرار C2(أ)) — ولا فرق فرعية (لا كيان «فريق» في النموذج)",
+    "items": [
+      {
+        "conversation_ref": "conv_preview_0001",
+        "state": "assigned",
+        "assignee_actor_id": "actor_preview_0007",
+        "category": "pending",
+        "message_count": 1,
+        "first_occurred_at": "2026-01-05T08:00:00.000Z",
+        "last_activity_at": "2026-01-05T11:10:00.000Z",
+        "idle_minutes": 50,
+        "is_idle_over_threshold": true
+      },
+      {
+        "conversation_ref": "conv_preview_0002",
+        "state": "assigned",
+        "assignee_actor_id": "actor_preview_0008",
+        "category": "pending",
+        "message_count": 2,
+        "first_occurred_at": "2026-01-05T09:00:00.000Z",
+        "last_activity_at": "2026-01-05T11:30:00.000Z",
+        "idle_minutes": 30,
+        "is_idle_over_threshold": true
+      },
+      {
+        "conversation_ref": "conv_preview_0003",
+        "state": "open",
+        "assignee_actor_id": null,
+        "category": "unassigned",
+        "message_count": 1,
+        "first_occurred_at": "2026-01-05T11:50:00.000Z",
+        "last_activity_at": "2026-01-05T11:50:00.000Z",
+        "idle_minutes": 10,
+        "is_idle_over_threshold": false
+      }
+    ],
+    "pagination": {
+      "returned": 3,
+      "total": 3,
+      "idle_threshold_minutes": 30
+    }
+  },
+  "metrics": {
+    "conversations_total": 3,
+    "by_state": {
+      "new": 0,
+      "open": 1,
+      "assigned": 2,
+      "pending": 0,
+      "resolved": 0,
+      "closed": 0
+    },
+    "unassigned_total": 1,
+    "idle_over_threshold_total": 2,
+    "first_response_minutes": 30,
+    "resolution_minutes": null,
+    "load_per_employee": [
+      {
+        "actor_id": "actor_preview_0007",
+        "open_count": 1
+      },
+      {
+        "actor_id": "actor_preview_0008",
+        "open_count": 1
+      }
+    ],
+    "note": "«الخمول منذ آخر نشاط» = الآن − آخر نشاط — وليس زمن انتظار العميل، ولا يُستعمل لتقييم سرعة الرد أو الموظف"
+  },
+  "isolation": {
+    "tenant_id": "tnt_preview_0002",
+    "other_tenant_ref": "conv_preview_0009",
+    "first_tenant_total": 3,
+    "other_tenant_own_total": 1,
+    "leaked_total": 0,
+    "note": "محادثة المستأجر الثاني (conv_preview_0009) لا تظهر في أي طابور أو مؤشر للمستأجر الأول — والعزل مُثبَت بالأرقام لا بالادّعاء"
+  },
+  "decisions": [
+    {
+      "title": "زمن أول الرد (C1)",
+      "detail": "يُحتسب من أول وارد إلى أول صادرة بعده — الصادرة الأسبق تُتجاهل — ولا قيمة بلا ردّ صحيح"
+    },
+    {
+      "title": "نطاق المشرف (C2(أ))",
+      "detail": "كل موظفي ومحادثات المستأجر نفسه — قرار نطاق، وليس تصريحاً بالوصول إلى مستأجر آخر"
+    },
+    {
+      "title": "تسمية الخمول (C3)",
+      "detail": "«الخمول منذ آخر نشاط» بدل «التأخير» — لأن المؤشر خمول لا انتظار عميل"
+    },
+    {
+      "title": "حدود الذرّية (C4)",
+      "detail": "الضمان محلي: تشغيل متسلسل بلا await + تخزين في الذاكرة + تراجع مُعوَّض لا معاملة إنتاجية"
+    }
+  ],
+  "guardrails": [
+    "قراءة فقط: لا أزرار كتابة ولا حالة تُعدَّل ولا سجل تغييرات يُكتب",
+    "بلا نص رسائل: المخرجات معرّفات وأرقام وتوقيتات فقط",
+    "بلا شبكة: لا fetch ولا CDN ولا خط خارجي — الصفحة تعمل من file://",
+    "بلا حساب ولا خادم ولا قاعدة بيانات: كل شيء داخل الملف",
+    "بيانات اصطناعية بالكامل: المستأجرون والمحادثات والأرقام مُصطنعة",
+    "بلا ترقية جاهزية: هذه معاينة عرض، لا إصدار منشور"
+  ]
+}

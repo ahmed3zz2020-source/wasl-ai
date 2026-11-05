@@ -9,7 +9,7 @@
 // ⭐ **المحاور**: ⭐ ① فشل التسجيل ⇒ لا تغيير · ② فشل التسجيل ⇒ لا إسناد ·
 //   ③ مدخل غير صالح ⇒ لا كتابة · ④ النجاح ⇒ سجل واحد مطابق ·
 //   ⑤ التعارض ⇒ لا أثر · ⑥ الضمان مُثبَّت في الكود (حارس بنيوي) ·
-//   ⑦ صفر اتصال.
+//   ⑦ صفر اتصال · ⑧ **حدود الضمان (C4): حارس «بلا `await`»**.
 // ⛔ كل البيانات اصطناعية محلية · ⛔ صفر اتصال · ⛔ صفر حساب.
 // ============================================================
 
@@ -270,7 +270,67 @@ test('٦) ⭐⭐⭐ الضمان مُثبَّت بنيوياً (حارس على 
       'السجل لا يستدعي التحقّق المشترك ⇒ فجوة بين التحقّق والكتابة',
     );
   });
+
+  await t.test('⭐⭐⭐⭐⭐ حدود الضمان (C4): لا `await` داخل مسار الكتابة', () => {
+    // ⭐ المبدأ: ⭐ الضمان كله (**تحقّق مسبق + تراجع مُعوَّض**) يفترض تشغيلاً
+    //   متسلسلاً ⇒ ⇒ فأي `await` داخل مسار الكتابة = تداخل محتمل بين
+    //   الكتابة والتسجيل ⇒ ⇒ **يُبطل صراحةً التراجع** ⇒ ⇒ فالحارس هنا.
+    // ⭐ الفحص على **الكود** (لا على النية) ⇒ ⇒ والتعليقات تُحذف قبل الفحص
+    //   ⇒ ⇒ لأن التوثيق يذكر `await` كنصيحة ⇒ ⇒ ولا يُحسب توثيقاً كوداً.
+    const stateSource = fs.readFileSync(path.join(ROOT, 'src/core/conversation-state.ts'), 'utf8');
+    const changeSource = fs.readFileSync(path.join(ROOT, 'src/core/conversation-change-log.ts'), 'utf8');
+
+    const commitBody = functionBody(stateSource, 'function commitStateChange(');
+    assert.ok(
+      !/\bawait\b/.test(commitBody),
+      'ظهر `await` داخل commitStateChange ⇒ يفقد التراجع أمانه ⇒ يلزم مراجعة + تصريح مستقل',
+    );
+
+    const recordBody = functionBody(changeSource, 'record(input: ConversationChangeInput)');
+    assert.ok(
+      !/\bawait\b/.test(recordBody),
+      'ظهر `await` داخل سجل التغييرات (record) ⇒ يفقد التراجع أمانه ⇒ يلزم مراجعة + تصريح مستقل',
+    );
+  });
 });
+
+/** ⭐ يستخرج **جسم** دالة/طريقة ⇒ ⇒ ويتخطّى **أنواع المعاملات** (التي تحوي `{}`). */
+function functionBody(rawSource: string, signature: string): string {
+  // ⭐ التعليقات تُحذف **أولاً** ⇒ ⇒ فالتوثيق (الذي يذكر `await`) لا يُحسب كوداً.
+  const source = stripComments(rawSource);
+  const start = source.indexOf(signature);
+  assert.ok(start >= 0, `التوقيع غير موجود: ${signature}`);
+  // ⭐ (١) إغلاق قائمة المعاملات ⇒ ⇒ فنتخطّى `next: { state: ... }`.
+  const openParen = source.indexOf('(', start);
+  assert.ok(openParen >= 0, `المعاملات غير موجودة: ${signature}`);
+  let parens = 0;
+  let closeParen = -1;
+  for (let i = openParen; i < source.length; i += 1) {
+    if (source[i] === '(') parens += 1;
+    else if (source[i] === ')') {
+      parens -= 1;
+      if (parens === 0) { closeParen = i; break; }
+    }
+  }
+  assert.ok(closeParen >= 0, `المعاملات غير مُغلقة: ${signature}`);
+  // ⭐ (٢) قوس الجسم — ⭐ بعد نوع الإرجاع ⇒ ⇒ لا على نوع المعامل.
+  const bodyStart = source.indexOf('{', closeParen);
+  assert.ok(bodyStart >= 0, `جسم غير موجود: ${signature}`);
+  let braces = 0;
+  for (let i = bodyStart; i < source.length; i += 1) {
+    if (source[i] === '{') braces += 1;
+    else if (source[i] === '}') {
+      braces -= 1;
+      if (braces === 0) return source.slice(bodyStart, i + 1);
+    }
+  }
+  throw new Error(`جسم غير مُغلق: ${signature}`);
+}
+
+/** ⭐ يزيل التعليقات الكتلية والتعليقات السطرية ⇒ ⇒ الفحص على الكود فقط. */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+}
 
 test('٧) ⭐⭐⭐⭐⭐ صفر اتصال (الحاجز مُركَّب)', async (t) => {
   await t.test('⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية', () => {

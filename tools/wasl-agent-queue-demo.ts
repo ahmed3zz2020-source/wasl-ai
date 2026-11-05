@@ -243,7 +243,7 @@ layer.process(
     body: 'وصلت البيانات — سنراجعها.',
   }),
 );
-// ⭐ محادثة ٣: وارد ١١:٥٠ ⇒ متأخرة (≥ ٣٠ دقيقة).
+// ⭐ محادثة ٣: وارد ١١:٥٠ ⇒ خمولها ٤٠ دقيقة ⇒ يتجاوز المعيار (≥ ٣٠ دقيقة).
 layer.process(
   ownerCtx3,
   demoEnvelope({
@@ -278,6 +278,7 @@ updateConversationState(ownerCtx3, 'conv_demo_0003', 'open', deps, { reason: 'ف
 console.log(line('═'));
 console.log('⭐ WASL AI — عرض تجريبي محلي: مركز عمل الوكيل + مؤشرات الخدمة (Slice 05)');
 console.log('⭐ كل البيانات اصطناعية · بلا شبكة · بلا حساب · بلا نشر');
+console.log('⭐ ⛔ «الخمول منذ آخر نشاط» ≠ زمن انتظار العميل — ولا يُستخدم لتقييم سرعة الرد');
 console.log(line('═'));
 
 const agentQueue = listWorkQueue(agentCtx, deps, { now: NOW });
@@ -285,11 +286,11 @@ console.log('\n⭐⭐ طابور الوكيل (قرار المالك: «المو
 console.log(line());
 for (const item of agentQueue.items) {
   console.log(
-    `• ${item.conversation_ref} · ${item.category} · ${item.state} · مُسندة: ${item.assignee_actor_id ?? '—'} · انتظار: ${item.waiting_minutes} دقيقة · متأخرة: ${item.is_late ? 'نعم' : 'لا'}`,
+    `• ${item.conversation_ref} · ${item.category} · ${item.state} · مُسندة: ${item.assignee_actor_id ?? '—'} · خمول منذ آخر نشاط: ${item.idle_minutes} دقيقة · تجاوز الخمول المعيار: ${item.is_idle_over_threshold ? 'نعم' : 'لا'}`,
   );
 }
 console.log(
-  `  (صفوف: ${agentQueue.pagination.returned}/${agentQueue.pagination.total} · معيار التأخير: ${agentQueue.pagination.late_threshold_minutes} دقيقة)`,
+  `  (صفوف: ${agentQueue.pagination.returned}/${agentQueue.pagination.total} · معيار الخمول: ${agentQueue.pagination.idle_threshold_minutes} دقيقة)`,
 );
 
 const teamQueue = listWorkQueue(supervisorCtx, deps, { now: NOW });
@@ -297,7 +298,7 @@ console.log('\n⭐⭐ طابور فريق المشرف (قرار: «المشرف
 console.log(line());
 for (const item of teamQueue.items) {
   console.log(
-    `• ${item.conversation_ref} · ${item.category} · ${item.state} · مُسندة: ${item.assignee_actor_id ?? '—'} · رسائل: ${item.message_count} · انتظار: ${item.waiting_minutes} دقيقة · متأخرة: ${item.is_late ? 'نعم' : 'لا'}`,
+    `• ${item.conversation_ref} · ${item.category} · ${item.state} · مُسندة: ${item.assignee_actor_id ?? '—'} · رسائل: ${item.message_count} · خمول منذ آخر نشاط: ${item.idle_minutes} دقيقة · تجاوز الخمول المعيار: ${item.is_idle_over_threshold ? 'نعم' : 'لا'}`,
   );
 }
 console.log(`  (صفوف: ${teamQueue.pagination.returned}/${teamQueue.pagination.total})`);
@@ -311,7 +312,7 @@ console.log(
     .map(([state, count]) => `${state}=${count}`)
     .join(' · ')}`,
 );
-console.log(`• بلا مُسندة: ${metrics.unassigned_total} · متأخرة: ${metrics.late_total}`);
+console.log(`• بلا مُسندة: ${metrics.unassigned_total} · تجاوز الخمول المعيار: ${metrics.idle_over_threshold_total}`);
 console.log(
   `• متوسط زمن أول رد: ${metrics.first_response_minutes ?? 'غير محسوب'} دقيقة · متوسط زمن الحل: ${metrics.resolution_minutes ?? 'غير محسوب'} دقيقة`,
 );

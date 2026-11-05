@@ -19,7 +19,7 @@ import type { ConversationChangeLog } from './conversation-change-log.ts';
 import type { ReadAuditLog } from './read-audit.ts';
 import {
   computeConversationActivity,
-  DEFAULT_LATE_THRESHOLD_MINUTES,
+  DEFAULT_IDLE_THRESHOLD_MINUTES,
   type AgentWorkQueueDependencies,
 } from './agent-queue.ts';
 
@@ -36,8 +36,8 @@ export interface ServiceMetricsDependencies extends AgentWorkQueueDependencies {
 export interface ServiceMetricsOptions {
   /** ⭐ لحظة القياس (ISO) — ⭐ **deterministic**. */
   readonly now?: string;
-  /** ⭐ معيار التأخير بالدقائق — ⭐ افتراضي ٣٠ (نفس معيار الطابور). */
-  readonly late_threshold_minutes?: number;
+  /** ⭐ **معيار الخمول** بالدقائق — ⭐ افتراضي ٣٠ (نفس معيار الطابور). ⭐ ⛔ **ليس** معيار تأخّر العميل. */
+  readonly idle_threshold_minutes?: number;
 }
 
 /** ⭐⭐⭐ مؤشرات الخدمة — ⭐ **أرقام فقط** (لا نصوص ولا أسرار). */
@@ -48,8 +48,8 @@ export interface ServiceMetrics {
   readonly by_state: Readonly<Record<ConversationState, number>>;
   /** ⭐ محادثات بلا مُسندة. */
   readonly unassigned_total: number;
-  /** ⭐ محادثات تجاوزت معيار التأخير. */
-  readonly late_total: number;
+  /** ⭐⭐ عدد المحادثات التي تجاوز **الخمول** المعيار — ⭐ **ليس** «تأخّر العميل» ولا يُستخدم لتقييم سرعة الرد. */
+  readonly idle_over_threshold_total: number;
   /** ⭐ متوسط زمن أول رد (بالدقائق) — ⭐ `undefined` إن لم تُحسب بيانات كافية. */
   readonly first_response_minutes: number | undefined;
   /** ⭐ متوسط زمن الحل (بالدقائق) — ⭐ `undefined` إن لم تُحسب بيانات كافية. */
@@ -115,13 +115,13 @@ export function getServiceMetrics(
   requireCapability(context, deps);
   const now = options.now ?? new Date().toISOString();
   const threshold =
-    options.late_threshold_minutes === undefined
-      ? DEFAULT_LATE_THRESHOLD_MINUTES
-      : Math.floor(options.late_threshold_minutes);
+    options.idle_threshold_minutes === undefined
+      ? DEFAULT_IDLE_THRESHOLD_MINUTES
+      : Math.floor(options.idle_threshold_minutes);
   if (!Number.isFinite(threshold) || threshold < 1) {
     throw new ServiceMetricsError(
-      'late_threshold_invalid',
-      'معيار التأخير لازم يكون رقماً ≥ ١ دقيقة',
+      'idle_threshold_invalid',
+      'معيار الخمول لازم يكون رقماً ≥ ١ دقيقة',
     );
   }
 
@@ -131,7 +131,7 @@ export function getServiceMetrics(
   const firstResponseSamples: number[] = [];
   const resolutionSamples: number[] = [];
   let unassignedTotal = 0;
-  let lateTotal = 0;
+  let idleOverThresholdTotal = 0;
 
   for (const ref of refs) {
     const row = deps.states.get(context.tenantId, ref);
@@ -142,20 +142,30 @@ export function getServiceMetrics(
 
     const activity = computeConversationActivity(context, ref, deps, {
       now,
-      late_threshold_minutes: threshold,
+      idle_threshold_minutes: threshold,
     });
-    if (activity.is_late) lateTotal += 1;
+    if (activity.is_idle_over_threshold) idleOverThresholdTotal += 1;
 
     // ⭐ العبء = محادثات **غير مغلقة** لكل موظف.
     if (assignee !== null && state !== 'resolved' && state !== 'closed') {
       load.set(assignee, (load.get(assignee) ?? 0) + 1);
     }
 
+    // ⭐⭐ زمن أول رد — ⭐ **التصحيح C1 (تصريح المالك · D-059 · بعد ملاحظة M4)**:
+    // ⭐ ① **أول رسالة واردة** من العميل هي نقطة البداية.
+    // ⭐ ② **أول رسالة صادرة _بعد_ تلك الواردة** هي الردّ الصحيح.
+    // ⭐ ③ **أي رسالة صادرة سبقت الواردة تُتجاهل** (ترحيب استباقي أو ردّ على غيرها).
+    // ⭐ ④ الزمن = الفرق بين timestamp الواردة والردّ الصحيح.
+    // ⭐ ⑤ **لا قيمة** إن لم يوجد ردّ صحيح ⇒ `undefined` (لا صفر بديل ولا تقدير).
     const rows = deps.store.messagesForConversation(context, ref);
     const firstInbound = rows.find((row) => row.direction === 'inbound');
-    const firstOutbound = rows.find((row) => row.direction === 'outbound');
-    // ⭐ زمن أول رد = ⭐ **أول رسالة صادرة − أول رسالة واردة** ⇒ ⭐ ولو لم توجد
-    // رسالة صادرة ⇒ ⭐ لا عيّنة (ولا صفراً مخترعاً).
+    const firstOutbound = firstInbound
+      ? rows.find(
+          (row) =>
+            row.direction === 'outbound' &&
+            Date.parse(row.occurred_at) > Date.parse(firstInbound.occurred_at),
+        )
+      : undefined;
     if (firstInbound && firstOutbound) {
       const delta = Date.parse(firstOutbound.occurred_at) - Date.parse(firstInbound.occurred_at);
       if (Number.isFinite(delta) && delta >= 0) {
@@ -193,7 +203,7 @@ export function getServiceMetrics(
     conversations_total: refs.length,
     by_state: byState,
     unassigned_total: unassignedTotal,
-    late_total: lateTotal,
+    idle_over_threshold_total: idleOverThresholdTotal,
     first_response_minutes: average(firstResponseSamples),
     resolution_minutes: average(resolutionSamples),
     load_per_employee: loadPerEmployee,
