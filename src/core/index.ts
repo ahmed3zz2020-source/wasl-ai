@@ -73,6 +73,33 @@ export {
   type StoredMessage,
 } from './store.ts';
 
+// ⭐ Slice 02 — طبقة المعالجة (عقد النتيجة + خط المعالجة)
+export {
+  PROCESSING_OUTCOME_RULES,
+  ProcessingLayer,
+  ProcessingOutcomeError,
+  parseProcessingOutcome,
+  validateProcessingOutcome,
+  type ProcessingDecision,
+  type ProcessingDependencies,
+  type ProcessingOutcome,
+  type ProcessingOutcomeRuleName,
+  type ProcessingOutcomeValidation,
+  type ProcessingReasonCode,
+} from './processing.ts';
+
+// ⭐ Slice 02 — قاعدة الترتيب (قرار المالك: `docs/SLICE-02-ORDERING-RULE.md`)
+export {
+  OrderingState,
+  defaultOrderingScopeResolver,
+  evaluateOrdering,
+  type OrderingDecision,
+  type OrderingDeferReason,
+  type OrderingPoint,
+  type OrderingScope,
+  type OrderingScopeResolver,
+} from './ordering.ts';
+
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
 // ⛔ لا مصدر جلسات اختباري هنا — ولا حتى واحد.

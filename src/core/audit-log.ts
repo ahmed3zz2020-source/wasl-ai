@@ -9,7 +9,9 @@
 // ⭐ حماية إضافية: قائمة سماح صريحة لمفاتيح التفاصيل + كاشف أسرار.
 // ============================================================
 
-export type AuditOutcome = 'accepted' | 'rejected' | 'duplicate';
+// ⭐ 'deferred' أُضيف في Slice 02 (٥ نوفمبر ٢٠٢٦) ليشمل قرار التأجيل من طبقة المعالجة.
+// ⭐ **إضافة فقط** — ⭐ القيم القديمة لم تتغيّر سلوكياً.
+export type AuditOutcome = 'accepted' | 'rejected' | 'duplicate' | 'deferred';
 
 export interface AuditEntry {
   readonly ts: string;
@@ -104,7 +106,7 @@ export class AuditLog {
     if (!OPERATION_PATTERN.test(String(input.operation ?? ''))) {
       throw new AuditLogError('operation_invalid', 'operation غير صالح');
     }
-    if (!['accepted', 'rejected', 'duplicate'].includes(input.outcome)) {
+    if (!['accepted', 'rejected', 'duplicate', 'deferred'].includes(input.outcome)) {
       throw new AuditLogError('outcome_invalid', 'outcome غير صالح');
     }
     const meta: Record<string, string> = {};
