@@ -139,19 +139,22 @@ def test_counts() -> tuple[int, int, int] | None:
     return total, grab("pass"), grab("fail")
 
 
-def pending_owner_items() -> list[str]:
-    """⭐ «ما ينتظر قرار المالك» يُشتق من §٣.٥ في آخر ردّ ⇒ لا يتقادم."""
+def pending_owner_items() -> tuple[str, list[str]]:
+    """⭐ «ما ينتظر قرار المالك» يُشتق من **رقم القسم الفعلي** ⇒ ⭐ لا يتقادم ولا يُكتب يدوياً."""
     if not LOG.exists():
-        return []
+        return ("", [])
     text = LOG.read_text(encoding="utf-8")
     start = text.find("## ٣.")
     if start < 0:
-        return []
+        return ("", [])
     end = text.find("\n## ", start + 1)
     block = text[start: end if end > 0 else len(text)]
-    heads = [m for m in re.finditer(r"^###\s*[^\n]*ما ينتظر[^\n]*$", block, re.M)]
+    heads = [m for m in re.finditer(r"^###\s*([^\n]*ما ينتظر[^\n]*)$", block, re.M)]
     if not heads:
-        return []
+        return ("", [])
+    # ⭐ رقم القسم من عنوانه الفعلي (مثال: «٣.٦»).
+    num = re.match(r"^\s*([٠-٩]+[.\-][٠-٩]+)", heads[-1].group(1))
+    section = num.group(1) if num else ""
     tail = block[heads[-1].end():]
     items: list[str] = []
     for ln in tail.splitlines():
@@ -165,7 +168,7 @@ def pending_owner_items() -> list[str]:
                     items.append(name)
         elif items and not ln.startswith("|"):
             break
-    return items
+    return (section, items)
 
 
 def summary_block(sha: str) -> str:
@@ -272,10 +275,11 @@ def summary_block(sha: str) -> str:
     if links:
         lines.append("- ⭐ **الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)**: " + " · ".join(links))
 
-    # ⑦ ما ينتظر قرار المالك (مشتق من §٣.٥ في آخر ردّ)
-    pending = pending_owner_items()
+    # ⑦ ما ينتظر قرار المالك (مشتق من رقم القسم الفعلي في آخر ردّ)
+    section, pending = pending_owner_items()
     if pending:
-        lines.append("- ⭐ **ما ينتظر قرار المالك الآن** (من §٣.٥ في السجل): " + " · ".join(pending))
+        where = f"§{section}" if section else "§٣"
+        lines.append("- ⭐ **ما ينتظر قرار المالك الآن** (من " + where + " في السجل): " + " · ".join(pending))
 
     # ⑧ ما لم يُنفَّذ
     if n_code:
