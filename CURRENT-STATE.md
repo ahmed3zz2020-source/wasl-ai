@@ -87,7 +87,7 @@
 | ١٣ | ⭐⭐ **معالجة المراجعة المعمارية المستقلة لـR006 (MISSION 003)** — ١٥ قسماً §0..§14 · ⭐ ١٠ مخرجاً مطلوبة · ٤ مستويات قرارات · ٢٢ مشهد عزل · ١٥ معيار مكدّس محسوب · ١٨ سؤال قانوني · ٣ مسارات واتساب · ٧ مكوّنات معلّقة | [`REVIEWS/R007-r006-review-remediation.md`](REVIEWS/R007-r006-review-remediation.md) | 📄 موثّق |
 | ١٤ | ⭐⭐ **سجل قرارات المالك** (٩ قرارات مفتوحة DR-2..DR-10 + DR-11 مقترح · بطاقة لكل قرار: شرح · خيارات · توصية · دليل · تأجيل) · ⭐ **كل بند توصية لا قرار** | [`DECISION-REGISTER.md`](DECISION-REGISTER.md) | 📄 موثّق |
 | ١٥ | ⭐⭐ **ملخص التسليم** (٦ فئات: أُنجز · تصاميم جاهزة · قرارات معتمدة · قرارات معلّقة · اختبارات مصمَّمة ولم تُنفَّذ · أعمال برمجية غير مبتدئة) · ⭐ **دون رفع درجة الجاهزية** | [`docs/DELIVERY-SUMMARY-2026-11-03.md`](docs/DELIVERY-SUMMARY-2026-11-03.md) | 📄 موثّق |
-| ١٦ | ⭐⭐ **التحضير الهندسي الوثائقي لمسار Tech Provider + Embedded Signup (D-048 · ٩/٩ بند · بلا كود) + بطاقة الشريحة البرمجية الأولى** (٧ أقسام · ٩ جداول · **إعداد لا موافقة**) | [`docs/TECH-PROVIDER-PREP.md`](docs/TECH-PROVIDER-PREP.md) · [`docs/FIRST-SLICE-DECISION-CARD.md`](docs/FIRST-SLICE-DECISION-CARD.md) | 📄 موثّق |
+| ١٦ | ⭐⭐ **التحضير الهندسي الوثائقي لمسار Tech Provider + Embedded Signup (D-048 · ٩/٩ بند · بلا كود) + بطاقة الشريحة البرمجية الأولى** (٧ أقسام · ١٠ جداول · **إعداد لا موافقة** · نطاق مجمَّد في §١) | [`docs/TECH-PROVIDER-PREP.md`](docs/TECH-PROVIDER-PREP.md) · [`docs/FIRST-SLICE-DECISION-CARD.md`](docs/FIRST-SLICE-DECISION-CARD.md) | 📄 موثّق |
 
 ### ٣.٢ ✅ قرارات معتمدة (المصدر: `DECISIONS.md` — ⛔ لا تُنسخ هنا)
 
