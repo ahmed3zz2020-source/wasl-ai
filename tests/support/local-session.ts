@@ -129,6 +129,17 @@ export const LOCAL_RESTRICTED_SOURCES = Object.freeze({
   listOnly: buildRestrictedSource('local-list-only', 'viewer', ['conversation.list']),
   stateReadOnly: buildRestrictedSource('local-state-read-only', 'agent', ['conversation.state.read']),
   noAccess: buildRestrictedSource('local-no-access', 'owner', []),
+  // ⭐⭐ الشريحة الخامسة — ⭐ **مصدر يملك الطابور بلا المؤشرات** ⇒ ⭐
+  // ⭐ **إثبات أن المؤشرات تحتاج صلاحية صريحة** (السقف يقتص).
+  noMetrics: buildRestrictedSource('local-no-metrics', 'owner', [
+    'conversation.list',
+    'conversation.read',
+    'conversation.audit',
+    'conversation.state.read',
+    'conversation.state.update',
+    'conversation.assign',
+    'conversation.queue.read',
+  ]),
 });
 
 /** ⭐⭐ السقف المسجَّل لكل مصدر — ⭐ **سلطة المالك على ما يُمنح**. */
@@ -140,6 +151,8 @@ const LOCAL_TEST_CEILINGS: Readonly<Record<TrustedRole, readonly string[]>> = Ob
     'conversation.state.read',
     'conversation.state.update',
     'conversation.assign',
+    'conversation.queue.read',
+    'conversation.metrics.read',
   ]),
   supervisor: Object.freeze([
     'conversation.list',
@@ -147,12 +160,15 @@ const LOCAL_TEST_CEILINGS: Readonly<Record<TrustedRole, readonly string[]>> = Ob
     'conversation.audit',
     'conversation.state.read',
     'conversation.state.update',
+    'conversation.queue.read',
+    'conversation.metrics.read',
   ]),
   agent: Object.freeze([
     'conversation.list',
     'conversation.read',
     'conversation.audit',
     'conversation.state.read',
+    'conversation.queue.read',
   ]),
   viewer: Object.freeze(['conversation.list', 'conversation.read', 'conversation.audit']),
   none: Object.freeze([]),

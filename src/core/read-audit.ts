@@ -23,7 +23,10 @@ export type ReadAuditOperation =
   | 'conversation.state.read'
   | 'conversation.state.update'
   | 'conversation.assign'
-  | 'conversation.changes';
+  | 'conversation.changes'
+  // ⭐⭐ الشريحة الخامسة — ⭐ إضافة فقط (⭐ القيم القديمة لم تتغيّر).
+  | 'conversation.queue.read'
+  | 'conversation.metrics.read';
 
 export interface ReadAuditEvent {
   readonly ts: string;
@@ -67,6 +70,8 @@ const OPERATIONS: readonly ReadAuditOperation[] = [
   'conversation.state.update',
   'conversation.assign',
   'conversation.changes',
+  'conversation.queue.read',
+  'conversation.metrics.read',
 ];
 
 function containsSecret(text: string): boolean {

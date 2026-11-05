@@ -8,7 +8,7 @@
     "src/core/"
   ],
   "scripts": {
-    "test:slice": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts tests/slice-02.test.ts tests/contract-freeze.test.ts tests/slice-03.test.ts tests/security-trust-boundary.test.ts tests/slice-04.test.ts tests/slice-04-closing.test.ts",
-    "test": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts tests/slice-02.test.ts tests/contract-freeze.test.ts tests/slice-03.test.ts tests/security-trust-boundary.test.ts tests/slice-04.test.ts tests/slice-04-closing.test.ts"
+    "test:slice": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts tests/slice-02.test.ts tests/contract-freeze.test.ts tests/slice-03.test.ts tests/security-trust-boundary.test.ts tests/slice-04.test.ts tests/slice-04-closing.test.ts tests/conversation-atomicity.test.ts tests/slice-05.test.ts",
+    "test": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts tests/slice-02.test.ts tests/contract-freeze.test.ts tests/slice-03.test.ts tests/security-trust-boundary.test.ts tests/slice-04.test.ts tests/slice-04-closing.test.ts tests/conversation-atomicity.test.ts tests/slice-05.test.ts"
   }
 }

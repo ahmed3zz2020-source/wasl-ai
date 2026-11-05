@@ -17,9 +17,11 @@ import type { TenantContext } from './tenant.ts';
 import type { MessageStore } from './store.ts';
 import type { ReadAuditLog } from './read-audit.ts';
 import {
+  assertChangeEntry,
   assertChangeReason,
   type ConversationChangeLog,
   type ConversationChangeEntry,
+  type ConversationChangeInput,
   type ConversationChangeOperation,
 } from './conversation-change-log.ts';
 import { CONVERSATION_CHANGE_STATES } from './conversation-change-log.ts';
@@ -158,6 +160,29 @@ export class ConversationStateStore {
     return { ...row };
   }
 
+  /**
+   * ⭐⭐⭐ تراجع مُعوَّض — ⭐ **يستعيد الصف السابق تماماً** (بلا أثر في السجل).
+   * ⭐⭐ **يُستخدم فقط عند فشل تسجيل التغيير** ⇒ ⇒ ⇒ **لا تغيير حالة بلا سجل**.
+   * ⛔ لا يُنشئ صفاً ولا يحذف شيئاً — ⭐ يستعيد ما كان موجوداً فقط.
+   */
+  restore(
+    tenantId: string,
+    conversationRef: string,
+    previous: ConversationStateView,
+  ): void {
+    const tenantRows = this.#rows.get(tenantId);
+    if (!tenantRows || !tenantRows.has(conversationRef)) return;
+    tenantRows.set(conversationRef, { ...previous });
+  }
+
+  /**
+   * ⭐⭐⭐ تجاهل صف لم يكن موجوداً — ⭐ **يُستخدم مع التراجع المعوَّض**
+   * ⭐ (حين أُنشئ الصف لأول مرة في محاولة فاشلة ⇒ ⇒ يُحذف ⇒ ⇒ ولا أثر).
+   */
+  discard(tenantId: string, conversationRef: string): void {
+    this.#rows.get(tenantId)?.delete(conversationRef);
+  }
+
   /** ⭐ عدد الصفوف لمستخدم واحد — ⭐ (تشخيص محلي فقط). */
   sizeFor(tenantId: string): number {
     return this.#rows.get(tenantId)?.size ?? 0;
@@ -262,28 +287,58 @@ function requireCapability(
   }
 }
 
-function recordChange(
+/**
+ * ⭐⭐⭐⭐⭐ **الالتزام الذرّي** — ⭐ **تعديل الحالة + سجل التغيير أو لا شيء**.
+ * ⭐ **الترتيب**: ⭐ (١) تحقّق كامل من مدخل السجل **قبل** أي كتابة ⇒
+ *   (٢) إنشاء صف الحالة (إن لم يكن موجوداً) ⇒ (٣) تعديل الحالة ⇒
+ *   (٤) تسجيل التغيير ⇒ ⭐ ولو فشل (٤) ⇒
+ *   ⭐ **تراجع مُعوَّض** ⇒ ⇒ ⇒ **النتيجة: لا تغيير حالة ولا إسناد بلا سجل تغيير مطابق**.
+ * ⭐ **سبب التراجع**: ⭐ لو فشل التسجيل (فشل كتابة دائم مثلاً) ⇒ كانت الحالة
+ *   تغيّرت وتغيّرها بلا أثر في أي سجل ⇒ ⇒ **التراجع يُبطل ذلك بالكامل**.
+ * ⛔ التراجع **لا يُسجّل** (لأنه لا تغيير في النهاية) ⇒ ⇒ ولا سجل بلا تغيير.
+ */
+function commitStateChange(
   context: TenantContext,
-  operation: ConversationChangeOperation,
   conversationRef: string,
-  from: ConversationState,
-  to: ConversationState,
-  reason: string,
-  assigneeFrom: string | null,
-  assigneeTo: string | null,
+  current: ConversationStateView,
+  existedBefore: boolean,
+  next: { state: ConversationState; assignee: string | null; expectedVersion?: number },
+  input: ConversationChangeInput,
   deps: ConversationStateDependencies,
-): void {
-  deps.changes.record({
-    tenant_id: context.tenantId,
-    actor_id: context.actorId,
-    operation,
+): ConversationStateView {
+  // ⭐⬀ (١) كل فحوص السجل قبل أي كتابة ⇒ ⇒ لا كتابة على مدخل مرفوض
+  // (ولا حتى إنشاء صف الحالة ⇒ ⇒ ولا أثر متبقٍّ بعد الرفض).
+  assertChangeEntry(input);
+  // ⭐ (٢) صف الحالة — ⭐ **بعد** كل الفحوص ⇒ ⇒ رفضٌ لا يترك صفاً خلفه.
+  deps.states.ensure(context.tenantId, conversationRef);
+  const updated = deps.states.setState(context.tenantId, conversationRef, next);
+  try {
+    // ⭐ (٤) تسجيل التغيير — ⭐ نفس المدخل الذي تحقّق منه قبل الكتابة.
+    deps.changes.record(input);
+  } catch (error) {
+    // ⭐⬀ (٤ب) تراجع مُعوَّض ⇒ ⇒ **لا تغيير بلا سجل**.
+    if (existedBefore) {
+      deps.states.restore(context.tenantId, conversationRef, current);
+    } else {
+      deps.states.discard(context.tenantId, conversationRef);
+    }
+    throw error;
+  }
+  return updated;
+}
+
+/**
+ * ⭐⭐ الحالة الابتدائية — ⭐ **للمحادثة التي لا يوجد لها صف بعد**.
+ * ⭐ تُستخدم **قبل** إنشاء الصف ⇒ ⇒ **فحص بحت بلا أثر** ⇒ ⇒ ورفضٌ لا يترك أثراً.
+ */
+function initialConversationState(conversationRef: string): ConversationStateView {
+  return {
     conversation_ref: conversationRef,
-    from_state: from,
-    to_state: to,
-    reason,
-    assignee_from: assigneeFrom,
-    assignee_to: assigneeTo,
-  });
+    state: 'new',
+    assignee_actor_id: null,
+    updated_at: '',
+    version: 0,
+  };
 }
 
 // ============================================================
@@ -350,7 +405,11 @@ export function updateConversationState(
     throw new ConversationStateError('state_invalid', 'الحالة المطلوبة خارج المجموعة المغلقة');
   }
   requireConversation(context, conversationRef, deps);
-  const current = deps.states.ensure(context.tenantId, conversationRef);
+  // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
+  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const current = existedBefore
+    ? (deps.states.get(context.tenantId, conversationRef) as ConversationStateView)
+    : initialConversationState(conversationRef);
 
   // ⭐⬀ حارس النهائية — ⭐ المحادثة المغلقة لا تُعدل ولا تُسند (ولا حتى إغلاقً مريرًاً).
   if (isTerminalState(current.state)) {
@@ -383,20 +442,28 @@ export function updateConversationState(
   }
   // ⭐ «open» = غير مسندة ⇒ ⇒ الإسناد يُلغى تلقائياً عند الانتقال إليها.
   const assignee = to === 'open' ? null : current.assignee_actor_id;
-  const updated = deps.states.setState(context.tenantId, conversationRef, {
-    state: to,
-    assignee,
-    ...(options.expectedVersion === undefined ? {} : { expectedVersion: options.expectedVersion }),
-  });
-  recordChange(
+  // ⭐⭐⭐ التزام ذرّي — ⭐ تعديل الحالة + سجل التغيير أو لا شيء.
+  const updated = commitStateChange(
     context,
-    'state.update',
     conversationRef,
-    current.state,
-    to,
-    reason,
-    current.assignee_actor_id,
-    assignee,
+    current,
+    existedBefore,
+    {
+      state: to,
+      assignee,
+      ...(options.expectedVersion === undefined ? {} : { expectedVersion: options.expectedVersion }),
+    },
+    {
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: 'state.update',
+      conversation_ref: conversationRef,
+      from_state: current.state,
+      to_state: to,
+      reason,
+      assignee_from: current.assignee_actor_id,
+      assignee_to: assignee,
+    },
     deps,
   );
   deps.readAudit.record({
@@ -431,7 +498,11 @@ export function assignConversation(
     throw new ConversationStateError('assignee_invalid', 'معرّف الموظف غير صالح');
   }
   requireConversation(context, conversationRef, deps);
-  const current = deps.states.ensure(context.tenantId, conversationRef);
+  // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
+  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const current = existedBefore
+    ? (deps.states.get(context.tenantId, conversationRef) as ConversationStateView)
+    : initialConversationState(conversationRef);
 
   // ⭐⬀ حارس النهائية — ⭐ لا إسناد لمحادثة مغلقة أبداً.
   if (isTerminalState(current.state)) {
@@ -463,19 +534,24 @@ export function assignConversation(
   assertChangeReason(options.reason ?? '');
   const operation: ConversationChangeOperation =
     current.state === 'assigned' ? 'assignment.transfer' : 'assignment.set';
-  const updated = deps.states.setState(context.tenantId, conversationRef, {
-    state: 'assigned',
-    assignee: assigneeActorId,
-  });
-  recordChange(
+  // ⭐⭐⭐ التزام ذرّي — ⭐ إسناد + سجل التغيير أو لا شيء.
+  const updated = commitStateChange(
     context,
-    operation,
     conversationRef,
-    current.state,
-    'assigned',
-    options.reason ?? '',
-    current.assignee_actor_id,
-    assigneeActorId,
+    current,
+    existedBefore,
+    { state: 'assigned', assignee: assigneeActorId },
+    {
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation,
+      conversation_ref: conversationRef,
+      from_state: current.state,
+      to_state: 'assigned',
+      reason: options.reason ?? '',
+      assignee_from: current.assignee_actor_id,
+      assignee_to: assigneeActorId,
+    },
     deps,
   );
   deps.readAudit.record({
@@ -504,7 +580,11 @@ export function unassignConversation(
   }
   requireCapability(context, CONVERSATION_ASSIGN_CAPABILITY, 'conversation.assign', deps, conversationRef);
   requireConversation(context, conversationRef, deps);
-  const current = deps.states.ensure(context.tenantId, conversationRef);
+  // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
+  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const current = existedBefore
+    ? (deps.states.get(context.tenantId, conversationRef) as ConversationStateView)
+    : initialConversationState(conversationRef);
   // ⭐⬀ حارس النهائية — ⭐ لا إلغاء إسناد لمحادثة مغلقة.
   if (isTerminalState(current.state)) {
     throw new ConversationStateError(
@@ -518,19 +598,24 @@ export function unassignConversation(
       `المحادثة غير مسندة ⇒ لا إلغاء إسناد (الحالة: ${current.state})`,
     );
   }
-  const updated = deps.states.setState(context.tenantId, conversationRef, {
-    state: 'open',
-    assignee: null,
-  });
-  recordChange(
+  // ⭐⭐⭐ التزام ذرّي — ⭐ إلغاء الإسناد + سجل التغيير أو لا شيء.
+  const updated = commitStateChange(
     context,
-    'assignment.clear',
     conversationRef,
-    'assigned',
-    'open',
-    options.reason ?? '',
-    current.assignee_actor_id,
-    null,
+    current,
+    existedBefore,
+    { state: 'open', assignee: null },
+    {
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: 'assignment.clear',
+      conversation_ref: conversationRef,
+      from_state: 'assigned',
+      to_state: 'open',
+      reason: options.reason ?? '',
+      assignee_from: current.assignee_actor_id,
+      assignee_to: null,
+    },
     deps,
   );
   deps.readAudit.record({

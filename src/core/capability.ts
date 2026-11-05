@@ -30,7 +30,10 @@ export type TrustedRole = (typeof TRUSTED_ROLES)[number];
 /**
  * ⭐⭐⭐ سياسة الصلاحيات حسب الدور — ⭐ **المصدر الوحيد للصلاحيات في النواة**.
  * ⭐ الدور `none` = ⭐ **بلا منح** (الدور الافتراضي ⇒ المنع).
- * ⭐ الهرمية: `owner` (٦) › `supervisor` (٥) › `agent` (٤) › `viewer` (٣) › `none` (٠).
+ * ⭐ الهرمية: `owner` (٨) › `supervisor` (٧) › `agent` (٥) › `viewer` (٣) › `none` (٠).
+ * ⭐ **الشريحة الخامسة (قرار المالك · ٥ نوفمبر ٢٠٢٦)**: ⭐ `conversation.queue.read`
+ *   (الوكيل يرى محادثاته · والمشرف طابور فريقه) ⇒ ⭐ و`conversation.metrics.read`
+ *   (**المشرف والمالك فقط**) ⇒ ⭐ والـ`viewer` **لا يحصل على الطابور** (سطح عمل لا قراءة).
  */
 export const ROLE_CAPABILITIES: Readonly<Record<TrustedRole, readonly string[]>> = Object.freeze({
   owner: Object.freeze([
@@ -40,6 +43,8 @@ export const ROLE_CAPABILITIES: Readonly<Record<TrustedRole, readonly string[]>>
     'conversation.state.read',
     'conversation.state.update',
     'conversation.assign',
+    'conversation.queue.read',
+    'conversation.metrics.read',
   ]),
   supervisor: Object.freeze([
     'conversation.list',
@@ -47,12 +52,15 @@ export const ROLE_CAPABILITIES: Readonly<Record<TrustedRole, readonly string[]>>
     'conversation.audit',
     'conversation.state.read',
     'conversation.state.update',
+    'conversation.queue.read',
+    'conversation.metrics.read',
   ]),
   agent: Object.freeze([
     'conversation.list',
     'conversation.read',
     'conversation.audit',
     'conversation.state.read',
+    'conversation.queue.read',
   ]),
   viewer: Object.freeze(['conversation.list', 'conversation.read', 'conversation.audit']),
   none: Object.freeze([]),

@@ -153,6 +153,7 @@ export {
   CONVERSATION_CHANGE_STATES,
   ConversationChangeError,
   ConversationChangeLog,
+  assertChangeEntry,
   assertChangeReason,
   MAX_CHANGE_REASON_LENGTH,
   type ConversationChangeEntry,
@@ -186,6 +187,33 @@ export {
   type ConversationStateView,
   type EmployeeDirectory,
 } from './conversation-state.ts';
+
+// ⭐ Slice 05 — مركز عمل الوكيل (⭐ قراءة فقط · بلا نص رسائل · عزل بالمستأجر)
+export {
+  AgentWorkQueueError,
+  CONVERSATION_QUEUE_CAPABILITY,
+  DEFAULT_LATE_THRESHOLD_MINUTES,
+  DEFAULT_QUEUE_PAGE_SIZE,
+  MAX_QUEUE_PAGE_SIZE,
+  computeConversationActivity,
+  listWorkQueue,
+  type AgentWorkQueueDependencies,
+  type AgentWorkQueueOptions,
+  type ConversationActivity,
+  type WorkQueueCategory,
+  type WorkQueueItem,
+  type WorkQueuePageInfo,
+} from './agent-queue.ts';
+
+// ⭐ Slice 05 — مؤشرات الخدمة (⭐ قراءة فقط · لا قيمة مخترَعة · المشرف والمالك فقط)
+export {
+  CONVERSATION_METRICS_CAPABILITY,
+  ServiceMetricsError,
+  getServiceMetrics,
+  type ServiceMetrics,
+  type ServiceMetricsDependencies,
+  type ServiceMetricsOptions,
+} from './service-metrics.ts';
 
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
