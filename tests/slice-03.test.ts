@@ -40,6 +40,7 @@ import {
   getConversation,
   listConversations,
   readConversationAudit,
+  resolveProductionTenantContext,
   resolveTenantContext,
   validateEnvelope,
   type ConversationQueryDependencies,
@@ -582,6 +583,76 @@ test('١١) عدم كسر Slice 01 وSlice 02', async (t) => {
     assert.equal(typeof listConversations, 'function');
     assert.equal(typeof getConversation, 'function');
     assert.equal(typeof readConversationAudit, 'function');
+  });
+});
+
+test('١٣) ⭐⭐ التحقّق: الصلاحيات لا تُشتق من مدخل عميل غير موثوق', async (t) => {
+  const CAPS = ALL_CAPABILITIES;
+
+  await t.test('⭐ ادّعاءات عميل خام تحمل صلاحيات ⇒ رفض (لا سياق ⇒ لا صلاحية)', () => {
+    const raw = {
+      session_id: 'sess_attack_0001',
+      tenant_id: 'tnt_attack_0001',
+      actor_id: 'actor_attack_0001',
+      conversation_ref: 'conv_attack_0001',
+      authenticated: true,
+      capabilities: [...CAPS],
+    };
+    assert.throws(
+      () =>
+        resolveTenantContext(raw, { source: localTestSessionSource, now: () => FIXED_NOW }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /لم يوثّق|unverified/);
+        return true;
+      },
+    );
+  });
+
+  await t.test('⭐⭐ نسخة (كائن جديد) من جلسة صحيحة مع صلاحيات مُضافة ⇒ رفض', () => {
+    const genuine = createSyntheticSession(1, 11, 101, 1, CAPS);
+    const copied = { ...genuine, capabilities: [...CAPS, 'super.admin'] };
+    assert.throws(
+      () =>
+        resolveTenantContext(copied, { source: localTestSessionSource, now: () => FIXED_NOW }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /لم يوثّق|unverified/);
+        return true;
+      },
+    );
+  });
+
+  await t.test('⭐ المسار الإنتاجي يرفض مصدر الاختبار ⇒ لا مسار إنتاجي من جلسة اختبار', () => {
+    const genuine = createSyntheticSession(1, 11, 101, 1, CAPS);
+    assert.throws(
+      () => resolveProductionTenantContext(genuine, localTestSessionSource),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /ليس إنتاجياً/);
+        return true;
+      },
+    );
+  });
+
+  await t.test('⭐⭐ السطح العام لا يُصدّر أدوات إصدار الإثبات ⇒ لا بناء سياق من ادّعاءات', async () => {
+    const production = (await import('../src/core/index.ts')) as Record<string, unknown>;
+    for (const forbidden of ['tenantContextFromSession', 'issueSessionAttestation']) {
+      assert.equal(forbidden in production, false, `${forbidden} مكشوف في السطح العام`);
+    }
+  });
+
+  await t.test('⭐⭐⭐ الفجوة المعروفة موثّقة: واجهة المصدر لا تفرض «بناء ادّعاءات جديدة»', () => {
+    // ⭐ هذا الفحص **توثيقي لا تقييدي**: ⭐ يثبت أن الفجوة مشروحة ومحدّدة، لا أنها مُغلقة.
+    const source = fs.readFileSync(path.join(ROOT, 'src/core/session.ts'), 'utf8');
+    assert.ok(
+      source.includes('يجب أن يُعيد كائن ادّعاءات جديداً'),
+      'واجب المصدر غير موثّق في العقد ⇒ ثغرة العقد غير معروفة للقارئ',
+    );
+    assert.ok(
+      source.includes('ثغرة مثبتة على مستوى العقد'),
+      'الفجوة المعروفة غير موثّقة ⇒ قارئ الكود لا يعرف الخطر',
+    );
   });
 });
 
