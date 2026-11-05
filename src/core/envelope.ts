@@ -13,6 +13,15 @@ import { CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } from './tenant.ts';
 
 export const ENVELOPE_SCHEMA_VERSION = '1';
 
+/**
+ * ⭐⭐⭐ خط أساس العقد (تصريح المالك · ٥ نوفمبر ٢٠٢٦ · D-053).
+ * ⭐ **أي إصدار غير مذكور هنا = رفض صريح** — ⭐ لا تمرير صامت ولا ترقية مُ implicite.
+ * ⭐ أي تغيير كاسر مستقبلي = ⭐ **إصدار جديد + قرار مالك** (لا يُمرَّر تحت الإصدار 1).
+ */
+export const ENVELOPE_SUPPORTED_SCHEMA_VERSIONS: readonly string[] = Object.freeze([
+  ENVELOPE_SCHEMA_VERSION,
+]);
+
 export type MessageDirection = 'inbound' | 'outbound';
 
 export type MessageAttributes = Readonly<Record<string, string>>;
@@ -177,6 +186,20 @@ export function validateEnvelope(input: unknown): EnvelopeValidation {
   }
   for (const field of Object.keys(ENVELOPE_RULES)) {
     checkScalar(field, input[field], errors);
+  }
+  // ⭐⭐ خط الأساس: ⭐ إصدار غير مدعوم = رفض صريح (لا تمرير صامت تحت الإصدار 1).
+  const declaredVersion = input.schema_version;
+  if (
+    typeof declaredVersion === 'string' &&
+    !ENVELOPE_SUPPORTED_SCHEMA_VERSIONS.includes(declaredVersion)
+  ) {
+    errors.push(
+      err(
+        'schema_version',
+        'schema_version_unsupported',
+        `schema_version: الإصدار غير مدعوم (المدعوم: ${ENVELOPE_SUPPORTED_SCHEMA_VERSIONS.join(' , ')})`,
+      ),
+    );
   }
   if (input.occurred_at !== undefined && typeof input.occurred_at === 'string') {
     if (ISO_UTC.test(input.occurred_at) && Number.isNaN(Date.parse(input.occurred_at))) {

@@ -234,6 +234,7 @@ export class ProcessingLayer {
       message_ref?: string,
       occurred_at?: string,
       errors?: readonly EnvelopeFieldError[],
+      conversation_ref?: string,
     ): ProcessingOutcome => {
       const outcome: ProcessingOutcome = {
         decision,
@@ -249,7 +250,13 @@ export class ProcessingLayer {
         operation: OPERATION,
         outcome: auditOutcome(decision),
         reason_code,
-        ...(message_ref ? { meta: { message_ref } } : {}),
+        meta: {
+          ...(message_ref ? { message_ref } : {}),
+          // ⭐⭐ معرّف المحادثة **الموثوق من السياق** — ⭐ لا من الرسالة (غير موثوق).
+          // ⭐⇒ قرار الرسالة (قبول/تأجيل/رفض) يُربط بمحادثته ⇒⇒ والرسائل غير المخزَّنة
+          //   تُقرأ من سجل التدقيق (المصدر الوحيد الذي يحمل قرارها).
+          ...(conversation_ref ? { conversation_ref } : {}),
+        },
       });
       return outcome;
     };
@@ -278,12 +285,28 @@ export class ProcessingLayer {
   try {
     assertConversationMatches(context, envelope.conversation_ref);
   } catch {
-    return finish('rejected', 'conversation_mismatch', context.tenantId, envelope.message_ref, envelope.occurred_at);
+    return finish(
+      'rejected',
+      'conversation_mismatch',
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
   }
 
   // ③ منع التكرار — قراءة من نفس مخزن Slice 01 (لا آلية ثانية).
   if (this.#store.getByRef(context, envelope.message_ref)) {
-    return finish('rejected', 'message_ref_duplicate', context.tenantId, envelope.message_ref, envelope.occurred_at);
+    return finish(
+      'rejected',
+      'message_ref_duplicate',
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
   }
 
   // ④ الترتيب — النطاق = (المستأجر · المحادثة الموثوقة) ⇒ لا افتراض ولا اشتقاق.
@@ -295,21 +318,53 @@ export class ProcessingLayer {
   });
   if (decision.outcome === 'deferred') {
     // ⭐ الرسالة المؤجلة: لا تُخزَّن · ولا تُغيّر آخر توقيت مقبول · ولا تُعالَج تلقائياً.
-    return finish('deferred', decision.reason_code, context.tenantId, envelope.message_ref, envelope.occurred_at);
+    return finish(
+      'deferred',
+      decision.reason_code,
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
   }
 
   // ⑤ القبول والتخزين — نفس آلية Slice 01 (المخزن يفرض التحقق والتكرار مرة أخرى).
   const appended = this.#store.append(context, envelope);
   if (appended.status === 'duplicate') {
-    return finish('rejected', appended.reason_code, context.tenantId, envelope.message_ref, envelope.occurred_at);
+    return finish(
+      'rejected',
+      appended.reason_code,
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      undefined,
+      context.conversationRef,
+    );
   }
   if (appended.status === 'rejected') {
-    return finish('rejected', appended.reason_code, context.tenantId, envelope.message_ref, envelope.occurred_at, appended.errors);
+    return finish(
+      'rejected',
+      appended.reason_code,
+      context.tenantId,
+      envelope.message_ref,
+      envelope.occurred_at,
+      appended.errors,
+      context.conversationRef,
+    );
   }
   orderingState.recordAccepted(context, scope, {
     occurred_at: envelope.occurred_at,
     message_ref: envelope.message_ref,
   });
-  return finish('accepted', decision.reason_code, context.tenantId, envelope.message_ref, envelope.occurred_at);
+  return finish(
+    'accepted',
+    decision.reason_code,
+    context.tenantId,
+    envelope.message_ref,
+    envelope.occurred_at,
+    undefined,
+    context.conversationRef,
+  );
   }
 }

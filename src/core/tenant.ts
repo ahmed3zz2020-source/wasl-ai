@@ -8,6 +8,8 @@
 // ⛔ لا يوجد في هذا الملف أي مسار يقرأ من محتوى الرسالة.
 // ============================================================
 
+import { normalizeCapabilities } from './capability.ts';
+
 export type TenantId = string;
 
 /** نمط معرّف المستأجر: أحرف صغيرة وأرقام وشرطة سفلية فقط. */
@@ -51,6 +53,12 @@ export interface SessionClaims {
    */
   readonly conversation_ref: string;
   readonly authenticated: boolean;
+  /**
+   * ⭐⭐ الصلاحيات الممنوحة — ⭐ **يضعها مصدر الجلسات بعد تحقّقه** (حدّ الثقة).
+   * ⛔ **قائمة حرة من العميل لا تُعدّ موثوقة** ⇒ ⭐ وما لا يطابق النمط لا يمنح شيئاً.
+   * ⭐ **والافتراضي = المنع** ⇒ ⭐ جلسة بلا صلاحيات = لا قراءة ولا تسريب.
+   */
+  readonly capabilities?: readonly string[];
 }
 
 /**
@@ -85,6 +93,11 @@ export interface TenantContext {
    * ⭐ (وليس من محتوى الرسالة) ⇒ ⭐ **وبها يُبنى نطاق الترتيب**.
    */
   readonly conversationRef: string;
+  /**
+   * ⭐⭐ الصلاحيات المعتمدة — ⭐ **من ادّعاءات جلسة تحقّق منها المصدر** (حدّ الثقة).
+   * ⛔ **فارغة = لا صلاحية** ⇒ ⭐ الفشل = المنع (لا تجاوز).
+   */
+  readonly capabilities: readonly string[];
   readonly issuedAt: string;
 }
 
@@ -173,7 +186,8 @@ export function tenantContextFromSession(
     CONVERSATION_REF_PATTERN,
     'conversation_invalid',
   );
-  return { tenantId, actorId, sessionId, conversationRef, issuedAt: now() };
+  const capabilities = normalizeCapabilities(claims.capabilities);
+  return { tenantId, actorId, sessionId, conversationRef, capabilities, issuedAt: now() };
 }
 
 /**

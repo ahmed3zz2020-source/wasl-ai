@@ -19,6 +19,7 @@
 export {
   ENVELOPE_RULES,
   ENVELOPE_SCHEMA_VERSION,
+  ENVELOPE_SUPPORTED_SCHEMA_VERSIONS,
   EnvelopeValidationError,
   parseEnvelope,
   validateEnvelope,
@@ -29,6 +30,14 @@ export {
   type MessageDirection,
   type MessageEnvelope,
 } from './envelope.ts';
+
+// ⭐ Slice 03 — الصلاحيات المحلية (حدّ الثقة نفسه · ⭐ الافتراضي = المنع)
+export {
+  CAPABILITY_PATTERN,
+  CapabilityError,
+  assertCapability,
+  normalizeCapabilities,
+} from './capability.ts';
 
 export {
   ACTOR_ID_PATTERN,
@@ -99,6 +108,35 @@ export {
   type OrderingPoint,
   type OrderingScope,
 } from './ordering.ts';
+
+// ⭐ Slice 03 — سجل أحداث القراءة (⭐ مسار منفصل عن `AuditOutcome`)
+export {
+  ReadAuditError,
+  ReadAuditLog,
+  type ReadAuditEvent,
+  type ReadAuditInput,
+  type ReadAuditOperation,
+  type ReadAuditResult,
+} from './read-audit.ts';
+
+// ⭐ Slice 03 — طبقة قراءة محادثات المستأجر (⭐ قدرتان منفصلتان · ⭐ بلا واجهة منشورة)
+export {
+  CONVERSATION_AUDIT_CAPABILITY,
+  CONVERSATION_LIST_CAPABILITY,
+  CONVERSATION_READ_CAPABILITY,
+  ConversationQueryError,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  getConversation,
+  listConversations,
+  readConversationAudit,
+  type ConversationAuditPage,
+  type ConversationMessage,
+  type ConversationPageInfo,
+  type ConversationQueryDependencies,
+  type ConversationSummary,
+  type ConversationThread,
+} from './conversation-query.ts';
 
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.

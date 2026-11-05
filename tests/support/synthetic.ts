@@ -66,12 +66,14 @@ export function toArabicDigits(value: number | string): string {
 /**
  * ⭐ مُطالبات جلسة اصطناعية — مصدر السياق الموثوق في الاختبارات.
  * ⭐ تُعلَّم داخلياً كمُصنَّعة ⇒ يمرّ بها مصدر الجلسات المحلي فقط.
+ * ⭐ `capabilities` = الصلاحيات الممنوحة (الشريحة الثالثة) ⇒ ⭐ **فارغة = لا صلاحية** (المنع).
  */
 export function createSyntheticSession(
   tenantIndex: number,
   actorIndex: number,
   sessionIndex: number,
   conversationIndex = 1,
+  capabilities: readonly string[] = [],
 ): SessionClaims {
   return markLocalTestInput({
     session_id: `sess_synth_${String(sessionIndex).padStart(4, '0')}`,
@@ -79,6 +81,7 @@ export function createSyntheticSession(
     actor_id: createSyntheticActorId(actorIndex),
     conversation_ref: createSyntheticConversationRef(conversationIndex),
     authenticated: true,
+    ...(capabilities.length ? { capabilities: [...capabilities] } : {}),
   });
 }
 
@@ -86,6 +89,7 @@ export function createSyntheticSession(
  * ⭐ سياق تنفيذ اصطناعي — يمرّ بالمسار العام `resolveTenantContext`
  * (وليس بمسار مباشر من الادّعاءات الخام)
  * ⭐ وبمصدر الجلسات الاختباري **محدَّد صراحةً** ⇒ لا افتراض افتراضي.
+ * ⭐ `capabilities` آخر معامل (إضافة فقط) ⇒ لا يكسر أي نداء سابق.
  */
 export function createSyntheticContext(
   tenantIndex: number,
@@ -93,9 +97,10 @@ export function createSyntheticContext(
   sessionIndex: number,
   conversationIndex = 1,
   now: () => string = () => '2026-01-01T00:00:00.000Z',
+  capabilities: readonly string[] = [],
 ): TenantContext {
   return resolveTenantContext(
-    createSyntheticSession(tenantIndex, actorIndex, sessionIndex, conversationIndex),
+    createSyntheticSession(tenantIndex, actorIndex, sessionIndex, conversationIndex, capabilities),
     { now, source: localTestSessionSource },
   );
 }

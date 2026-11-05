@@ -21,6 +21,8 @@ import { assertTenantMatches, TenantContextError, type TenantContext } from './t
 export interface StoredMessage {
   readonly message_ref: string;
   readonly tenant_id: string;
+  /** ⭐⭐ معرّف المحادثة — ⭐ **مُضاف في الشريحة الثالثة** (٥ نوفمبر ٢٠٢٦) ⇒ إضافة فقط. */
+  readonly conversation_ref: string;
   readonly channel: string;
   readonly direction: string;
   readonly from: string;
@@ -45,6 +47,12 @@ const OPERATION = 'message.append';
 
 export class MessageStore {
   readonly #rows: Map<string, StoredMessage[]> = new Map();
+  /**
+   * ⭐⭐ فهرس المحادثات (الشريحة الثالثة) — ⭐ **فهرس داخل البنية نفسها لا مخزن موازٍ**.
+   * ⭐Map من (المستأجر ⇒ المحادثة ⇒ نفس كائنات الصفوف) ⇒ ⭐ **لا تكرار للبيانات**
+   *   (المصفوفة الثانية تحوي **مراجع** لنفس الكائنات ⇒ تعديل الصف يعدّل الاثنين معاً).
+   */
+  readonly #byConversation: Map<string, Map<string, StoredMessage[]>> = new Map();
   readonly #audit: AuditLog;
   readonly #now: () => string;
 
@@ -116,6 +124,7 @@ export class MessageStore {
     const stored: StoredMessage = {
       message_ref: envelope.message_ref,
       tenant_id: context.tenantId,
+      conversation_ref: envelope.conversation_ref,
       channel: envelope.channel,
       direction: envelope.direction,
       from: envelope.from,
@@ -128,6 +137,13 @@ export class MessageStore {
     };
     existing.push(stored);
     this.#rows.set(context.tenantId, existing);
+    // ⭐⭐ فهرس المحادثات — ⭐ نفس كائن الصف (مرجع) ⇒ لا نسخة موازية.
+    const byConversation =
+      this.#byConversation.get(context.tenantId) ?? new Map<string, StoredMessage[]>();
+    const conversationRows = byConversation.get(envelope.conversation_ref) ?? [];
+    conversationRows.push(stored);
+    byConversation.set(envelope.conversation_ref, conversationRows);
+    this.#byConversation.set(context.tenantId, byConversation);
     this.#audit.record({
       tenant_id: context.tenantId,
       actor_id: context.actorId,
@@ -159,6 +175,29 @@ export class MessageStore {
   /** ⭐ عدّ صفوف المستأجر في السياق فقط. */
   countFor(context: TenantContext): number {
     return (this.#rows.get(context.tenantId) ?? []).length;
+  }
+
+  /**
+   * ⭐⭐ قائمة معرّفات المحادثات في نطاق المستأجر فقط (الشريحة الثالثة).
+   * ⛔ **لا مدخل يقبل معرّف مستأجر** ⇒ ⭐ النطاق من السياق وحده.
+   */
+  conversationRefs(context: TenantContext): readonly string[] {
+    const byConversation = this.#byConversation.get(context.tenantId);
+    return byConversation ? [...byConversation.keys()] : [];
+  }
+
+  /**
+   * ⭐⭐⭐ رسائل محادثة واحدة — ⭐ **في نطاق المستأجر فقط**.
+   * ⛔ محادثة لا تخص المستأجر ⇒ ⭐ **صفوف صفر** (ولا خطأ يكشف وجودها).
+   * ⭐ الترتيب = ترتيب القبول (ترتيب الإدراج) ⇒ ⭐ ترقيم مستقر.
+   */
+  messagesForConversation(
+    context: TenantContext,
+    conversationRef: string,
+  ): readonly StoredMessage[] {
+    const byConversation = this.#byConversation.get(context.tenantId);
+    const rows = byConversation?.get(conversationRef) ?? [];
+    return rows.map((row) => ({ ...row }));
   }
 
   /** ⭐ سجل التدقيق المرتبط. */

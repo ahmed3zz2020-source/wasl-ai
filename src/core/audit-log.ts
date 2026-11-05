@@ -9,6 +9,8 @@
 // ⭐ حماية إضافية: قائمة سماح صريحة لمفاتيح التفاصيل + كاشف أسرار.
 // ============================================================
 
+import type { TenantContext } from './tenant.ts';
+
 // ⭐ 'deferred' أُضيف في Slice 02 (٥ نوفمبر ٢٠٢٦) ليشمل قرار التأجيل من طبقة المعالجة.
 // ⭐ **إضافة فقط** — ⭐ القيم القديمة لم تتغيّر سلوكياً.
 export type AuditOutcome = 'accepted' | 'rejected' | 'duplicate' | 'deferred';
@@ -39,6 +41,9 @@ export const AUDIT_META_ALLOWLIST: readonly string[] = [
   'field',
   'count',
   'limit',
+  // ⭐ أُضيف في الشريحة الثالثة (٥ نوفمبر ٢٠٢٦) — ⭐ إضافة فقط · ⭐ القيم القديمة لم تتغيّر.
+  // ⭐ **معرّف المحادثة الموثوق** ⇒ يربط قرار الرسالة (قبول/تأجيل/رفض) بمحادثته.
+  'conversation_ref',
 ];
 
 /** ⭐ أنماط الأسرار — أي تطابق في التفاصيل = رفض الكتابة. */
@@ -156,6 +161,26 @@ export class AuditLog {
   /** ⭐ نسخة للقراءة — غير قابلة للتعديل. */
   entries(): readonly AuditEntry[] {
     return this.#entries.map((entry) => ({ ...entry }));
+  }
+
+  /**
+   * ⭐⭐⭐ قراءة **معزولة** بحسب المستأجر (الشريحة الثالثة · ٥ نوفمبر ٢٠٢٦).
+   * ⛔ **لا تُستخدم `entries()` في أي مسار قراءة خاص بالمستأجر** ⇒ لأنها تُرجع كل المستأجرين.
+   * ⭐ التصفية بالمستأجر من **سياق موثوق** — ⭐ لا معرّف مستأجر من العميل.
+   * ⭐ ويجوز تضييقها بمحادثة واحدة ⇒ ⭐ وبذلك تُقرأ قرارات الرسائل غير المخزَّنة.
+   */
+  entriesFor(
+    context: TenantContext,
+    options: { conversationRef?: string } = {},
+  ): readonly AuditEntry[] {
+    const mine = this.#entries.filter((entry) => entry.tenant_id === context.tenantId);
+    if (options.conversationRef === undefined) {
+      return mine.map((entry) => ({ ...entry }));
+    }
+    const ref = options.conversationRef;
+    return mine
+      .filter((entry) => entry.meta?.conversation_ref === ref)
+      .map((entry) => ({ ...entry }));
   }
 
   /** ⭐ سطر JSONL لكل عملية (للعرض أو الحفظ). */
