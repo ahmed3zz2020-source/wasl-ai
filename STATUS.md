@@ -10,6 +10,8 @@
 
 ## المرحلة: **٠ — التأسيس** ✅ · ✅⭐ **R007 مقبولة معمارياً (CONDITIONAL ACCEPTANCE · ٣ نوفمبر ٢٠٢٦)** · ⭐ **موافقة البحث (D-046 · ٤ نوفمبر ٢٠٢٦) مُنفَّذة: بحث محامٍ + بحث غير ملزم في P2** ⇒ ⭐ **والتحضير الهندسي الوثائقي لمسار Tech Provider + Embedded Signup مُنفَّذ (D-048 · ٤ نوفمبر ٢٠٢٦ · ٩ بنود توصيف بلا كود) في [`docs/TECH-PROVIDER-PREP.md`](docs/TECH-PROVIDER-PREP.md)** ⇒ ⭐ **والخطوة التالية = موافقة المالك على ٥ قرارات في [`docs/DR-5-DR-8-SEARCH-REPORT.md`](docs/DR-5-DR-8-SEARCH-REPORT.md) §٤**
 
+> ⭐⭐ **نطاق أول Private MVP (`D-063` · ٦ نوفمبر ٢٠٢٦) = تجربة داخلية مغلقة ببيانات صناعية فقط** ⇒ ⭐ **⛔ ليست تصريح Backend ولا قاعدة بيانات ولا مصادقة ولا نشر** ⇒ ⭐ **ولا حسابات حقيقية ولا بيانات محادثات حقيقية ولا ربط واتساب قبل موافقة مستقلة** ⇒ ⭐ **والجولة جارية = توثيق + بطاقات قرارات + خطة ⇒ ⛔ صفر تنفيذ برمجي** ⇒ ⭐ **التقرير: [`docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md`](docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md)** (M39–M48 · ٤ بطاقات قرارات · خطة `Slice 09` منقّحة) ⇒ ⭐ **والجاهزية 9/21 لم تتحرك.**
+
 > ⭐ **التفاصيل الكاملة** (إيه اتعمل · إيه ما بدأش · الأدلة · الأرقام) ⇒ [`CURRENT-STATE.md`](CURRENT-STATE.md). الملف ده **ملخص بشري** بس.
 
 التأسيس خلص. **R002** · **R003** · **R004** · **R004.1** · **R004.2** — **كلها بدون كود**.
@@ -35,7 +37,7 @@ dلوقتي مستني: **مراجعة المهندس المعماري لحزم�
 | ٥ | الخط الزمني (٧ مراحل + معايير قبول) | ✅ | [`TIMELINE.md`](TIMELINE.md) |
 | ٦ | قائمة قدرات المنفّذ | ✅ | [`docs/CAPABILITY-MANIFEST.md`](docs/CAPABILITY-MANIFEST.md) |
 | ٧ | قالب حزمة المراجعة | ✅ | [`REVIEWS/TEMPLATE.md`](REVIEWS/TEMPLATE.md) |
-| ٨ | هيكل المعرفة الدائم (١٥٣ ملف متتبَّع · ٨٤ ملف `.md`) | ✅ | ⭐ **١٧ ملف `src/core/` + ٢٥ ملف `tests/`** |
+| ٨ | هيكل المعرفة الدائم (١٥٤ ملف متتبَّع · ٨٥ ملف `.md`) | ✅ | ⭐ **١٧ ملف `src/core/` + ٢٥ ملف `tests/`** |
 | ٩ | اللوحة الدائمة (٩ مسارات متحقَّق) | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev |
 | ١٠ | حزمة السياق الحيّة لـ ChatGPT | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev/bridge |
 | ١١ | أول رسالة جاهزة لـ ChatGPT | ✅ | https://wasl-hub.ahmed3zz2020.workers.dev/first-message |
@@ -263,6 +265,7 @@ Brand Identity Studio ← هوية العميل (بتغذّي كل السطوح)
 
 ## ملفات مهمة
 
+- ⭐⭐ [`docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md`](docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md) — ⭐ **تقرير جاهزية القرار (٦ نوفمبر ٢٠٢٦ · M39–M48 · ٤ بطاقات قرارات جاهزة للموافقة · خطة `Slice 09` منقّحة)**
 - ⭐ [`REVIEWS/R007-r006-review-remediation.md`](R007-r006-review-remediation.md) — ⭐ **التقرير الحالي (١٥ قسماً §0..§14 · MISSION 003)**
 - ⭐⭐ [`DECISION-REGISTER.md`](DECISION-REGISTER.md) — ⭐ **سجل قرارات المالك (٩ قرارات مفتوحة DR-2..DR-10 + DR-11 مقترح · بطاقة لكل قرار + ختم اعتماد)** — ⭐ **كل بند توصية لا قرار**
 - ⭐⭐ [`docs/DELIVERY-SUMMARY-2026-11-03.md`](docs/DELIVERY-SUMMARY-2026-11-03.md) — ⭐ **ملخص التسليم (٦ فئات: أُنجز · تصاميم جاهزة · قرارات معتمدة · قرارات معلّقة · اختبارات مصمَّمة ولم تُنفَّذ · أعمال برمجية غير مبتدئة)**
