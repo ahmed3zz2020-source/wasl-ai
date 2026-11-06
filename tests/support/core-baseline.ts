@@ -21,11 +21,13 @@ import path from 'node:path';
  *   ⇒ ⇒⇒ **فالمرجع تحرّك إلى `38ffd77`** (آخر commit قبل تحديث هذا المرجع)
  *   ⇒ ⇒⇒⇒ **وإعادة الضبط = قرار صريح (لا تلقائي)** ⇒ ⭐ وهذا الصف هو سنده.
  * ⭐ **سجلّ التتبّع**: `da897f0` (D-062 · Slice 08) ⇒ `38ffd77` (D-064 · S09-0).
+ * D-065 (2026-11-06): baseline moved to fc4ec6a (Acceleration Pack 01)
+ *   (M54 issuer trust + M55 contract semantics changed src/core/ on purpose)
  */
-export const CORE_BASELINE_COMMIT = '38ffd772593b66f404b8878adc1b45533a9bbbdd';
+export const CORE_BASELINE_COMMIT = 'fc4ec6ac877f97012e09e69ea91fda0510b01421';
 
 /** ⭐ القرار الذي يثبّت خطّ الأساس (⇒ يُفحص توثيقه مع الرقم). */
-export const CORE_BASELINE_DECISION = 'D-064';
+export const CORE_BASELINE_DECISION = 'D-065';
 
 /** ⭐⭐⭐ نطاق الفحص — ⭐ **نواة الإنتاج** (لا الأدوات ولا الاختبارات). */
 export const CORE_PATH = 'src/core/';
