@@ -443,10 +443,10 @@
 
 | ⭐ الملف | ⭐ الرابط (مثبَّت على commit التسليم) |
 |---|---|
-| ⭐ **هذا التقرير** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/__DELIVERY_SHA__/docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md` |
-| ⭐ **سجل الردود (آخر ردّ = #٤٠)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/__DELIVERY_SHA__/docs/CHATGPT-REVIEW-LOG.md` |
-| ⭐ **تقرير `S09-0`** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/__DELIVERY_SHA__/docs/S09-0-REPORT.md` |
-| ⭐ **القرار `D-064`** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/__DELIVERY_SHA__/DECISIONS.md` |
+| ⭐ **هذا التقرير** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/dad9b5e/docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md` |
+| ⭐ **سجل الردود (آخر ردّ = #٤٠)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/dad9b5e/docs/CHATGPT-REVIEW-LOG.md` |
+| ⭐ **تقرير `S09-0`** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/dad9b5e/docs/S09-0-REPORT.md` |
+| ⭐ **القرار `D-064`** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/dad9b5e/DECISIONS.md` |
 | ⭐ **الملف داخل المستودع** | ⭐ `docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md` |
 
 ### ٦.ب ⭐ المراجع التاريخية — ⭐ **مجمَّدة (⛔ ليست للتسليم · للتتبّع فقط)**
