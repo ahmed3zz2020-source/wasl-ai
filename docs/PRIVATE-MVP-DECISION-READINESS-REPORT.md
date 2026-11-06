@@ -354,6 +354,13 @@
 >
 > ⭐ **الملف داخل المستودع:**
 > ⭐ `docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md`
+>
+> ⭐⭐ **روابط مثبَّتة على commit (الأدقّ — استخدمها عند المراجعة):**
+> ⭐ **هذا التقرير**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/1ca21f8/docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md`
+> ⭐ **سجل الردود (ردّ #٣٩)**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/1ca21f8/docs/CHATGPT-REVIEW-LOG.md`
+> ⭐ **القرار `D-063`**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/1ca21f8/DECISIONS.md`
+>
+> ⭐⭐ **تنبيه كاش (مقيس في هذه الجلسة)**: ⭐ **رابط `…/main/…` قد يقدّم نسخة مخبّأة قديمة لعدّة دقائق بعد الدفع** ⇒ ⭐⇒⇒ **لذلك الروابط المثبَّتة على `commit` هي المرجع الأدقّ** ⇒ ⭐ **والتحقّق من التطابق = مطابقة الـblob SHA عبر contents API** (`https://api.github.com/repos/ahmed3zz2020-source/wasl-ai/contents/<file>?ref=main`) ⇐ ⭐ **وهذا هو الفحص المعتمد لا الـraw.**
 
 > ⭐ **روابط مرجعية ثابتة (كلها على `3b632d1` — مرجع D-063):**
 > ⭐ **تقرير التحضير المعماري (مُجمَّد):** `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3b632d1cbf32f26f70936e552434dfdde0ac8f9f/docs/PRIVATE-MVP-PREPARATION-REPORT.md`
