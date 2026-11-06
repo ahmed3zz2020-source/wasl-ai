@@ -26,6 +26,13 @@ import {
   cloneIsolated,
   commitIn,
 } from './support/core-baseline.ts';
+// ⭐⭐⭐ **M56** — ⭐ دفتر المحاووتات → ⭐⇒⇒ **نتيجة المحاولة الأولى محفوظة**
+//   → ⭐⇒⇒⇒ **ولا إعادة محاولة إلا لفشل بنية تحتية** → ⭐⇒⇒⇒⇒ **وإعلان صريح**.
+import {
+  failedTestNames,
+  runWithLedger,
+  type AttemptLedger,
+} from './support/attempt-log.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const WORKSPACE = path.resolve(ROOT, '..');
@@ -58,13 +65,6 @@ function runTests(cwd: string, file: string): { code: number; output: string } {
  *   **ولم نكن نرى إلا الـparent** ⇒ ⭐⇒⇒⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒
  *   ⇒ ⭐ ولهذا تُلتقط أسماء الفحوص المتداخلة كلها ⛔ لا الـparent وحده.
  */
-function failedTestNames(output: string): string[] {
-  return output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith('not ok '))
-    .map((line) => line.replace(/^not ok \d+ - /, '').trim());
-}
 
 /** ⭐⭐⭐ بصمة ملفات النواة ⇒ ⭐ إثبات أن الكسر **لم يخرج** من النسخة. */
 function coreFingerprint(repoRoot: string): string {
@@ -96,6 +96,19 @@ interface EvictionCase {
   readonly expected: readonly string[];
 }
 
+/**
+ * ⭐⭐⭐ **ضابط الضابط** — ⭐ يُنفذ الضابط لملف واحد ولا يُعاد للحمل متزايًا خارجيًا.
+ */
+const CONTROL_CACHE = new Map<string, AttemptLedger>();
+
+function controlLedger(testFile: string): AttemptLedger {
+  const cached = CONTROL_CACHE.get(testFile);
+  if (cached) return cached;
+  const ledger = runWithLedger(() => runTests(ROOT, testFile), { max_attempts: 3 });
+  CONTROL_CACHE.set(testFile, ledger);
+  return ledger;
+}
+
 async function runEviction(t: any, spec: EvictionCase): Promise<void> {
   const before = coreFingerprint(ROOT);
 
@@ -104,14 +117,14 @@ async function runEviction(t: any, spec: EvictionCase): Promise<void> {
     //   المتوازي أحياناً ⛔ بلا عيب حقيقي في الكود ⇒ ⭐⇒⇒ **ومحاولة ثانية
     //   على نفس الكود تفصل «الحمل» عن «العيب»** ⇒ ⭐⇒⇒⇒ **وإن فشل
     //   المحاولتان ⇒ الخطأ يُعرض بصوت (لا إخفاء) ⇒ ⛔ والاختبار يظل صادماً.**
-    let control = runTests(ROOT, spec.testFile);
-    if (control.code !== 0) {
-      control = runTests(ROOT, spec.testFile);
-    }
+    const control = controlLedger(spec.testFile);
+    for (const note of control.notes) process.stdout.write(note + '\n');
     assert.equal(
-      control.code,
+      control.final.code,
       0,
-      `الضابط فشل على الكود الحقيقي (محاولتان) ⇒ اختبار الطرد غير صالح:\n${control.output.slice(-1500)}`,
+      `الضابط فشل على الكود الحقيقي ⇒ اختبار الطرد غير صالح:\n`
+      + `المحاولة الأولى: رمز ${String(control.first.code)} · فحوص فاشلة: ${control.first.failed_names.join(' | ') || '(لم تستخرج)'} (M56: لا إعادة محاوكة لفشل فحوص)`
+      + `${control.first.output.slice(-1500)}`,
     );
   });
 
@@ -122,13 +135,19 @@ async function runEviction(t: any, spec: EvictionCase): Promise<void> {
         breakCoreIn(ISOLATED, item.file, item.anchor, item.replacement);
       }
       commitIn(ISOLATED, `eviction probe ${spec.id} — ${spec.label}`);
-      const broken = runTests(ISOLATED, spec.testFile);
+      const broken = runWithLedger(() => runTests(ISOLATED, spec.testFile), { max_attempts: 3 });
+      for (const note of broken.notes) process.stdout.write(note + '\n');
       assert.notEqual(
-        broken.code,
+        broken.final.code,
         0,
         `الكسر ${spec.id} (${spec.label}) لم يُنتج فشلاً ⇒ الحارس أعمى (اختبار زائف)`,
       );
-      const failed = failedTestNames(broken.output);
+      // ⭐⭐⭐ **M56**: ⭐ الكسر يفتر فشل فحوص حقيقي ⇒ ⭐⇒⇒ لا يُ فشل بنية تحتية.
+      assert.ok(
+        broken.final.failed_names.length > 0,
+        `الكسر ${spec.id} أسقط البنية التحتية وليس فشل فحوص حقيقياً`,
+      );
+      const failed = broken.final.failed_names;
       const detected = spec.expected.filter((name) =>
         failed.some((entry) => entry.includes(name)),
       );
