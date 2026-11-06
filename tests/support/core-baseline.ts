@@ -100,6 +100,30 @@ export function breakTenantIsolationIn(cloneDir: string): string {
   return 'src/core/store.ts';
 }
 
+/**
+ * ⭐⭐⭐⭐⭐ **يكسر سطراً في نواة داخل النسخة المعزولة فقط** — ⭐ لاختبار الطرد.
+ * ⭐ `anchor` لازم يكون **فريداً** ⇒ ⭐⇒⇒ لو تغيّر الكود ⇒ يفشل الاختبار بصوت
+ *   (لا يكسر بصمت) ⇒ ⭐⇒⇒⇒ **والتاريخ يظهر أن الكسر كان حقيقياً.**
+ */
+export function breakCoreIn(
+  cloneDir: string,
+  relativeFile: string,
+  anchor: string,
+  replacement: string,
+): string {
+  const file = path.join(cloneDir, relativeFile);
+  const original = fs.readFileSync(file, 'utf8');
+  const occurrences = original.split(anchor).length - 1;
+  if (occurrences !== 1) {
+    throw new Error(
+      `\u2b50 نقطة الكسر في ${relativeFile} ظهرت ${occurrences} مرة (المتوقع 1) \u21d2 ` +
+        'لازم تحديث اختبار الطرد',
+    );
+  }
+  fs.writeFileSync(file, original.replace(anchor, replacement), 'utf8');
+  return relativeFile;
+}
+
 /** ⭐⭐⭐⭐⭐ **يُثبّت التغيير داخل النسخة المعزولة** (commit حقيقي). */
 export function commitIn(cloneDir: string, message: string): void {
   execFileSync('git', ['add', '-A'], { cwd: cloneDir, stdio: 'ignore' });

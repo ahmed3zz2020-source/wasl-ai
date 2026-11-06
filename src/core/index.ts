@@ -248,6 +248,29 @@ export {
   type LocalIdentitySources,
 } from './authorization.ts';
 
+// ⭐ S09-0 — عقد مصدر الهوية المحلي (غير مفعّل · تصريح المالك D-064)
+// ⭐ ⛔ **العقد غير مفعّل عمداً** ⇒ ⭐⇒⇒ `IDENTITY_SOURCE_CONTRACT.active === false`
+// ⭐ ⇒⇒⇒ **ولا يُصدَّر منه أي دالة تُسجّل مصدر هوية ولا تُفعّل نطاقاً إنتاجياً**
+// ⭐ ⇒⇒⇒⇒ **⇒ فوجوده في السطح العام ليس تصريحاً بتفعيل أي مصدر.**
+export {
+  IDENTITY_ATTESTATION_STATUSES,
+  IDENTITY_CONTRACT_CODES,
+  IDENTITY_SOURCE_CONTRACT,
+  IDENTITY_SOURCE_KINDS,
+  IdentityContractError,
+  assertIdentityAttestation,
+  evaluateIdentityAttestation,
+  isActiveIdentitySourceKind,
+  type IdentityAttestation,
+  type IdentityAttestationStatus,
+  type IdentityContractCode,
+  type IdentityContractDecision,
+  type IdentityContractOptions,
+  type IdentitySourceKind,
+  type IdentitySourceProof,
+  type TrustedIdentityClaim,
+} from './identity-source-contract.ts';
+
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
 // ⛔ لا مصدر جلسات اختباري هنا — ولا حتى واحد.
