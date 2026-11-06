@@ -31,6 +31,8 @@ import test from 'node:test';
 // ⭐⭐ استيراد الحاجز **يُركّبه** (أثر جانبي عند التحميل) ⇒ ⭐⇒⇒ لا اتصال خارجي.
 import { guard } from './guard-setup.ts';
 import {
+  IDENTITY_CONTRACT_CODES,
+  IDENTITY_CONTRACT_STATES,
   IDENTITY_SOURCE_CONTRACT,
   IdentityContractError,
   LocalAuthorizationError,
@@ -41,6 +43,7 @@ import {
   authorizeLocalRequest,
   createLocalIdentitySources,
   evaluateIdentityAttestation,
+  evaluateIdentityAttestationStructure,
   isActiveIdentitySourceKind,
   requireLocalAuthorization,
   type IdentityAttestation,
@@ -52,6 +55,12 @@ import { issueIdentityAdminAuthority } from '../src/core/identity.ts';
 // ⭐⭐ `registerSessionSource` **غير مُصدَّر من السطح العام** ⇒ ⭐ استيراد مباشر
 //    (وهو ⭐ **السبب** في أن العميل لا يستطيع تسجيل مصدر لنفسه).
 import { registerSessionSource } from '../src/core/session.ts';
+// ⭐⭐⭐ **D-065 (M54)**: ⭐ `issueLocalTestAttestation` **غير مُصدَّر من السطح
+//    العام** ⇒ ⭐ استيراد مباشر ⇒ ⭐⇒⇒ **وهو السبب في أن لا جهة خارجية
+//    تستطيع إصدار إثبات هوية لنفسها.**
+import { issueLocalTestAttestation } from '../src/core/identity-source-contract.ts';
+// ⭐⭐⭐ **السطح العام كاملاً** — ⭐ يُفحص للتأكّد من خلوّه من مُصدِر الإثبات.
+import * as publicSurface from '../src/core/index.ts';
 
 const TENANT_A = 'tenant-alpha';
 const TENANT_B = 'tenant-beta';
@@ -94,6 +103,36 @@ function registryWithOwner(): {
     }),
   );
   return { registry, ownerAuthority: issueIdentityAdminAuthority(owner) };
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **سجلّ فيه مالك + موظّف (M54)** — ⭐ أساس إصدار إثبات حقيقي.
+ * ⭐ **الدور والمستأجر يأتيان من السجلّ** ⇒ ⭐⇒⇒ **لا مدخلات من المستدعي.**
+ */
+function registryWithAgent(): LocalIdentityRegistry {
+  const { registry, ownerAuthority } = registryWithOwner();
+  registry.register(
+    {
+      identity_id: 'ident-agent',
+      tenant_id: TENANT_A,
+      actor_id: 'actor-agent',
+      role: 'agent',
+      expires_at: null,
+    },
+    ownerAuthority,
+  );
+  return registry;
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **إثبات مُصدَر من المصدر المحلي (M54)** — ⭐ **ليس كائناً مبنيّاً يدوياً**.
+ * ⭐ ⇒⇒⇒ **وهذا هو الفرق بين «شكل مطابق» و«إثبات موثوق».**
+ */
+function issuedAttestation(
+  registry: LocalIdentityRegistry,
+  identityId = 'ident-agent',
+): IdentityAttestation {
+  return issueLocalTestAttestation(identityId, { registry });
 }
 
 // ============================================================
@@ -151,7 +190,12 @@ test('S09-05) ⭐⭐⭐⭐⭐ ادّعاء دور أعلى من العميل ⇒
   assert.equal(decision.trusted === false ? decision.code : '', 'identity_role_conflict');
 
   // ⭐ ادّعاء مطابق للدور المروَّض ⇒ لا تعارض (لا تعارض ⇒ لا رفض).
-  const aligned = evaluateIdentityAttestation(attestation({ claimed_role: 'agent' }));
+  // ⭐⭐⭐ **D-065 (M54)**: ⭐ لازم يكون الإثبات **مُصدَراً من المصدر المحلي**
+  //   ⇒ ⭐⇒⇒ **فمطابقة الشكل وحدها ⛔ لا تكفي** ⇒ ⭐⇒⇒⇒ **والإثبات المُصدَر
+  //   مع ادّعاء متطابق = قبول.**
+  const issued = issuedAttestation(registryWithAgent());
+  (issued as { claimed_role?: unknown }).claimed_role = 'agent';
+  const aligned = evaluateIdentityAttestation(issued);
   assert.equal(aligned.trusted, true);
 });
 
@@ -243,12 +287,12 @@ test('S09-12) ⭐⭐⭐⭐⭐ سلطة إدارية من هوية ليست ما�
 });
 
 test('S09-13) ⭐⭐⭐⭐⭐ إثبات سليم ⇒ ادّعاء موثوق **بلا صلاحية** (لا محرك موازٍ)', () => {
-  const decision = evaluateIdentityAttestation(attestation());
+  const decision = evaluateIdentityAttestation(issuedAttestation(registryWithAgent()));
   assert.equal(decision.trusted, true);
   if (!decision.trusted) return;
   const claim = decision.claim;
   assert.equal(claim.tenant_id, TENANT_A);
-  assert.equal(claim.actor_id, 'actor-alpha-1');
+  assert.equal(claim.actor_id, 'actor-agent');
   assert.equal(claim.role, 'agent');
   assert.equal(claim.status, 'active');
   assert.equal(claim.source_kind, 'local_test');
@@ -574,4 +618,235 @@ test('S09-15) ⭐⭐⭐⭐⭐ طبقة التفويض القائمة ترفض ا
   const allowed = authorizeLocalRequest(request, { registry, sources });
   assert.equal(allowed.allowed, true);
   assert.equal(allowed.allowed === true ? allowed.tenant_id : '', TENANT_A);
+});
+
+// ============================================================
+// ⭐ ④ — «حزمة التسريع ٠١» (D-065): ⭐ M54 (أصالة جهة الإصدار) · M55 (دلالة العقد)
+// ⭐⭐ **التصريح**: ⭐ المالك (٦ نوفمبر ٢٠٢٦ · D-065) — «حزمة التسريع ٠١».
+// ⭐⭐⭐ **هذا ليس نظام مصادقة** ⇒ ⭐ كل نتيجة أدناه = نتيجة محلية على جهاز
+//   التطوير ⭐⇒ **وليست شهادة أمان إنتاجي.**
+// ⛔ بلا شبكة · ⛔ بلا بيانات حقيقية · ⛔ بلا حساب · ⛔ بلا نشر.
+// ============================================================
+
+test('M54-01) ⭐⭐⭐⭐⭐ إثبات مبنيّ يدوياً (شكل سليم) ⇒ رفض', () => {
+  // ⭐⭐⭐ **العيب الذي كان موجوداً**: ⭐ مطابقة الشكل وحدها كانت تكفي.
+  const decision = evaluateIdentityAttestation(attestation());
+  assert.equal(decision.trusted, false);
+  assert.equal(
+    decision.trusted === false ? decision.code : '',
+    'identity_issuer_unverified',
+    'كائن مبنيّ يدوياً مرّ ⇒ العيب M54 لم يُغلق',
+  );
+});
+
+test('M54-02) ⭐⭐⭐⭐⭐ نسخة من إثبات مُصدَر ⇒ رفض (النسخ ليس الإصدار)', () => {
+  const issued = issuedAttestation(registryWithAgent());
+  const copy = { ...issued };
+  const decision = evaluateIdentityAttestation(copy);
+  assert.equal(decision.trusted, false);
+  assert.equal(decision.trusted === false ? decision.code : '', 'identity_issuer_unverified');
+});
+
+test('M54-03) ⭐⭐⭐⭐⭐ تعديل الدور بعد الإصدار ⇒ رفض (القيمة المثبتة هي المرجع)', () => {
+  const issued = issuedAttestation(registryWithAgent());
+  (issued as { role: string }).role = 'owner';
+  const decision = evaluateIdentityAttestation(issued);
+  assert.equal(decision.trusted, false);
+  assert.equal(decision.trusted === false ? decision.code : '', 'identity_registry_mismatch');
+});
+
+test('M54-04) ⭐⭐⭐⭐⭐ إلغاء الهوية بعد الإصدار ⇒ رفض عند إعادة التحقّق', () => {
+  const { registry, ownerAuthority } = registryWithOwner();
+  registry.register(
+    {
+      identity_id: 'ident-agent',
+      tenant_id: TENANT_A,
+      actor_id: 'actor-agent',
+      role: 'agent',
+      expires_at: null,
+    },
+    ownerAuthority,
+  );
+  const issued = issueLocalTestAttestation('ident-agent', { registry });
+  assert.equal(evaluateIdentityAttestation(issued).trusted, true);
+
+  registry.revoke('ident-agent', ownerAuthority);
+  const decision = evaluateIdentityAttestation(issued);
+  assert.equal(decision.trusted, false);
+  assert.equal(decision.trusted === false ? decision.code : '', 'identity_revoked');
+});
+
+test('M54-05) ⭐⭐⭐⭐⭐ الإصدار يشتقّ الدور والمستأجر من السجلّ (لا من المستدعي)', () => {
+  const registry = registryWithAgent();
+  const issued = issueLocalTestAttestation('ident-agent', { registry });
+  assert.equal(issued.role, 'agent');
+  assert.equal(issued.tenant_id, TENANT_A);
+  assert.equal(issued.actor_id, 'actor-agent');
+  assert.equal(issued.status, 'active');
+
+  assert.throws(
+    () => issueLocalTestAttestation('ident-ghost', { registry }),
+    (error: unknown) => {
+      assert.equal((error as { code: string }).code, 'identity_unregistered');
+      return true;
+    },
+  );
+});
+
+test('M54-06) ⭐⭐⭐⭐⭐ السطح العام لا يُصدّر مُصدِر الإثبات', () => {
+  assert.equal(
+    'issueLocalTestAttestation' in publicSurface,
+    false,
+    'السطح العام صار يُصدر إثبات هوية ⇒ نافذة إصدار مكشوفة',
+  );
+});
+
+test('M54-07) ⭐⭐⭐⭐⭐ الفحص البنيوي لا يمنح ثقة (الفصل صريح)', () => {
+  const structure = evaluateIdentityAttestationStructure(attestation());
+  assert.equal(structure.structurally_valid, true);
+  assert.equal(structure.code, null);
+
+  const decision = evaluateIdentityAttestation(attestation());
+  assert.equal(decision.trusted, false, 'الفحص البنيوي تحوّل إلى ثقة');
+});
+
+/**
+ * ⭐⭐⭐⭐⭐ **جرد رموز الرفض القابلة للوصول (M57)** — ⭐ **قياس لا ادّعاء**.
+ * ⭐⭐ **الفصل المطلوب (M57)**: ⭐ ⭐⇒ **تغطية الفروع (أي رمز رفض له مسار
+ *   وصول) ≠ تغطية المتطلبات الأمنية (هل المتطلب مُنفَّذ ومُختبَر).**
+ * ⭐⇒⇒ **فهذا الجرد يقيس الأول فقط** ⇒ ⭐⇒⇒⇒ **والمتطلبات تُقاس في جدول
+ *   منفصل داخل التقرير.**
+ */
+function collectRejectionCodes(): Map<string, string> {
+  const { registry, ownerAuthority } = registryWithOwner();
+  registry.register(
+    {
+      identity_id: 'ident-agent',
+      tenant_id: TENANT_A,
+      actor_id: 'actor-agent',
+      role: 'agent',
+      expires_at: null,
+    },
+    ownerAuthority,
+  );
+  const supervisorAuthority = issueIdentityAdminAuthority({
+    identity_id: 'ident-supervisor',
+    tenant_id: TENANT_A,
+    actor_id: 'actor-supervisor',
+    role: 'supervisor',
+    status: 'active',
+    expires_at: null,
+  });
+  const secondOwnerAuthority = issueIdentityAdminAuthority({
+    identity_id: 'ident-owner-2',
+    tenant_id: TENANT_A,
+    actor_id: 'actor-owner-2',
+    role: 'owner',
+    status: 'active',
+    expires_at: null,
+  });
+  registry.register(
+    {
+      identity_id: 'ident-owner-2',
+      tenant_id: TENANT_A,
+      actor_id: 'actor-owner-2',
+      role: 'owner',
+      expires_at: null,
+    },
+    ownerAuthority,
+  );
+  registry.revoke('ident-owner-2', ownerAuthority);
+
+  const issued = issueLocalTestAttestation('ident-agent', { registry });
+  const tampered = issueLocalTestAttestation('ident-agent', { registry });
+  (tampered as { role: string }).role = 'owner';
+
+  const cases: { label: string; value: unknown; scope?: 'test' | 'production' }[] = [
+    { label: 'غياب الإثبات', value: undefined },
+    { label: 'إثبات فارغ', value: {} },
+    { label: 'نوع مصدر مجهول', value: attestation({ proof: { kind: 'made_up', source_id: 'x' } as never }) },
+    { label: 'مصدر خارجي موثّق', value: attestation({ proof: { kind: 'external_attested', source_id: 's', attestation_ref: 'r' } }) },
+    { label: 'نطاق إنتاجي', value: issued, scope: 'production' },
+    { label: 'معرّف هوية فاسد', value: attestation({ identity_id: '!' }) },
+    { label: 'معرّف مستأجر فاسد', value: attestation({ tenant_id: 'Tenant Upper!' }) },
+    { label: 'دور خارج المجموعة المغلقة', value: attestation({ role: 'root' as never }) },
+    { label: 'هوية ملغاة', value: attestation({ status: 'revoked' }) },
+    { label: 'هوية منتهية', value: attestation({ status: 'expired' }) },
+    { label: 'حالة خارج المجموعة المغلقة', value: attestation({ status: 'weird' as never }) },
+    { label: 'ادّعاء مستأجر مختلف', value: attestation({ claimed_tenant_id: TENANT_B }) },
+    { label: 'ادّعاء دور أعلى', value: attestation({ claimed_role: 'owner' }) },
+    { label: 'سياق إداري مزيف', value: attestation({ requests_admin: true, admin_authority: { kind: 'identity.admin', identity_id: 'x' } }) },
+    { label: 'طلب إداري بلا سلطة', value: attestation({ requests_admin: true }) },
+    { label: 'سلطة من هوية ليست مالكاً', value: attestation({ requests_admin: true, admin_authority: supervisorAuthority }) },
+    { label: 'سلطة مالك ملغى', value: attestation({ requests_admin: true, admin_authority: secondOwnerAuthority }) },
+    { label: 'إثبات مبنيّ يدوياً', value: attestation() },
+    { label: 'تعديل إثبات مُصدَر', value: tampered },
+  ];
+
+  const codes = new Map<string, string>();
+  for (const item of cases) {
+    const decision = evaluateIdentityAttestation(item.value, {
+      scope: item.scope ?? 'test',
+      registry,
+    });
+    assert.equal(decision.trusted, false, `الحالة «${item.label}» قُبلت ⇒ الفحص ناقص`);
+    if (decision.trusted) continue;
+    if (!codes.has(decision.code)) codes.set(decision.code, item.label);
+  }
+
+  // ⭐⭐⭐ **رموز مسار الإصدار (الرمي)** ⇒ ⭐⇒⇒ **تُحتسب مع الرفض لا بدلها.
+  try {
+    issueLocalTestAttestation('ident-ghost', { registry });
+  } catch (error) {
+    const code = (error as { code: string }).code;
+    if (!codes.has(code)) codes.set(code, 'إصدار لهوية غير مسجَّلة');
+  }
+  try {
+    issueLocalTestAttestation('ident-agent', {} as never);
+  } catch (error) {
+    const code = (error as { code: string }).code;
+    if (!codes.has(code)) codes.set(code, 'إصدار بلا سجلّ');
+  }
+
+  return codes;
+}
+
+test('M55-01) ⭐⭐⭐⭐⭐ دلالة العقد معلنة (تعريف ⇦ تقييم ⇦ تفعيل)', () => {
+  assert.equal(IDENTITY_SOURCE_CONTRACT.state, 'defined');
+  assert.equal(IDENTITY_SOURCE_CONTRACT.activation_requires, 'owner_decision');
+  assert.equal(IDENTITY_SOURCE_CONTRACT.evaluation.scope, 'test');
+  assert.equal(IDENTITY_SOURCE_CONTRACT.evaluation.session_established, false);
+  assert.equal(IDENTITY_SOURCE_CONTRACT.evaluation.issuer_trust_required, true);
+  assert.equal(IDENTITY_SOURCE_CONTRACT.evaluation.requires_issued_attestation, true);
+  assert.deepEqual(
+    [...IDENTITY_CONTRACT_STATES],
+    ['defined', 'evaluated_locally', 'activated'],
+  );
+});
+
+test('M55-02) ⭐⭐⭐⭐⭐ كل رمز رفض يرجّعه العقد معلَن في المجموعة المغلقة', () => {
+  const declared = new Set<string>(IDENTITY_CONTRACT_CODES);
+  const codes = collectRejectionCodes();
+  for (const code of codes.keys()) {
+    assert.ok(declared.has(code), `رمز رفض غير معلَن: ${code}`);
+  }
+});
+
+test('M55-03) ⭐⭐⭐⭐⭐ ناتج التقييم يحمل دلالته (بلا جلسة مصادقة)', () => {
+  const claim = assertIdentityAttestation(issuedAttestation(registryWithAgent()));
+  assert.equal(claim.issuer_trust, 'issued_local_test');
+  assert.equal(claim.contract_state, 'defined');
+  assert.equal(claim.evaluation_scope, 'test');
+  assert.equal(claim.session_established, false);
+});
+
+test('M57-01) ⭐⭐⭐⭐⭐ جرد رموز الرفض (مقيس: ١٧ قابل · ١ معلَن بلا مسار)', () => {
+  const codes = collectRejectionCodes();
+  const declared = [...IDENTITY_CONTRACT_CODES];
+  const unreachable = declared.filter((code) => !codes.has(code));
+
+  // ⭐⭐⭐ **القياس مكتوب في اسم الفحص** ⇒ ⭐⇒⇒ **وليس تقديراً في التقرير.**
+  assert.equal(codes.size, 17, `العدد المقيس ${codes.size} ≠ 17`);
+  assert.deepEqual(unreachable, ['identity_status_invalid']);
+  assert.equal(declared.length, 18);
 });

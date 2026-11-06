@@ -252,22 +252,31 @@ export {
 // ⭐ ⛔ **العقد غير مفعّل عمداً** ⇒ ⭐⇒⇒ `IDENTITY_SOURCE_CONTRACT.active === false`
 // ⭐ ⇒⇒⇒ **ولا يُصدَّر منه أي دالة تُسجّل مصدر هوية ولا تُفعّل نطاقاً إنتاجياً**
 // ⭐ ⇒⇒⇒⇒ **⇒ فوجوده في السطح العام ليس تصريحاً بتفعيل أي مصدر.**
+// ⭐ D-065 (M54): ⭐ ⛔ `issueLocalTestAttestation` **غير مُصدَّر من السطح العام**
+//    ⇒ ⇒⇒ **فمصدر الهوية المحلي لا يُستدعى من الإنتاج** ⇒ ⇒⇒⇒ **وإصدار
+//    إثبات هوية يبقى طبقة تطبيق محلية** ⇒ ⇒⇒⇒⇒ **⇒ وتعبئة إثبات يدوياً
+//    من الخارج ترفضها العقد (`identity_issuer_unverified`).**
 export {
   IDENTITY_ATTESTATION_STATUSES,
   IDENTITY_CONTRACT_CODES,
+  IDENTITY_CONTRACT_STATES,
   IDENTITY_SOURCE_CONTRACT,
   IDENTITY_SOURCE_KINDS,
   IdentityContractError,
   assertIdentityAttestation,
   evaluateIdentityAttestation,
+  evaluateIdentityAttestationStructure,
   isActiveIdentitySourceKind,
   type IdentityAttestation,
   type IdentityAttestationStatus,
   type IdentityContractCode,
   type IdentityContractDecision,
   type IdentityContractOptions,
+  type IdentityContractState,
   type IdentitySourceKind,
   type IdentitySourceProof,
+  type IdentityStructureDecision,
+  type LocalAttestationIssueOptions,
   type TrustedIdentityClaim,
 } from './identity-source-contract.ts';
 
