@@ -34,7 +34,9 @@ const ISOLATED = path.join(WORKSPACE, '.wasl-eviction-s09-0');
 
 /** ⭐⭐⭐ تشغيل ملف اختبار داخل مجلد معيّن ⇒ ⭐ (النسخة المعزولة أو الريبو). */
 function runTests(cwd: string, file: string): { code: number; output: string } {
-  // ⭐ ⭐⭐⭐⭐ `NODE_TEST_CONTEXT` لازم يُشال من بيئة الابن ⇒ ⭐ وإلا ورث الابن وضع «مشغّل اختبار» ⇒ ⇒⇒ فنادى `run()` ذاتياً ⇒ ⇒⇒⇒ ولم يشغّل أي ملف ⇒ ⇒⇒⇒⇒ بلا مخرجات · ورمز خروج ٠ ⇒ ⇒⇒⇒⇒⇒⇒ وكأن الكسر لم يحدث ⇒ ⇒⇒⇒⇒⇒⇒⇒ أسباب خاطئ.
+  // ⭐ `NODE_TEST_CONTEXT` لازم يُشال من بيئة الابن ⇒ ⭐ وإلا ورث الابن وضع «مشغّل اختبار»
+  //   ⇒ فنادى `run()` ذاتياً ⇒ ⭐ ولم يشغّل أي ملف ⇒ ⭐ وخرج بلا مخرجات وبرمز صفر
+  //   ⇒ ⭐ وكأن الكسر لم يحدث ⇒ ⭐ وسببه خطأ في الأداة لا الكسر.
   const env = { ...process.env } as Record<string, string | undefined>;
   delete env.NODE_TEST_CONTEXT;
   delete env.NODE_OPTIONS;
@@ -54,11 +56,7 @@ function runTests(cwd: string, file: string): { code: number; output: string } {
  * ⭐⭐⭐⭐⭐ **المسافات البادئة تُشال** ⇒ ⭐ وإلا ضاعت الفحوص **المتداخلة**
  *   (nested) ⇒ ⭐⇒⇒ وتPAD يُظهر الفشل الداخلي تحت الـparent ⇒ ⭐⇒⇒⇒
  *   **ولم نكن نرى إلا الـparent** ⇒ ⭐⇒⇒⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒
- *   ⇒⇒⇒⇒⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒
- *   ⇒⇒⇒⇒⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒
- *   ⇒⇒⇒⇒⇒zyn ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒
- *   ⇒⇒⇒⇒⇒zyn ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒⇒ ⇒Annex ⇒⇒ ⇒⇒ ⇒Annex ⇒⇒ ⇒⇒ ⇒Annex ⇒⇒ ⇒⇒ ⇒Annex
- *   ⇒⇒⇒⇒⇒zyn ⇒⇒ ⇒⇒ ⇒Annex ⇒⇒ ⇒⇒ ⇒Annex ⇒⇒ ⇒⇒ ⇒Annex ⇒⇒ ⇒⇒ ⇒Annex ⇒⇒ ⇒⇒ ⇒Annex
+ *   ⇒ ⭐ ولهذا تُلتقط أسماء الفحوص المتداخلة كلها ⛔ لا الـparent وحده.
  */
 function failedTestNames(output: string): string[] {
   return output
