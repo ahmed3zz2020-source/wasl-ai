@@ -385,7 +385,7 @@ function main(): void {
     process.stdout.write('\n' + '─'.repeat(96) + '\n');
     process.stdout.write('⭐ تغطية الفروع (من تقرير Node) — ⭐ رقم **مختلف** عن تغطية المتطلبات الأمنية\n');
     process.stdout.write('─'.repeat(96) + '\n');
-    process.stdout.write('الملف | line % | branch % | funcs % | أسطر الأسطر\n');
+    process.stdout.write('الملف | line % | branch % | funcs % | الأسطر غير المغطّاة\n');
     for (const row of rows) {
       process.stdout.write(
         `${row.file} | ${row.line_pct} | ${row.branch_pct} | ${row.funcs_pct} | ${row.uncovered}\n`,
