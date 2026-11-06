@@ -127,7 +127,7 @@
   .meta span { background: var(--panel-2); border-radius: 6px; padding: 4px 9px; }
   .meta span.terminal { background: #3a1d1d; color: #ffb4ac; }
   .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .state-btn, .action-btn {
+  .state-btn, .action-btn, .journey-btn {
     background: var(--panel-2);
     color: var(--ink);
     border: 1px solid var(--line);
@@ -137,7 +137,7 @@
     cursor: pointer;
     font-family: inherit;
   }
-  .state-btn:hover:not(:disabled), .action-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .state-btn:hover:not(:disabled), .action-btn:hover:not(:disabled), .journey-btn:hover { border-color: var(--accent); color: var(--accent); }
   .state-btn.blocked, .action-btn.blocked { opacity: .42; cursor: not-allowed; }
   select {
     background: var(--panel-2);
@@ -162,6 +162,21 @@
   .proof { margin: 0; padding-right: 18px; font-size: 13px; }
   .proof li { margin: 3px 0; }
   .proof li.leak { color: #7ee787; font-weight: 700; }
+  .journey-input {
+    flex: 1;
+    min-width: 240px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .journey-steps { margin: 10px 0 0; padding-right: 20px; font-size: 13px; }
+  .journey-steps li { margin: 3px 0; }
+  p.reply { color: var(--muted); font-size: 13px; }
+  p.err { color: #ffb4ac; font-size: 13px; }
   @media (max-width: 820px) {
     .columns { grid-template-columns: 1fr; }
     h1 { font-size: 19px; }
@@ -185,7 +200,7 @@
 
 /* ⭐ مُجمِّع: tools/wasl-workbench-bundle.ts ⭐ */
 
-const __m_capability = (() => {
+const __m_src_core_capability = (() => {
 // ============================================================
 // WASL AI — الصلاحيات المحلية + سياسة الأدوار (حدّ الثقة)
 // ------------------------------------------------------------
@@ -325,8 +340,8 @@ function assertCapability(context               , capability        )       {
 return { CAPABILITY_PATTERN, TRUSTED_ROLES, ROLE_CAPABILITIES, isTrustedRole, CapabilityError, normalizeCapabilities, resolveGrantedCapabilities, assertCapability };
 })();
 
-const __m_tenant = (() => {
-const { normalizeCapabilities } = __m_capability;
+const __m_src_core_tenant = (() => {
+const { normalizeCapabilities } = __m_src_core_capability;
 // ============================================================
 // WASL AI — سياق المستأجر الموثوق (المكوّن ٢ · الشريحة الأولى)
 // ------------------------------------------------------------
@@ -613,8 +628,8 @@ function assertConversationMatches(
 return { TENANT_ID_PATTERN, ACTOR_ID_PATTERN, SESSION_ID_PATTERN, CONVERSATION_REF_PATTERN, TenantContextError, defaultNow, issueSessionAttestation, tenantContextFromSession, assertTenantMatches, assertConversationMatches };
 })();
 
-const __m_envelope = (() => {
-const { CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } = __m_tenant;
+const __m_src_core_envelope = (() => {
+const { CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } = __m_src_core_tenant;
 // ============================================================
 // WASL AI — عقد الرسالة الداخلي (المكوّن ١ · الشريحة الأولى)
 // ------------------------------------------------------------
@@ -860,9 +875,9 @@ function parseEnvelope(input         )                  {
 return { ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, ENVELOPE_RULES, validateEnvelope, parseEnvelope };
 })();
 
-const __m_session = (() => {
-const { issueSessionAttestation, tenantContextFromSession, defaultNow, ACTOR_ID_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError } = __m_tenant;
-const { isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities } = __m_capability;
+const __m_src_core_session = (() => {
+const { issueSessionAttestation, tenantContextFromSession, defaultNow, ACTOR_ID_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError } = __m_src_core_tenant;
+const { isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities } = __m_src_core_capability;
 // ============================================================
 // WASL AI — حدّ الثقة: مصادر الجلسات (المكوّن ٢ · الشريحة الأولى)
 // ------------------------------------------------------------
@@ -1076,7 +1091,7 @@ function resolveProductionTenantContext(
 return { registerSessionSource, activeSessionSources, resolveTenantContext, resolveProductionTenantContext };
 })();
 
-const __m_audit_log = (() => {
+const __m_src_core_audit_log = (() => {
 // ============================================================
 // WASL AI — سجل التدقيق المحلي (المكوّن ٤ · الشريحة الأولى)
 // ------------------------------------------------------------
@@ -1342,10 +1357,10 @@ class AuditLog {
 return { AUDIT_META_ALLOWLIST, SECRET_PATTERNS, AuditLogError, issueAuditAdminScope, isAdminScope, assertAdminScope, AuditLog };
 })();
 
-const __m_store = (() => {
-const { EnvelopeValidationError, validateEnvelope } = __m_envelope;
-const { AuditLog } = __m_audit_log;
-const { assertTenantMatches, TenantContextError } = __m_tenant;
+const __m_src_core_store = (() => {
+const { EnvelopeValidationError, validateEnvelope } = __m_src_core_envelope;
+const { AuditLog } = __m_src_core_audit_log;
+const { assertTenantMatches, TenantContextError } = __m_src_core_tenant;
 // ============================================================
 // WASL AI — مخزن الرسائل المحلي (عزل المستأجر على مستوى التطبيق)
 // ------------------------------------------------------------
@@ -1551,7 +1566,7 @@ class MessageStore {
 return { EnvelopeValidationError, MessageStore };
 })();
 
-const __m_ordering = (() => {
+const __m_src_core_ordering = (() => {
 // ============================================================
 // WASL AI — قاعدة ترتيب الرسائل (Slice 02 · طبقة المعالجة)
 // ------------------------------------------------------------
@@ -1647,12 +1662,12 @@ function evaluateOrdering(options
 return { OrderingState, evaluateOrdering };
 })();
 
-const __m_processing = (() => {
-const { validateEnvelope } = __m_envelope;
-const { assertConversationMatches, assertTenantMatches } = __m_tenant;
-const { MessageStore } = __m_store;
-const { AuditLog } = __m_audit_log;
-const { evaluateOrdering, OrderingState } = __m_ordering;
+const __m_src_core_processing = (() => {
+const { validateEnvelope } = __m_src_core_envelope;
+const { assertConversationMatches, assertTenantMatches } = __m_src_core_tenant;
+const { MessageStore } = __m_src_core_store;
+const { AuditLog } = __m_src_core_audit_log;
+const { evaluateOrdering, OrderingState } = __m_src_core_ordering;
 // ============================================================
 // WASL AI — طبقة المعالجة: عقد النتيجة + خط المعالجة (Slice 02)
 // ------------------------------------------------------------
@@ -2018,9 +2033,9 @@ class ProcessingLayer {
 return { PROCESSING_OUTCOME_RULES, ProcessingOutcomeError, validateProcessingOutcome, parseProcessingOutcome, ProcessingLayer };
 })();
 
-const __m_read_audit = (() => {
-const { SECRET_PATTERNS, assertAdminScope } = __m_audit_log;
-const { CONVERSATION_REF_PATTERN } = __m_tenant;
+const __m_src_core_read_audit = (() => {
+const { SECRET_PATTERNS, assertAdminScope } = __m_src_core_audit_log;
+const { CONVERSATION_REF_PATTERN } = __m_src_core_tenant;
 // ============================================================
 // WASL AI — سجل أحداث القراءة (الشريحة الثالثة)
 // ------------------------------------------------------------
@@ -2188,9 +2203,9 @@ class ReadAuditLog {
 return { ReadAuditError, ReadAuditLog };
 })();
 
-const __m_conversation_query = (() => {
-const { assertCapability } = __m_capability;
-const { CONVERSATION_REF_PATTERN } = __m_tenant;
+const __m_src_core_conversation_query = (() => {
+const { assertCapability } = __m_src_core_capability;
+const { CONVERSATION_REF_PATTERN } = __m_src_core_tenant;
 // ============================================================
 // WASL AI — طبقة قراءة محادثات المستأجر (الشريحة الثالثة)
 // ------------------------------------------------------------
@@ -2501,9 +2516,9 @@ function readConversationAudit(
 return { CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, CONVERSATION_AUDIT_CAPABILITY, MAX_PAGE_SIZE, DEFAULT_PAGE_SIZE, ConversationQueryError, listConversations, getConversation, readConversationAudit };
 })();
 
-const __m_conversation_change_log = (() => {
-const { SECRET_PATTERNS, assertAdminScope } = __m_audit_log;
-const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } = __m_tenant;
+const __m_src_core_conversation_change_log = (() => {
+const { SECRET_PATTERNS, assertAdminScope } = __m_src_core_audit_log;
+const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } = __m_src_core_tenant;
 // ============================================================
 // WASL AI — سجل تغييرات المحادثات (الشريحة الرابعة)
 // ------------------------------------------------------------
@@ -2722,11 +2737,11 @@ class ConversationChangeLog {
 return { CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, MAX_CHANGE_REASON_LENGTH, assertChangeReason, assertChangeEntry, ConversationChangeLog };
 })();
 
-const __m_conversation_state = (() => {
-const { assertCapability } = __m_capability;
-const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } = __m_tenant;
-const { assertChangeEntry, assertChangeReason } = __m_conversation_change_log;
-const { CONVERSATION_CHANGE_STATES } = __m_conversation_change_log;
+const __m_src_core_conversation_state = (() => {
+const { assertCapability } = __m_src_core_capability;
+const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } = __m_src_core_tenant;
+const { assertChangeEntry, assertChangeReason } = __m_src_core_conversation_change_log;
+const { CONVERSATION_CHANGE_STATES } = __m_src_core_conversation_change_log;
 // ============================================================
 // WASL AI — طبقة إدارة حالة المحادثة والإسناد المحلي (الشريحة الرابعة)
 // ------------------------------------------------------------
@@ -3450,8 +3465,8 @@ function readConversationChanges(
 return { CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATES, ALLOWED_TRANSITIONS, TERMINAL_CONVERSATION_STATES, isTerminalState, ConversationStateStore, ConversationStateError, getConversationState, updateConversationState, assignConversation, unassignConversation, MAX_CHANGE_PAGE_SIZE, readConversationChanges };
 })();
 
-const __m_agent_queue = (() => {
-const { assertCapability } = __m_capability;
+const __m_src_core_agent_queue = (() => {
+const { assertCapability } = __m_src_core_capability;
 // ============================================================
 // WASL AI — مركز عمل الوكيل (الشريحة الخامسة)
 // ------------------------------------------------------------
@@ -3758,9 +3773,9 @@ function listWorkQueue(
 return { CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, MAX_QUEUE_PAGE_SIZE, DEFAULT_QUEUE_PAGE_SIZE, AgentWorkQueueError, computeConversationActivity, listWorkQueue };
 })();
 
-const __m_service_metrics = (() => {
-const { assertCapability } = __m_capability;
-const { computeConversationActivity, DEFAULT_IDLE_THRESHOLD_MINUTES } = __m_agent_queue;
+const __m_src_core_service_metrics = (() => {
+const { assertCapability } = __m_src_core_capability;
+const { computeConversationActivity, DEFAULT_IDLE_THRESHOLD_MINUTES } = __m_src_core_agent_queue;
 // ============================================================
 // WASL AI — مؤشرات الخدمة (الشريحة الخامسة)
 // ------------------------------------------------------------
@@ -3971,9 +3986,9 @@ function getServiceMetrics(
 return { CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics };
 })();
 
-const __m_identity = (() => {
-const { ACTOR_ID_PATTERN, TENANT_ID_PATTERN } = __m_tenant;
-const { isTrustedRole } = __m_capability;
+const __m_src_core_identity = (() => {
+const { ACTOR_ID_PATTERN, TENANT_ID_PATTERN } = __m_src_core_tenant;
+const { isTrustedRole } = __m_src_core_capability;
 // ============================================================
 // WASL AI — الهوية المحلية (Slice 08 · P0)
 // ------------------------------------------------------------
@@ -3982,11 +3997,11 @@ const { isTrustedRole } = __m_capability;
 // ⛔ بلا كلمات مرور · ⛔ بلا حسابات حقيقية · ⛔ بلا رموز مصادقة إنتاجية
 //   · ⛔ بلا جلسات حقيقية · ⛔ بلا قاعدة بيانات · ⛔ بلا شبكة.
 // ⭐ **المبدأ الحاكم**: ⭐ الهوية = (مستأجر · دور · حالة) **مسجَّلة من جهة
-//   موثوقة** ⇒ ⭐⇒⇒ **والدور يُشتق من السجلّ لا من مدخلات الطلب.**
-// ⭐ **نطاق المصادر**: ⭐ كل مصدر هوية محلية نطاقه `test` ⇒ ⇒⇒
-//   ⇒⇒⇒ **المسار الإنتاجي يرفضها بنيوياً** (`resolveProductionTenantContext`).
+//   موثوقة** ⇒ ⭐⇒ **والدور يُشتق من السجلّ لا من مدخلات الطلب.**
+// ⭐ **نطاق المصادر**: ⭐ كل مصدر هوية محلية نطاقه `test` ⇒ ⇒
+//   ⇒ ⇒**المسار الإنتاجي يرفضها بنيوياً** (`resolveProductionTenantContext`).
 // ⭐⭐ **إجابة M34 (مصدر صلاحية الإدارة)**: ⭐ «إثبات الأصل» بـ`WeakSet` يكفي
-//   لقراءة نطاق إداري، ⭐ **لكنه لا يثبت الأحقية** ⇒ ⇒⇒ **فصّلنا الأمرين**:
+//   لقراءة نطاق إداري، ⭐ **لكنه لا يثبت الأحقية** ⇒ ⇒**فصّلنا الأمرين**:
 //   ⭐ ① **سلطة الإدارة** = كائن بنَسَب مثبت **+mربوطة بهوية مالك مسجَّلة**
 //   ⭐ ② **صلاحية العملية** = قرار منفصل في طبقة التفويض (يستعمل جدول النواة)
 // ⭐⇒⇒ **فلا طبقة واحدة تفعل الاثنين معاً.**
@@ -4032,10 +4047,10 @@ class LocalIdentityError extends Error {
 
 /**
  * ⭐⭐⭐ **سلطة الإدارة المحلية** — ⭐ **نَسَب مثبت + هوية مالك**.
- * ⭐ تُصدر **داخل هذه الوحدة فقط** ⇒ ⇒⇒ **نسخة مزوَّرة مرفوضة بنيوياً.**
- * ⭐ ⭐ **ولا تكفي وحدها** ⇒ ⭐⇒⇒ **السجلّ نفسه يعيد التحقّق**: ⭐ الهوية
+ * ⭐ تُصدر **داخل هذه الوحدة فقط** ⇒ ⇒**نسخة مزوَّرة مرفوضة بنيوياً.**
+ * ⭐ ⭐ **ولا تكفي وحدها** ⇒ ⭐⇒ **السجلّ نفسه يعيد التحقّق**: ⭐ الهوية
  *   المصدِرة يجب أن تكون **مسجَّلة في هذا السجلّ · بدور `owner` · غير ملغاة
- *   وغير منتهية** ⇒ ⇒⇒⇒ **فمن يُلغى أو تنتهي صلاحيته يفقد الأحقية فوراً.**
+ *   وغير منتهية** ⇒ ⇒**فمن يُلغى أو تنتهي صلاحيته يفقد الأحقية فوراً.**
  */
                                          
                                   
@@ -4101,7 +4116,7 @@ let REGISTRY_COUNTER = 0;
 class LocalIdentityRegistry {
            #identities = new Map                       ();
            #now              ;
-  /** ⭐⭐ معرّف النسخة — ⭐ **فريد داخل العملية** ⇒ ⭐ ⇒⇒ مصادر الهوية تأخذ منه ⇒ ⇒⇒ فلا تصادم بين سجلّين. */
+  /** ⭐⭐ معرّف النسخة — ⭐ **فريد داخل العملية** ⇒ ⭐ ⇒ مصادر الهوية تأخذ منه فلا تصادم بين سجلّين. */
            instanceId        ;
 
   constructor(options                         = {}) {
@@ -4241,15 +4256,15 @@ class LocalIdentityRegistry {
 return { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, issueIdentityAdminAuthority, isIdentityAdminAuthority, LocalIdentityRegistry };
 })();
 
-const __m_authorization = (() => {
-const { assertCapability, ROLE_CAPABILITIES, TRUSTED_ROLES } = __m_capability;
-const { CONVERSATION_REF_PATTERN } = __m_tenant;
-const { registerSessionSource, resolveTenantContext } = __m_session;
-const { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityRegistry } = __m_identity;
-const { CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, CONVERSATION_AUDIT_CAPABILITY } = __m_conversation_query;
-const { CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY } = __m_conversation_state;
-const { CONVERSATION_QUEUE_CAPABILITY } = __m_agent_queue;
-const { CONVERSATION_METRICS_CAPABILITY } = __m_service_metrics;
+const __m_src_core_authorization = (() => {
+const { assertCapability, ROLE_CAPABILITIES, TRUSTED_ROLES } = __m_src_core_capability;
+const { CONVERSATION_REF_PATTERN } = __m_src_core_tenant;
+const { registerSessionSource, resolveTenantContext } = __m_src_core_session;
+const { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityRegistry } = __m_src_core_identity;
+const { CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, CONVERSATION_AUDIT_CAPABILITY } = __m_src_core_conversation_query;
+const { CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY } = __m_src_core_conversation_state;
+const { CONVERSATION_QUEUE_CAPABILITY } = __m_src_core_agent_queue;
+const { CONVERSATION_METRICS_CAPABILITY } = __m_src_core_service_metrics;
 // ============================================================
 // WASL AI — طبقة التفويض المحلية (Slice 08 · P0)
 // ------------------------------------------------------------
@@ -4258,13 +4273,13 @@ const { CONVERSATION_METRICS_CAPABILITY } = __m_service_metrics;
 //   ⭐ ② **قرار السماح** (يحق له؟) ⇒ ⭐ **هذه الوحدة** (باستعمال جدول النواة)
 // ⛔ بلا رموز مصادقة · ⛔ بلا جلسات حقيقية · ⛔ بلا قاعدة بيانات · ⛔ بلا شبكة.
 // ⭐⭐ **المبدأ الحاكم**: ⭐ **الدور يُشتق من السجلّ لا من الطلب** ⇒
-//   ⭐⇒⇒ **مصدر الهوية يبني «هوية موثّقة» جديدة** ⇒ ⇒⇒ **لا حقل من
+//   ⭐⇒ **مصدر الهوية يبني «هوية موثّقة» جديدة** ⇒ ⭐ **لا حقل من
 //   الحمولة (دور · مستأجر · صلاحيات) يصل إلى السياق — أبداً.**
 // ⭐⭐ **لا محرك صلاحيات موازٍ** ⇒ ⭐ العمليات تُترجم إلى **الصلاحيات
-//   الموجودة في `src/core/capability.ts`** ⇒ ⇒⇒ **والقرار = `assertCapability`**
-//   ⇒ ⇒⇒⇒ **فالقاعدة واحدة: سياسة النواة.**
+//   الموجودة في `src/core/capability.ts`** ⇒ **والقرار = `assertCapability`**
+//   ⇒ **فالقاعدة واحدة: سياسة النواة.**
 // ⭐ **الفصل عن المسار الإنتاجي**: ⭐ مصادر الهوية المحلية نطاقها `test` ⇒
-//   ⇒⇒⇒ **`resolveProductionTenantContext` يرفضها بنيوياً.**
+//   ⇒ **`resolveProductionTenantContext` يرفضها بنيوياً.**
 // ============================================================
 
 
@@ -4279,7 +4294,7 @@ const { CONVERSATION_METRICS_CAPABILITY } = __m_service_metrics;
 
 /**
  * ⭐⭐⭐ **عمليات التفويض المحلية** — ⭐ **مترجمة إلى صلاحيات النواة نفسها**.
- * ⭐ ⛔ **لا اسم صلاحية جديد هنا** ⇒ ⇒⇒ (لا محرك موازٍ).
+ * ⭐ ⛔ **لا اسم صلاحية جديد هنا** ⇒ ⇒(لا محرك موازٍ).
  */
 const LOCAL_AUTHORIZATION_OPERATIONS                                   = Object.freeze({
   'conversation.list': CONVERSATION_LIST_CAPABILITY,
@@ -4357,8 +4372,8 @@ class LocalAuthorizationError extends Error {
 
 /**
  * ⭐⭐⭐ **بناء مصدر هوية محلية لدور واحد** — ⭐ **مصدر جلسات حقيقي** (نفس
- *   عقد `SessionSource`) ⇒ ⇒⇒ **لا مسار موازٍ لتفويض النواة**.
- * ⭐ ⭐ **يقرأ من السجلّ فقط** ⇒ ⇒⇒ **لا دور ولا مستأجر ولا صلاحية من الحمولة**.
+ *   عقد `SessionSource`) ⇒ ⇒**لا مسار موازٍ لتفويض النواة**.
+ * ⭐ ⭐ **يقرأ من السجلّ فقط** ⇒ ⇒**لا دور ولا مستأجر ولا صلاحية من الحمولة**.
  */
 function buildLocalIdentitySource(
   registry                       ,
@@ -4383,11 +4398,11 @@ function buildLocalIdentitySource(
       }
       const identity = registry.find(raw.identity_id);
       if (!identity) return null;
-      // ⭐⭐⇦⇦ **الدور من السجلّ** ⇒ ⇒⇒ مصدر دور أعلى لا يقبل هوية أدنى.
+      // ⭐⭐⇦⇦ **الدور من السجلّ** ⇒ ⇒مصدر دور أعلى لا يقبل هوية أدنى.
       if (identity.role !== role) return null;
       if (identity.status !== 'active') return null;
       if (registry.isExpired(identity.identity_id)) return null;
-      // ⭐⭐⭐ **هوية جديدة بالكامل** ⇒ ⭐⇒⇒ لا تمرير للحمولة إطلاقاً.
+      // ⭐⭐⭐ **هوية جديدة بالكامل** ⇒ ⭐ **لا تمرير للحمولة إطلاقاً.
       return {
         session_id: `sess_local_${identity.identity_id}`,
         tenant_id: identity.tenant_id,
@@ -4401,7 +4416,7 @@ function buildLocalIdentitySource(
 
 /**
  * ⭐⭐⭐ **إنشاء مصادر الهوية المحلية** — ⭐ **تسجيل صريح** (لا تسجيل عند
- *   تحميل الوحدة) ⇒ ⇒⇒ **لا مصدر افتراضي** ⇒ ⇒⇒⇒ **والمسار الإنتاجي يبقى
+ *   تحميل الوحدة) ⇒ ⇒ **لا مصدر افتراضي** **والمسار الإنتاجي يبقى
  *   بلا مصادر** (`activeSessionSources()` فارغة).
  */
 function createLocalIdentitySources(
@@ -4428,9 +4443,9 @@ function deny(code        , reason        )                             {
  * ⭐⭐⭐⭐⭐ **طبقة التفويض المحلية** — ⭐ **البوّابة الوحيدة** بين «طلب» و«سياق تنفيذ».
  * ⭐⭐ **الترتيب (Fail-closed)**:
  *   ⭐ ① **شكل الطلب** ⇒ ② **الهوية** (موجودة · غير ملغاة · غير منتهية)
- *   ⭐ ⇒ ③ **المستأجر** (المعلن يطابق) ⇒ ④ **الدور** (من السجلّ ⇒ مصدر مطابق)
+ *   ⭐ ③ **المستأجر** (المعلن يطابق) ⇒ ④ **الدور** (من السجلّ مصدر مطابق)
  *   ⭐ ⇒ ⑤ **بناء السياق** (المصدر يبني هوية جديدة) ⇒ ⑥ **صلاحية العملية**
- * ⭐ ⇒⇒⇒ **أي خطوة تفشل = رفض صريح (لا سياق ⇒ لا تنفيذ).**
+ * ⭐ ⇒ **أي خطوة تفشل = رفض صريح (بلا سياق ⇒ بلا تنفيذ).**
  */
 function authorizeLocalRequest(
   request                           ,
@@ -4476,7 +4491,7 @@ function authorizeLocalRequest(
     return deny('tenant_mismatch', 'المستأجر المعلن لا يطابق مستأجر الهوية');
   }
 
-  // ⭐ ④ الدور — ⭐ من السجلّ ⇒ ⇒⇒ مصدر مطابق للدور (لا دور أعلى).
+  // ⭐ ④ الدور — ⭐ من السجلّ ⇒ ⇒مصدر مطابق للدور (لا دور أعلى).
   const source = deps.sources.byRole[identity.role];
   if (!source) {
     return deny('identity_role_unsupported', 'لا مصدر مسجَّل لهذا الدور');
@@ -4535,8 +4550,8 @@ function authorizeLocalRequest(
 }
 
 /**
- * ⭐⭐⭐ **بوّابة تفويض فاشلة-مغلقة** — ⭐ **ترمي عند الرفض** ⇒ ⇒⇒
- *   لا تنفيذ بلا سياق ⇒ ⇒⇒ (الافتراضي = المنع).
+ * ⭐⭐⭐ **بوّابة تفويض فاشلة-مغلقة** — ⭐ **ترمي عند الرفض** ⇒ ⇒
+ *   لا تنفيذ بلا سياق ⇒ ⇒(الافتراضي = المنع).
  */
 function requireLocalAuthorization(
   request                           ,
@@ -4551,7 +4566,575 @@ function requireLocalAuthorization(
 return { LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, createLocalIdentitySources, authorizeLocalRequest, requireLocalAuthorization };
 })();
 
-const __m_index = (() => {
+const __m_src_core_identity_source_contract = (() => {
+const { ACTOR_ID_PATTERN, TENANT_ID_PATTERN } = __m_src_core_tenant;
+const { TRUSTED_ROLES, isTrustedRole } = __m_src_core_capability;
+const { LOCAL_IDENTITY_ID_PATTERN, isIdentityAdminAuthority } = __m_src_core_identity;
+// ============================================================
+// WASL AI — S09-0 · عقد مصدر الهوية المحلي (غير مفعّل)
+// ------------------------------------------------------------
+// ⭐⭐⭐ **هذا ليس نظام مصادقة** ⇒ ⭐ **عقد** فقط: ⭐ يشرح ما يجب أن
+//   يثبته مصدر هوية موثوق مستقبلاً، ⭐ ويرفض ما لا يثبته.
+// ⛔ **غير مفعّل عمداً** ⇒ ⭐ لا مصدر إنتاجي · ⛔ لا تسجيل دخول
+//   · ⛔ لا `OAuth` · ⛔ لا `JWT` · ⛔ لا خادم · ⛔ لا قاعدة بيانات.
+// ⭐ **العلاقة بالنواة القائمة**: ⭐ يستعمل `TRUSTED_ROLES` وأنماط
+//   المعرّفات و`isIdentityAdminAuthority` ⇒ ⭐⇒ **بلا محرك صلاحيات
+//   موازٍ** ⇒ ⭐⇒⇒ **الصلاحية تبقى قرار `assertCapability` وحدها.**
+// ⭐⭐ **الفصل عن طبقة التفويض (M34 · مبقى)**: ⭐ هذا العقد يقرّر
+//   «هل هذا إثبات هوية موثوق؟» ⇒ ⭐⇒ **لا يقرّر «يحق له؟»**.
+// ------------------------------------------------------------
+// ⭐⭐⭐ **تحديث «حزمة التسريع ٠١» (٦ نوفمبر ٢٠٢٦ · D-065) — M54 + M55**:
+// ⭐ **M54 (أصالة جهة الإصدار)**: ⭐ كان العقد يثق بمطابقة **الشكل**
+//   ⇒ ⭐⇒⇒ فأي كائن مبني يدوياً كان يمرّ ⇒ ⭐⇒⇒⇒ **فُصل التحقّق
+//   البنيوي عن الثقة في جهة الإصدار** ⇒ ⭐⇒⇒ **والقبول صار مشروطاً
+//   بإثبات صادر من مصدر محلي حقيقي (سجلّ داخلي غير قابل للادعاء)
+//   + إعادة تحقّق من السجلّ عند كل تقييم.**
+// ⭐ **M55 (دلالة العقد)**: ⭐ **الفرق بين «تعريف العقد» و«تقييمه
+//   محلياً» و«تفعيله تشغيلياً» صار معلناً** ⇒ ⭐⇒⇒ **والأكواد
+//   المرفوضة كلها داخل المجموعة المغلقة** ⇒ ⭐⇒⇒⇒ **ونجاح التقييم
+//   المحلي ⛔ ليس جلسة مصادقة**.
+// ⛔ **لا تغيير مدمِر**: ⭐ أسماء الدوال المصدَّرة لم تتغيّر، ⭐ ولا
+//   الأكواد القديمة حُذفت، ⭐ ولا حقول الادّعاء حُذفت ⇒ ⇒⇒ **توافق
+//   مع كل العقود السابقة** (التفصيل في `docs/ACCELERATION-PACK-01-REPORT.md`).
+// ============================================================
+
+
+
+
+
+/**
+ * ⭐⭐⭐ **أنواع مصدر الهوية** — ⭐ المجموعة المغلقة.
+ * ⭐ `local_test` = مصدر اختبار محلي (نشط اليوم · داخل النطاق `test`).
+ * ⭐ `external_attested` = مصدر خارجي مستقبلي (معرَّف · ⛔ **غير مفعّل**).
+ */
+const IDENTITY_SOURCE_KINDS = ['local_test', 'external_attested']         ;
+
+                                                                        
+
+/** ⭐⭐ أنواع الإثبات — ⭐ **كل نوع يحمل ما يثبته فعلاً**. */
+                                 
+     
+                                  
+                                                              
+                                 
+     
+     
+                                         
+                                              
+                                 
+                                                                  
+                                       
+      
+
+/** ⭐⭐⭐ **حالة الهوية الموثّقة** — ⭐ مغلقة. */
+const IDENTITY_ATTESTATION_STATUSES = ['active', 'revoked', 'expired']         ;
+
+                                                                                       
+
+/**
+ * ⭐⭐⭐ **إثبات هوية** — ⭐ ما يقدّمه المصدر الموثوق.
+ * ⭐⭐ **قاعدة الحاكمة**: ⭐ `role` و`tenant_id` هنا **يثبتُهما المصدر**
+ *   لا العميل ⇒ ⭐⇒⇒ **وأي ادّعاء موازٍ من العميل = تعارض = رفض.**
+ */
+                                      
+                               
+                             
+                            
+                             
+                                             
+                                      
+                                                                    
+                                  
+                                                                       
+                                       
+                                                              
+                                    
+                                                                       
+                                     
+ 
+
+/**
+ * ⭐⭐⭐ **ادّعاء الهوية الموثّقة** — ⭐ ناتج العقد.
+ * ⛔ **بلا حقل صلاحيات** ⇒ ⭐⇒⇒ **لا يمكن للعقد أن يمنح صلاحية**
+ *   ⇒ ⭐⇒⇒⇒ **الصلاحية = قرار `assertCapability` وحده.**
+ */
+                                       
+                               
+                             
+                            
+                             
+                            
+                                           
+                             
+     
+                                                                  
+                                                                     
+                                                               
+     
+                                             
+     
+                                                                   
+                                                                  
+                                                                   
+                                                              
+     
+                                                 
+                                    
+                                      
+ 
+
+/** ⭐⭐⭐ **نتيجة تقييم العقد** — ⭐ **فاشلة-مغلقة**. */
+                                      
+                                                                    
+                                                                                
+
+/**
+ * ⭐⭐⭐ **نتيجة التحقّق البنيوي وحده (M54)** — ⭐ **بلا ثقة في جهة
+ *   الإصدار** ⇒ ⭐⇒⇒ **فالمطابقة الشكلية ⛔ ليست إثباتاً موثوقاً.**
+ */
+                                            
+                                            
+                                       
+                                                         
+                               
+                               
+                                 
+ 
+
+/**
+ * ⭐⭐⭐⭐⭐ **حالات العقد (M55)** — ⭐ مغلقة — ⭐ **ترتيبها هو ترتيب الرحلة**:
+ * ⭐ ① `defined` = العقد **مُعرَّف فقط** (لا تقييم ولا تفعيل).
+ * ⭐ ② `evaluated_locally` = undergoing تقييم **محلي** في النطاق `test`.
+ * ⭐ ③ `activated` = **تفعيل تشغيلي** ⇒ ⭐⛔ **يحتاج تصريح المالك.**
+ */
+const IDENTITY_CONTRACT_STATES = ['defined', 'evaluated_locally', 'activated']         ;
+
+                                                                              
+
+/**
+ * ⭐⭐⭐ **أكواد رفض العقد** — ⭐ مغلقة (لا قيمة خارجها).
+ * ⭐⭐ **تحديث D-065 (M55)**: ⭐ **الأكواد التسعة القديمة ما زالت كلّها
+ *   موجودة بالاسم نفسه** ⇒ ⇒⇒ **توافق مع ما قبل D-065** ⇒ ⭐⇒⇒⇒
+ *   **وأُضيفت الأكواد التي كان العقد يُرجعها بلا تصريح مسبق** ⇒
+ *   ⭐⇒⇒⇒ **فكل رمز مرفوض صار معلَناً (سلوك متسق + أسماء متسقة).**
+ */
+const IDENTITY_CONTRACT_CODES = Object.freeze([
+  'identity_source_missing',
+  'identity_source_untrusted',
+  'identity_source_inactive',
+  'identity_scope_forbidden',
+  'identity_attestation_invalid',
+  'identity_role_conflict',
+  'identity_tenant_conflict',
+  'identity_status_invalid',
+  'admin_authority_invalid',
+  'admin_not_owner',
+  'role_invalid',
+  'identity_revoked',
+  'identity_expired',
+  'admin_revoked',
+  'identity_issuer_unverified',
+  'identity_registry_missing',
+  'identity_unregistered',
+  'identity_registry_mismatch',
+]);
+
+                                                                            
+
+class IdentityContractError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'IdentityContractError';
+    this.code = code;
+  }
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **مواصفات العقد** — ⭐ **الجزء الموثَّق من «العقد»**.
+ * ⭐ `active: false` ⛔ ⇒ ⭐ **وجود العقد ليس تصريحاً بتفعيل أي مصدر.**
+ * ⭐⭐ **D-065 (M55)**: ⭐ أُضيفت حقول الدلالة (الحالة · التقييم · شرط التفعيل).
+ */
+const IDENTITY_SOURCE_CONTRACT = Object.freeze({
+  version: 's09-0.2',
+  /** ⭐⭐⛔ **غير مفعّل** — تفعيله يحتاج تصريح المالك منفصل. */
+  active: false,
+  /** ⭐⭐⭐ **حالة العقد (M55)** — ⭐ `defined` = مُعرَّف فقط. */
+  state: 'defined'                         ,
+  /** ⭐⭐ الأنواع **المعروفة** (للمستقبل). */
+  known_proof_kinds: Object.freeze([...IDENTITY_SOURCE_KINDS]         ),
+  /** ⭐⭐ الأنواع **النشطة اليوم** — ⭐⇦ `local_test` فقط. */
+  active_proof_kinds: Object.freeze(['local_test']         ),
+  /** ⭐⭐ النطاقات المسموحة اليوم — ⭐⇦ `test` فقط (لا إنتاجي). */
+  supported_scopes: Object.freeze(['test']         ),
+  /** ⭐⭐ الحقول الإلزامية في الإثبات. */
+  required_fields: Object.freeze([
+    'identity_id',
+    'tenant_id',
+    'actor_id',
+    'role',
+    'status',
+    'proof',
+  ]         ),
+  /** ⭐⭐⭐ **دلالة التقييم (M55)** — ⭐ معلنة صراحةً. */
+  evaluation: Object.freeze({
+    scope: 'test'         ,
+    session_established: false         ,
+    requires_issued_attestation: true         ,
+    issuer_trust_required: true         ,
+  }),
+  /** ⭐⭐⭐ **شرط التفعيل التشغيلي** — ⭐ قرار المالك فقط. */
+  activation_requires: 'owner_decision'         ,
+  /** ⭐⭐⭐ ما يرفضه العقد بنيوياً. */
+  forbids: Object.freeze([
+    'client_supplied_role',
+    'client_supplied_tenant',
+    'production_scope',
+    'self_asserted_admin',
+    'unknown_proof_kind',
+    'inactive_proof_kind',
+    'forged_local_test_attestation',
+    'unverified_issuer',
+  ]         ),
+});
+
+/** ⭐⭐⭐ **اعتماديات العقد** — ⭐ اختيارية (بلا سجلّ ⇒ ⛔ لا سلطة إدارية). */
+                                          
+                                                                
+                                         
+                                                             
+                                            
+                                                 
+                              
+ 
+
+/** ⭐⭐⭐ **اعتماديات الإصدار المحلي (M54)**. */
+                                               
+                                                        
+                                           
+                                                                    
+                              
+ 
+
+function deny(code        , reason        )                           {
+  return { trusted: false, code, reason };
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **سجلّ الإصدار الداخلي (M54)** — ⭐ **خاص بالوحدة ولا يُصدَّر**.
+ * ⭐⭐⭐ **لماذا `WeakMap`**: ⭐ ⭐⇒ **لأنه يربط كل إثبات بما صدر منه بالضبط**
+ *   ⇒ ⇒⇒ **فكائن مبنيّ يدوياً (كائن آخر) لا يُطابق ⇒ مرفوض**.
+ * ⭐⭐⭐ **ولماذا لقطة (snapshot)**: ⭐ ⭐⇒ **لأن تعديل الحقول بعد الإصدار
+ *   يجب أن يُكتشف** ⇒ ⇒⇒ **فالمرجع هو القيمة المثبتة وقت الإصدار** ⇒ ⇒⇒⇒
+ *   **والمقارنة تتم عند كل تقييم ⇒ فالتعديل = رفض.**
+ */
+                                     
+                               
+                             
+                            
+                             
+                                             
+                             
+                                           
+ 
+
+const ISSUED_ATTESTATIONS = new WeakMap                                   ();
+
+/**
+ * ⭐⭐⭐⭐⭐ **إصدار إثبات هوية محلي (M54)** — ⭐ **غير مُصدَّر من `index.ts`**.
+ * ⭐⭐⭐ **مبدأ الاشتقاق**: ⭐ الدور والمستأجر والمنفّذ **تُشتقّ من السجلّ**
+ *   ⇒ ⭐⇒⇒ **ولا تُمرَّر من المستدعي إطلاقاً** ⇒ ⭐⇒⇒⇒ **فلا مجال لادّعاء
+ *   دور أعلى ولا لتبديل مستأجر.**
+ * ⛔ يُستدعى من طبقة التطبيق المحلية (المعاينة · شجرة الاختبار) فقط.
+ */
+function issueLocalTestAttestation(
+  identityId        ,
+  options                              ,
+)                      {
+  const registry = options?.registry;
+  if (!registry) {
+    throw new IdentityContractError('identity_registry_missing', 'لا سجلّ هوية ⇒ لا إصدار');
+  }
+  const identity = registry.find(identityId);
+  if (!identity) {
+    throw new IdentityContractError(
+      'identity_unregistered',
+      'الهوية غير مسجَّلة في السجلّ ⇒ لا إصدار',
+    );
+  }
+  if (identity.status !== 'active') {
+    throw new IdentityContractError('identity_revoked', 'الهوية ملغاة ⇒ لا إصدار');
+  }
+  if (registry.isExpired(identity.identity_id, registry.currentTime())) {
+    throw new IdentityContractError('identity_expired', 'صلاحية الهوية منتهية ⇒ لا إصدار');
+  }
+  const sourceId = options.source_id ?? `local-test:${registry.instanceId}`;
+  const attestation                      = {
+    identity_id: identity.identity_id,
+    tenant_id: identity.tenant_id,
+    actor_id: identity.actor_id,
+    role: identity.role,
+    status: 'active',
+    proof: { kind: 'local_test', source_id: sourceId },
+  };
+  ISSUED_ATTESTATIONS.set(attestation, {
+    identity_id: identity.identity_id,
+    tenant_id: identity.tenant_id,
+    actor_id: identity.actor_id,
+    role: identity.role,
+    status: 'active',
+    source_id: sourceId,
+    registry,
+  });
+  return attestation;
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **التحقّق البنيوي وحده (M54)** — ⭐ **فصل عن الثقة**.
+ * ⭐⭐⭐ **ماذا يفحص**: ⭐ أنواع الحقول ونمط المعرّفات وقيمة الدور والحالة.
+ * ⭐⭐⭐ **ماذا لا يفحص**: ⭐ ⛔ **لا جهة الإصدار** · ⛔ ولا السجلّ · ⛔ ولا النطاق.
+ * ⭐⇒⇒ **فمطابقة الشكل وحدها ⛔ ليست إثباتاً موثوقاً.**
+ */
+function evaluateIdentityAttestationStructure(
+  attestation         ,
+)                            {
+  if (!attestation || typeof attestation !== 'object') {
+    return {
+      structurally_valid: false,
+      code: 'identity_source_missing',
+      reason: 'لا يوجد إثبات هوية',
+    };
+  }
+  const raw = attestation                       ;
+  if (
+    typeof raw.identity_id !== 'string' ||
+    !LOCAL_IDENTITY_ID_PATTERN.test(raw.identity_id)
+  ) {
+    return {
+      structurally_valid: false,
+      code: 'identity_attestation_invalid',
+      reason: 'معرّف الهوية في الإثبات غير صالح',
+    };
+  }
+  if (typeof raw.tenant_id !== 'string' || !TENANT_ID_PATTERN.test(raw.tenant_id)) {
+    return {
+      structurally_valid: false,
+      code: 'identity_attestation_invalid',
+      reason: 'معرّف المستأجر في الإثبات غير صالح',
+    };
+  }
+  if (typeof raw.actor_id !== 'string' || !ACTOR_ID_PATTERN.test(raw.actor_id)) {
+    return {
+      structurally_valid: false,
+      code: 'identity_attestation_invalid',
+      reason: 'معرّف المنفّذ في الإثبات غير صالح',
+    };
+  }
+  if (!isTrustedRole(raw.role)) {
+    return {
+      structurally_valid: false,
+      code: 'role_invalid',
+      reason: 'الدور خارج المجموعة المغلقة',
+    };
+  }
+  if (
+    raw.status !== 'active' &&
+    raw.status !== 'revoked' &&
+    raw.status !== 'expired'
+  ) {
+    return {
+      structurally_valid: false,
+      code: 'identity_attestation_invalid',
+      reason: 'حالة الهوية خارج المجموعة المغلقة',
+    };
+  }
+  return { structurally_valid: true, code: null, reason: null };
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **تقييم إثبات هوية** — ⭐ **البوّابة الوحيدة** في العقد.
+ * ⭐⭐ **الترتيب (فاشلة-مغلقة)**: ⭐ ① وجود الإثبات ⇒ ② النطاق ⇒
+ *   ③ نوع المصدر ⇒ ④ الشكل البنيوي ⇒ ⑤ حالة الهوية ⇒ ⑥ المستأجر
+ *   ⇒ ⑦ الدور المُدَّعى ⇒ ⑧⭐ السياق الإداري ⇒ ⑨⭐⭐ **جهة الإصدار
+ *   (M54)** ⇒ ⑩⭐⭐ **إعادة التحقّق من السجلّ (M54)** ⇒ ⑪ النتيجة.
+ * ⭐⇒⇒ **أي خطوة تفشل = رفض صريح (بلا ادّعاء موثوق ⇒ بلا سياق).**
+ */
+function evaluateIdentityAttestation(
+  attestation         ,
+  options                          = {},
+)                           {
+  const scope = options.scope ?? 'test';
+
+  // ⭐ ① وجود الإثبات — ⭐ الرفض الافتراضي عند الغياب.
+  if (!attestation || typeof attestation !== 'object') {
+    return deny('identity_source_missing', 'لا يوجد إثبات هوية ⇒ لا ادّعاء موثوق');
+  }
+  const raw = attestation                       ;
+
+  // ⭐ ② النطاق — ⭐ ⛔ في هذه الشريحة: النطاق المسموح `test` فقط.
+  if (scope !== 'test') {
+    return deny('identity_scope_forbidden', `النطاق «${scope}» غير مفعّل في عقد S09-0`);
+  }
+
+  // ⭐ ③ نوع المصدر — ⭐ معروف ⇦ نشط · ⭐ معروف ⇦ غير مفعّل · ⭐ مجهول ⇦ مرفوض.
+  if (!raw.proof || typeof raw.proof !== 'object') {
+    return deny('identity_source_missing', 'الإثبات بلا نوع مصدر ⇒ لا ادّعاء موثوق');
+  }
+  const proofKind = (raw.proof                      ).kind;
+  if (proofKind === 'external_attested') {
+    return deny(
+      'identity_source_inactive',
+      'المصدر الخارجي الموثّق غير مفعّل — تفعيله يحتاج تصريح المالك منفصل',
+    );
+  }
+  if (proofKind !== 'local_test') {
+    return deny('identity_source_untrusted', 'نوع المصدر خارج المجموعة المغلقة');
+  }
+  const proof = raw.proof                                               ;
+  if (typeof proof.source_id !== 'string' || proof.source_id.length === 0) {
+    return deny('identity_source_untrusted', 'المصدر المحلي بلا معرّف ⇒ لا ادّعاء موثوق');
+  }
+
+  // ⭐ ④ الشكل البنيوي — ⭐ (نفس أنماط النواة) ⭐⇒⇒ **بلا أي ثقة هنا.**
+  const structure = evaluateIdentityAttestationStructure(raw);
+  if (!structure.structurally_valid) {
+    return deny(
+      structure.code ?? 'identity_attestation_invalid',
+      structure.reason ?? 'الإثبات غير مطابق للشكل',
+    );
+  }
+
+  // ⭐ ⑤ حالة الهوية — ⭐ النشطة وحدها تُقبل.
+  if (raw.status === 'revoked') {
+    return deny('identity_revoked', 'الهوية ملغاة');
+  }
+  if (raw.status === 'expired') {
+    return deny('identity_expired', 'صلاحية الهوية منتهية');
+  }
+
+  // ⭐ ⑥ المستأجر — ⭐ ادّعاء العميل لا يُقدَّم على مستأجر الإثبات.
+  if (
+    raw.claimed_tenant_id !== undefined &&
+    raw.claimed_tenant_id !== raw.tenant_id
+  ) {
+    return deny('identity_tenant_conflict', 'المستأجر المُدَّعى لا يطابق مستأجر الإثبات');
+  }
+
+  // ⭐ ⑦ الدور المُدَّعى — ⭐ ⛔ رفع دور من العميل = رفض بنيوي.
+  if (raw.claimed_role !== undefined && raw.claimed_role !== raw.role) {
+    return deny('identity_role_conflict', 'الدور المُدَّعى لا يطابق دور الإثبات');
+  }
+
+  // ⭐ ⑧⭐ السياق الإداري — ⭐ **المصدر لا يمنح صلاحية إدارية بنفسه**.
+  if (raw.requests_admin === true || raw.admin_authority !== undefined) {
+    if (!isIdentityAdminAuthority(raw.admin_authority)) {
+      return deny('admin_authority_invalid', 'سلطة الإدارة غير صالحة — المصدر لا يمنحها بنفسه');
+    }
+    const authority = raw.admin_authority                             ;
+    const registry = options.registry;
+    const owner = registry?.find(String(authority.identity_id ?? ''));
+    if (!owner || owner.role !== 'owner') {
+      return deny('admin_not_owner', 'سلطة الإدارة ليست بهوية مالك مسجَّلة');
+    }
+    if (owner.status !== 'active') {
+      return deny('admin_revoked', 'سلطة الإدارة ملغاة');
+    }
+  }
+
+  // ⭐ ⑨⭐⭐ **جهة الإصدار (M54)** — ⭐ **مطابقة الشكل ⛔ لا تكفي**.
+  const snapshot = ISSUED_ATTESTATIONS.get(raw);
+  if (!snapshot) {
+    return deny(
+      'identity_issuer_unverified',
+      'الإثبات لم يصدر من المصدر المحلي ⇒ مطابقة الشكل وحدها لا تُثبت شيئاً',
+    );
+  }
+  if (
+    snapshot.identity_id !== raw.identity_id ||
+    snapshot.tenant_id !== raw.tenant_id ||
+    snapshot.actor_id !== raw.actor_id ||
+    snapshot.role !== raw.role ||
+    snapshot.status !== raw.status ||
+    snapshot.source_id !== proof.source_id
+  ) {
+    return deny(
+      'identity_registry_mismatch',
+      'تعديل على إثبات مُصدَر ⇒ الرفض (القيمة المثبتة هي المرجع)',
+    );
+  }
+
+  // ⭐ ⑩⭐⭐ **إعادة التحقّق من السجلّ (M54)** — ⭐ كل تقييم ⇒ فحص جديد.
+  const registry = snapshot.registry;
+  const current = registry.find(snapshot.identity_id);
+  if (!current) {
+    return deny('identity_unregistered', 'الهوية لم تعد مسجَّلة في السجلّ المُصدِر');
+  }
+  if (current.status !== 'active') {
+    return deny('identity_revoked', 'الهوية ملغاة في السجلّ المُصدِر');
+  }
+  const now = options.now?.() ?? registry.currentTime();
+  if (registry.isExpired(snapshot.identity_id, now)) {
+    return deny('identity_expired', 'صلاحية الهوية منتهية في السجلّ المُصدِر');
+  }
+  if (
+    current.role !== snapshot.role ||
+    current.tenant_id !== snapshot.tenant_id ||
+    current.actor_id !== snapshot.actor_id
+  ) {
+    return deny(
+      'identity_registry_mismatch',
+      'سجلّ الهوية لا يطابق ما صدر من الإصدار ⇒ الرفض',
+    );
+  }
+
+  // ⭐ ⑪ النتيجة — ⭐ ادّعاء موثوق (بلا صلاحية: الصلاحية = قرار منفصل).
+  return {
+    trusted: true,
+    claim: {
+      identity_id: snapshot.identity_id,
+      tenant_id: snapshot.tenant_id,
+      actor_id: snapshot.actor_id,
+      role: snapshot.role,
+      status: 'active',
+      source_kind: 'local_test',
+      source_id: snapshot.source_id,
+      issuer_trust: 'issued_local_test',
+      contract_state: IDENTITY_SOURCE_CONTRACT.state,
+      evaluation_scope: 'test',
+      session_established: false,
+    },
+  };
+}
+
+/**
+ * ⭐⭐⭐ **بوّابة العقد الفاشلة-مغلقة** — ⭐ ترمي عند الرفض ⇒
+ *   ⭐⇒⇒ لا ادّعاء موثوق بلا سياق ⇒ ⇒⇒ (الافتراضي = المنع).
+ */
+function assertIdentityAttestation(
+  attestation         ,
+  options                          = {},
+)                       {
+  const decision = evaluateIdentityAttestation(attestation, options);
+  if (!decision.trusted) {
+    throw new IdentityContractError(decision.code, decision.reason);
+  }
+  return decision.claim;
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **هل نوع المصدر نشط في هذه الشريحة؟** — ⭐ قراءة العقد.
+ * ⭐ ⛔ `external_attested` ⇒ `false` ⇒ ⭐ **التفعيل يحتاج تصريح منفصل.**
+ */
+function isActiveIdentitySourceKind(kind         )                       {
+  return (
+    typeof kind === 'string' &&
+    (IDENTITY_SOURCE_CONTRACT.active_proof_kinds                     ).includes(kind)
+  );
+}
+return { IDENTITY_SOURCE_KINDS, IDENTITY_ATTESTATION_STATUSES, IDENTITY_CONTRACT_STATES, IDENTITY_CONTRACT_CODES, IdentityContractError, IDENTITY_SOURCE_CONTRACT, issueLocalTestAttestation, evaluateIdentityAttestationStructure, evaluateIdentityAttestation, assertIdentityAttestation, isActiveIdentitySourceKind };
+})();
+
+const __m_src_core_index = (() => {
 // ============================================================
 // WASL AI — النواة الداخلية للشريحة الأولى (تصدير موحّد)
 // ------------------------------------------------------------
@@ -4570,73 +5153,830 @@ const __m_index = (() => {
 //    (بمصدر جلسات إلزامي) و`resolveProductionTenantContext` (يرفض مصدر الاختبار).
 // ============================================================
 
-const { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope } = __m_envelope;
+const { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope } = __m_src_core_envelope;
 
 // ⭐ Slice 03 — الصلاحيات المحلية (حدّ الثقة نفسه · ⭐ الافتراضي = المنع)
 // ⭐ الدور وسياسة الأدوار (حدّ الثقة — الاصلاحية من النواة)
-const { CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities } = __m_capability;
+const { CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities } = __m_src_core_capability;
 
-const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow } = __m_tenant;
+const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow } = __m_src_core_tenant;
 
 // ⛔ `tenantContextFromSession` و`issueSessionAttestation` و`registerSessionSource`
 //    و`markLocalTestInput`
 //    **غير مُصدرة من السطح العام** ⇒ المسار العام الوحيد = `resolveTenantContext`
 //    (بمصدر جلسات إلزامي **مسجّل**) و`resolveProductionTenantContext` (يرفض مصدر الاختبار).
 
-const { activeSessionSources, resolveProductionTenantContext, resolveTenantContext } = __m_session;
+const { activeSessionSources, resolveProductionTenantContext, resolveTenantContext } = __m_src_core_session;
 
-const { AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS } = __m_audit_log;
+const { AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS } = __m_src_core_audit_log;
 
 // ⛔ `issueAuditAdminScope` **غير مُصدَّر من السطح العام** (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)
 //    ⇒ ⭐ ⇒⇒ **السطح العام الإنتاجي لا يستطيع إصدار نطاق إدارة** ⇒ ⇒⇒
 //    ⇒⇒⇒ **ولا يوجد مسار لتفريغ كل المستأجرين من أي مقبض شائع**
 //    ⇒ ⇒⇒⇒ **والتفريغ الشامل = سلطان إداري محلي (نطاق بنَسَب مثبت) لا تُصدَّر منه.**
 
-const { MessageStore } = __m_store;
+const { MessageStore } = __m_src_core_store;
 
 // ⭐ Slice 02 — طبقة المعالجة (عقد النتيجة + خط المعالجة)
-const { PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome } = __m_processing;
+const { PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome } = __m_src_core_processing;
 
 // ⭐ Slice 02 — قاعدة الترتيب (قرار المالك: `docs/SLICE-02-ORDERING-RULE.md`)
-const { OrderingState, evaluateOrdering } = __m_ordering;
+const { OrderingState, evaluateOrdering } = __m_src_core_ordering;
 
 // ⭐ Slice 03 — سجل أحداث القراءة (⭐ مسار منفصل عن `AuditOutcome`)
-const { ReadAuditError, ReadAuditLog } = __m_read_audit;
+const { ReadAuditError, ReadAuditLog } = __m_src_core_read_audit;
 
 // ⭐ Slice 03 — طبقة قراءة محادثات المستأجر (⭐ قدرتان منفصلتان · ⭐ بلا واجهة منشورة)
-const { CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit } = __m_conversation_query;
+const { CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit } = __m_src_core_conversation_query;
 
 // ⭐ Slice 04 — سجل تغييرات المحادثات (⭐ مستقل عن سجل المعالجة وسجل أحداث القراءة)
-const { CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH } = __m_conversation_change_log;
+const { CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH } = __m_src_core_conversation_change_log;
 
 // ⭐ Slice 04 — طبقة إدارة حالة المحادثة والإسناد
-const { ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState } = __m_conversation_state;
+const { ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState } = __m_src_core_conversation_state;
 
 // ⭐ Slice 05 — مركز عمل الوكيل (⭐ قراءة فقط · بلا نص رسائل · عزل بالمستأجر)
-const { AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue } = __m_agent_queue;
+const { AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue } = __m_src_core_agent_queue;
 
 // ⭐ Slice 05 — مؤشرات الخدمة (⭐ قراءة فقط · لا قيمة مخترَعة · المشرف والمالك فقط)
-const { CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics } = __m_service_metrics;
+const { CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics } = __m_src_core_service_metrics;
 
 // ⭐ Slice 08 — طبقة الهوية والتفويض المحلية (محاكاة محلية · ⛔ ليست مصادقة إنتاجية)
 // ⭐ ⛔ `issueIdentityAdminAuthority` **غير مُصدَّر من السطح العام** ⇒ ⇒⇒
 //    ⇒⇒⇒ **السطح العام لا يصدر سلطة إدارة** ⇒ ⇒⇒⇒ **⇒ فالتسجيل والإلغاء
 //    يحتاجان طبقة التطبيق المحلية** ⇒ ⇒⇒⇒⇒ **والتسجيل لا يتم عند تحميل
 //    الوحدة** ⇒ ⇒⇒⇒⇒⇒ **⇒ لا مصدر افتراضي ولا مسار إنتاجي.**
-const { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, LocalIdentityRegistry } = __m_identity;
+const { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, LocalIdentityRegistry } = __m_src_core_identity;
 
-const { LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, authorizeLocalRequest, createLocalIdentitySources, requireLocalAuthorization } = __m_authorization;
+const { LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, authorizeLocalRequest, createLocalIdentitySources, requireLocalAuthorization } = __m_src_core_authorization;
+
+// ⭐ S09-0 — عقد مصدر الهوية المحلي (غير مفعّل · تصريح المالك D-064)
+// ⭐ ⛔ **العقد غير مفعّل عمداً** ⇒ ⭐⇒⇒ `IDENTITY_SOURCE_CONTRACT.active === false`
+// ⭐ ⇒⇒⇒ **ولا يُصدَّر منه أي دالة تُسجّل مصدر هوية ولا تُفعّل نطاقاً إنتاجياً**
+// ⭐ ⇒⇒⇒⇒ **⇒ فوجوده في السطح العام ليس تصريحاً بتفعيل أي مصدر.**
+// ⭐ D-065 (M54): ⭐ ⛔ `issueLocalTestAttestation` **غير مُصدَّر من السطح العام**
+//    ⇒ ⇒⇒ **فمصدر الهوية المحلي لا يُستدعى من الإنتاج** ⇒ ⇒⇒⇒ **وإصدار
+//    إثبات هوية يبقى طبقة تطبيق محلية** ⇒ ⇒⇒⇒⇒ **⇒ وتعبئة إثبات يدوياً
+//    من الخارج ترفضها العقد (`identity_issuer_unverified`).**
+const { IDENTITY_ATTESTATION_STATUSES, IDENTITY_CONTRACT_CODES, IDENTITY_CONTRACT_STATES, IDENTITY_SOURCE_CONTRACT, IDENTITY_SOURCE_KINDS, IdentityContractError, assertIdentityAttestation, evaluateIdentityAttestation, evaluateIdentityAttestationStructure, isActiveIdentitySourceKind } = __m_src_core_identity_source_contract;
 
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
 // ⛔ لا مصدر جلسات اختباري هنا — ولا حتى واحد.
 // ⛔ ولا مصدر إنتاجي مسجَّل ⇒ لا افتراض افتراضي لمصدر الجلسات.
-return { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope, CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities, ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow, activeSessionSources, resolveProductionTenantContext, resolveTenantContext, AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS, MessageStore, PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome, OrderingState, evaluateOrdering, ReadAuditError, ReadAuditLog, CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit, CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH, ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState, AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue, CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics, LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, LocalIdentityRegistry, LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, authorizeLocalRequest, createLocalIdentitySources, requireLocalAuthorization };
+return { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope, CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities, ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow, activeSessionSources, resolveProductionTenantContext, resolveTenantContext, AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS, MessageStore, PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome, OrderingState, evaluateOrdering, ReadAuditError, ReadAuditLog, CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit, CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH, ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState, AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue, CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics, LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, LocalIdentityRegistry, LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, authorizeLocalRequest, createLocalIdentitySources, requireLocalAuthorization, IDENTITY_ATTESTATION_STATUSES, IDENTITY_CONTRACT_CODES, IDENTITY_CONTRACT_STATES, IDENTITY_SOURCE_CONTRACT, IDENTITY_SOURCE_KINDS, IdentityContractError, assertIdentityAttestation, evaluateIdentityAttestation, evaluateIdentityAttestationStructure, isActiveIdentitySourceKind };
 })();
 
-const __m_wasl_workbench_preview_runtime = (() => {
-const { AuditLog, ConversationChangeLog, ConversationStateStore, LocalIdentityRegistry, MessageStore, OrderingState, ProcessingLayer, ReadAuditLog, ALLOWED_TRANSITIONS, CONVERSATION_STATES, TERMINAL_CONVERSATION_STATES, assignConversation, authorizeLocalRequest, createLocalIdentitySources, isTerminalState, listWorkQueue, readConversationChanges, unassignConversation, updateConversationState } = __m_index;
-const { issueIdentityAdminAuthority } = __m_identity;
+const __m_src_local_journey_types = (() => {
+// ============================================================
+// WASL AI — أنواع رحلة خدمة العملاء (محاكاة محلية · D-065)
+// ------------------------------------------------------------
+// ⭐⭐⭐ **هذه محاكاة محلية** ⇒ ⭐ **ليست نظام خدمة عملاء** ⇒ ⭐ ولا قناة
+//   تواصل حقيقية ⇒ ⭐ ولا إرسال ⇒ ⭐ ولا بيانات عميل حقيقية.
+// ⭐⭐ **العقد الحاكم**: ⭐ كل قرار في الرحلة = **قرار النواة** (لا نسخة
+//   موازية) ⇒ ⭐⇒⇒ **وكل ردّ = قالب ثابت** (بلا توليد) ⇒ ⭐⇒⇒⇒ **فالنتيجة
+//   قابلة للتكرار بالكامل.**
+// ⭐⭐ **الأثر**: ⭐ الرحلة **محاكاة صناعية بالكامل** ⇒ ⭐⇒⇒ **فلن يدخل
+//   شيء منها إلى الإنتاج** ⇒ ⭐⇒⇒⇒ **وهي خارج حزمة `npm` (نطاق `src/core/`).**
+// ⛔ بلا شبكة · ⛔ بلا تخزين دائم · ⛔ بلا استدعاء ذكاء خارجي.
+// ============================================================
+
+/** ⭐⭐⭐ **نيّات الرحلة** — ⭐ مجموعة مغلقة. */
+const JOURNEY_INTENTS = ['billing', 'technical', 'delivery', 'general']         ;
+
+                                                             
+
+/** ⭐⭐⭐ **الأولويات** — ⭐ مجموعة مغلقة. */
+const JOURNEY_PRIORITIES = ['normal', 'high']         ;
+
+                                                                  
+
+/** ⭐⭐⭐ **أنواع الخطوات** — ⭐ مجموعة مغلقة (سجل الأحداث). */
+const JOURNEY_STEP_KINDS = [
+  'identity',
+  'receive',
+  'classify',
+  'reply',
+  'assign',
+  'advance',
+  'reject',
+]         ;
+
+                                                                  
+
+/** ⭐⭐⭐ **خطوة واحدة في السجل** — ⭐ (محلي · في الذاكرة). */
+                              
+                       
+                                 
+                          
+                                                       
+                               
+ 
+
+/** ⭐⭐⭐ **نتيجة عملية في الرحلة**. */
+                                 
+                       
+                               
+                                    
+                                        
+                                            
+                                
+                                
+                                            
+                                         
+ 
+
+/** ⭐⭐⭐ **نتيجة التصنيف** — ⭐ (حتمية · بلا توليد). */
+return { JOURNEY_INTENTS, JOURNEY_PRIORITIES, JOURNEY_STEP_KINDS };
+})();
+
+const __m_src_local_journey_classification = (() => {
+const { JOURNEY_INTENTS } = __m_src_local_journey_types;
+// ============================================================
+// WASL AI — التصنيف الحتمي وقوالب الردّ (محاكاة محلية · D-065)
+// ------------------------------------------------------------
+// ⭐⭐⭐ **قاعدة الحاكمة**: ⭐ التصنيف = **جدول كلمات ثابت** ⇒ ⭐⇒⇒ **لا
+//   نموذج تعلّم ولا استدعاء خارجي** ⇒ ⭐⇒⇒⇒ **فنفس النص ⇒ نفس النتيجة
+//   دائماً** (قابل للتكرار).
+// ⭐⭐ **الكشف عن النية**: ⭐ **أكثر عدد مطابقات** يفوز ⇒ ⭐⇒⇒ **وعند
+//   التعادل يفوز **الترتيب المُعلَن** (`JOURNEY_INTENTS`)** ⇒ ⭐⇒⇒⇒ **فلا
+//   عشوائية ولا اعتماد على ترتيب كائنات.**
+// ⛔ لا بيانات عميل حقيقية · ⛔ لا استدعاء خارجي.
+// ============================================================
+
+
+
+/** ⭐⭐⭐ **جدول الكلمات المفتاحية** — ⭐ ثابت ومُعلَن (بلا تعلّم). */
+const INTENT_KEYWORDS                                                     = Object.freeze({
+  billing: Object.freeze(['فاتورة', 'دفع', 'تحويل', 'اشتراك', 'سعر', 'مدفوعات']),
+  technical: Object.freeze(['خطأ', 'تطبيق', 'تسجيل دخول', 'كلمة مرور', 'مشكلة', 'لا يعمل', 'عطل']),
+  delivery: Object.freeze(['شحن', 'توصيل', 'عنوان', 'طرد', 'مندوب', 'شحنة']),
+  general: Object.freeze([]),
+});
+
+/** ⭐⭐⭐ **كلمات رفع الأولوية** — ⭐ ثابتة. */
+const HIGH_PRIORITY_KEYWORDS                    = Object.freeze([
+  'عاجل',
+  'ضروري',
+  'فورا',
+  'متوقف',
+  'انقطاع',
+  'خسارة',
+  'فشل',
+]);
+
+/** ⭐⭐⭐ **قوالب الردّ** — ⭐ ثابتة (نصّ محفوظ · بلا توليد). */
+const REPLY_TEMPLATES                                          = Object.freeze({
+  billing:
+    'استلمنا استفسارك عن الفواتير. تم تحويله إلى فريق الحسابات وسيتم الرد عليك في أقرب وقت.',
+  technical:
+    'استلمنا بلاغك عن المشكلة التقنية. فريق الدعم التقني يراجع التفاصيل الآن.',
+  delivery: 'استلمنا استفسارك عن الشحنة. فريق التوصيل يتابع حالة الشحنة الآن.',
+  general: 'استلمنا رسالتك. سيتواصل معك فريق خدمة العملاء لتفاصيل الاستفسار.',
+});
+
+/** ⭐⭐⭐ **سقف الأولوية** — ⭐ ثابت. */
+const HIGH_PRIORITY_PREFIX = 'طلبك عاجل — تم رفع الأولوية.';
+
+/** ⭐⭐⭐ **تطبيع النص** — ⭐ (حروف صغيرة + مسافات مدمجة). */
+function normalize(text        )         {
+  return String(text ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **تصنيف رسالة الرحلة** — ⭐ **حتمي بالكامل**.
+ * ⭐ نفس النص ⇒ نفس النية والأولوية ⇒ ⭐⇒⇒ **فالنتيجة قابلة للتكرار.**
+ */
+function classifyJourneyMessage(text        )                        {
+  const normalized = normalize(text);
+  const matched           = [];
+
+  let intent                = 'general';
+  let bestCount = 0;
+  for (const candidate of JOURNEY_INTENTS) {
+    const keywords = INTENT_KEYWORDS[candidate];
+    let count = 0;
+    for (const keyword of keywords) {
+      if (normalized.includes(keyword)) {
+        count += 1;
+        matched.push(keyword);
+      }
+    }
+    // ⭐⭐⭐ **الأكثر مطابقة يفوز** ⇒ ⭐⇒⇒ **وعند التعادل: الأول في الترتيب
+    //   المُعلَن** ⇒ ⭐⇒⇒⇒ **فالنتيجة لا تعتمد على ترتيب غير مضمون.**
+    if (count > bestCount) {
+      intent = candidate;
+      bestCount = count;
+    }
+  }
+
+  let priority                  = 'normal';
+  for (const keyword of HIGH_PRIORITY_KEYWORDS) {
+    if (normalized.includes(keyword)) {
+      priority = 'high';
+      matched.push(keyword);
+      break;
+    }
+  }
+
+  return { intent, priority, matched: Object.freeze([...matched]) };
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **ردّ الرحلة** — ⭐ **قالب ثابت** (بلا توليد · بلا خارجي).
+ */
+function renderJourneyReply(
+  intent               ,
+  priority                 ,
+)         {
+  const base = REPLY_TEMPLATES[intent] ?? REPLY_TEMPLATES.general;
+  return priority === 'high' ? `${HIGH_PRIORITY_PREFIX} ${base}` : base;
+}
+return { classifyJourneyMessage, renderJourneyReply };
+})();
+
+const __m_src_local_journey_engine = (() => {
+const { AuditLog, ConversationChangeLog, ConversationStateStore, LocalIdentityRegistry, MessageStore, OrderingState, ProcessingLayer, ReadAuditLog, assignConversation, authorizeLocalRequest, createLocalIdentitySources, updateConversationState } = __m_src_core_index;
+const { issueIdentityAdminAuthority } = __m_src_core_identity;
+const { evaluateIdentityAttestation, issueLocalTestAttestation } = __m_src_core_identity_source_contract;
+const { classifyJourneyMessage, renderJourneyReply } = __m_src_local_journey_classification;
+// ============================================================
+// WASL AI — محاكي رحلة خدمة العملاء (محاكاة محلية · D-065)
+// ------------------------------------------------------------
+// ⭐⭐⭐ **هذا ليس نظام خدمة عملاء** ⇒ ⭐ محاكاة صناعية محلية بالكامل.
+// ⭐⭐ **قاعدة إعادة الاستخدام**: ⭐ **لا نسخة موازية** من منطق النواة ⇒
+//   ⭐⇒⇒ **كل قرار يمرّ على دوال النواة نفسها** (الطبقة · التخزين ·
+//   الصلاحيات · انتقالات الحالة · سجل التغييرات) ⇒ ⭐⇒⇒⇒ **فما يظهر في
+//   الرحلة هو ما تفعله النواة فعلاً — لا ما نريد أن تدّعيه.**
+// ⭐⭐ **هوية المالك (M54)**: ⭐ كل عملية تبدأ بـ**إثبات هوية صادر من
+//   المصدر المحلي** ⇒ ⭐⇒⇒ **ونجاح تقييمه هو شرط التنفيذ**.
+// ⛔ بلا شبكة · ⛔ بلا تخزين دائم · ⛔ بلا إرسال فعلي · ⛔ بلا استدعاء خارجي.
+// ============================================================
+
+
+// ⭐⭐⭐ **إصدار سلطة الإدارة غير مُصدَّر من السطح العام** ⇒ ⭐ استيراد مباشر.
+
+// ⭐⭐⭐ **إصدار إثبات الهوية غير مُصدَّر من السطح العام** ⇒ ⭐ استيراد مباشر
+//    ⇒ ⭐⇒⇒ **فلا جهة خارجية تستطيع إصدار إثبات هوية لهذا المسار.**
+
+
+             
+                 
+                  
+                
+              
+                  
+                    
+
+/** ⭐⭐⭐ **لحظة القياس المثبَّتة** — ⭐ نفس المدخل ⇒ نفس النتيجة. */
+const JOURNEY_NOW = '2026-01-05T12:00:00.000Z';
+
+/** ⭐⭐⭐ **المستأجر الأول** — ⭐ (نطاق الاختبار فقط). */
+const JOURNEY_TENANT = 'tnt_journey_0001';
+
+/** ⭐⭐⭐ **المستأجر الثاني** — ⭐ لاختبار العزل. */
+const JOURNEY_OTHER_TENANT = 'tnt_journey_0002';
+
+/** ⭐⭐⭐ **الأدوار التي تلعب في الرحلة**. */
+                                                            
+
+const ACTOR_IDENTITIES                                         = Object.freeze({
+  owner: 'journey-ident-owner',
+  supervisor: 'journey-ident-supervisor',
+  agent: 'journey-ident-agent',
+});
+
+const ACTOR_ACTORS                                         = Object.freeze({
+  owner: 'actor_journey_0001',
+  supervisor: 'actor_journey_0002',
+  agent: 'actor_journey_0003',
+});
+
+                                          
+                              
+                             
+ 
+
+/**
+ * ⭐⭐⭐⭐⭐ **محاكي الرحلة** — ⭐ **الحالة كلها في الذاكرة**.
+ * ⭐ إغلاق العملية = ضياع كل شيء ⇒ ⭐⇒⇒ **لا أثر دائم ولا بيانات عميل.**
+ */
+class JourneySimulator {
+           #registry                       ;
+           #sources                      ;
+           #layer                 ;
+           #deps                               ;
+           #steps                = [];
+           #tenantId        ;
+  #seq = 0;
+  #messages = 0;
+  #conversations = 0;
+  #last                        = null;
+
+  constructor(options                          = {}) {
+    const now = options.now ?? (() => JOURNEY_NOW);
+    this.#tenantId = options.tenantId ?? JOURNEY_TENANT;
+
+    const audit = new AuditLog({ now });
+    const readAudit = new ReadAuditLog({ now });
+    const store = new MessageStore({ now, audit });
+    const states = new ConversationStateStore({ now });
+    const changes = new ConversationChangeLog({ now });
+    this.#layer = new ProcessingLayer({ store, audit, orderingState: new OrderingState() });
+
+    // ⭐⭐⭐ **سجلّ الهوية المحلي** — ⭐ (تسجيل صريح · بلا افتراضي).
+    this.#registry = new LocalIdentityRegistry({ now });
+    const ownerSeed = {
+      identity_id: ACTOR_IDENTITIES.owner,
+      tenant_id: this.#tenantId,
+      actor_id: ACTOR_ACTORS.owner,
+      role: 'owner'         ,
+      expires_at: null,
+    };
+    const ownerAuthority = issueIdentityAdminAuthority({
+      ...ownerSeed,
+      status: 'active',
+      expires_at: null,
+    });
+    this.#registry.register(ownerSeed, ownerAuthority);
+    this.#registry.register(
+      {
+        identity_id: ACTOR_IDENTITIES.supervisor,
+        tenant_id: this.#tenantId,
+        actor_id: ACTOR_ACTORS.supervisor,
+        role: 'supervisor',
+        expires_at: null,
+      },
+      ownerAuthority,
+    );
+    this.#registry.register(
+      {
+        identity_id: ACTOR_IDENTITIES.agent,
+        tenant_id: this.#tenantId,
+        actor_id: ACTOR_ACTORS.agent,
+        role: 'agent',
+        expires_at: null,
+      },
+      ownerAuthority,
+    );
+    this.#registry.register(
+      {
+        identity_id: 'journey-ident-other-owner',
+        tenant_id: JOURNEY_OTHER_TENANT,
+        actor_id: 'actor_journey_0004',
+        role: 'owner',
+        expires_at: null,
+      },
+      ownerAuthority,
+    );
+    this.#sources = createLocalIdentitySources(this.#registry);
+
+    const roster                                    = {
+      [this.#tenantId]: [ACTOR_ACTORS.supervisor, ACTOR_ACTORS.agent],
+      [JOURNEY_OTHER_TENANT]: ['actor_journey_0004'],
+    };
+    this.#deps = {
+      store,
+      states,
+      changes,
+      readAudit,
+      employees: {
+        isEmployee(tenantId        , actorId        )          {
+          return (roster[tenantId] ?? []).includes(actorId);
+        },
+      },
+    };
+  }
+
+  // ── ⭐ مساعدات داخلية ──
+
+  #record(kind                 , detail        , code               )       {
+    this.#seq += 1;
+    this.#steps.push({ seq: this.#seq, kind, detail, code });
+  }
+
+  #codeOf(error         )         {
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      return String((error                     ).code);
+    }
+    return 'journey_unknown_error';
+  }
+
+  #nextConversationRef()         {
+    this.#conversations += 1;
+    return `conv_journey_${String(this.#conversations).padStart(4, '0')}`;
+  }
+
+  /**
+   * ⭐⭐⭐⭐⭐ **بوّابة الهوية (M54)** — ⭐ **شرط التنفيذ الأول في كل عملية**.
+   * ⭐⭐⭐ **الفصل**: ⭐ الفحص البنيوي وحده ⛔ لا يكفي ⇒ ⭐⇒⇒ **فلا بدّ من
+   *   إثبات صادر من المصدر المحلي + إعادة تحقّق من السجلّ.**
+   */
+  #identityGate(actor              )          {
+    const identityId = ACTOR_IDENTITIES[actor];
+    let attestation;
+    try {
+      attestation = issueLocalTestAttestation(identityId, { registry: this.#registry });
+    } catch (error) {
+      const code = this.#codeOf(error);
+      this.#record('reject', `تعذّر إصدار إثبات هوية «${actor}»`, code);
+      return false;
+    }
+    const decision = evaluateIdentityAttestation(attestation, { registry: this.#registry });
+    if (!decision.trusted) {
+      this.#record('reject', `إثبات هوية «${actor}» مرفوض ⇒ لا تنفيذ`, decision.code);
+      return false;
+    }
+    this.#record('identity', `هوية «${actor}» موثّقة (${decision.claim.role})`, null);
+    return true;
+  }
+
+  /** ⭐⭐⭐ **بناء السياق** — ⭐ **من طبقة التفويض القائمة** (بلا نسخة موازية). */
+  #context(
+    actor              ,
+    conversationRef        ,
+    operation                             ,
+  )                       {
+    const decision = authorizeLocalRequest(
+      {
+        identity_id: ACTOR_IDENTITIES[actor],
+        conversation_ref: conversationRef,
+        operation,
+      },
+      { registry: this.#registry, sources: this.#sources },
+    );
+    if (!decision.allowed) {
+      this.#record('reject', `العملية «${operation}» مرفوضة لـ«${actor}»`, decision.code);
+      return null;
+    }
+    return decision.context;
+  }
+
+  /** ⭐⭐⭐ **رسالة صناعية** — ⭐ (بلا بريد · بلا بيانات حقيقية). */
+  #envelope(conversationRef        , direction                        , body        )                  {
+    this.#messages += 1;
+    // ⭐⭐⭐ **أزمنة متصاعدة بثانية واحدة** ⇒ ⭐⇒⇒ **فلا تعارض في الترتيب**
+    //   (لحظة واحدة لرسالتين = مؤجَّلة) ⇒ ⭐⇒⇒⇒ **والتسلسل يبقى حتمياً.**
+    const occurredAt = new Date(
+      Date.parse(JOURNEY_NOW) + this.#messages * 1000,
+    ).toISOString();
+    return {
+      schema_version: '1',
+      message_ref: `journey-msg-${String(this.#messages).padStart(4, '0')}`,
+      channel: 'journey',
+      direction,
+      from: 'participant_journey_0001',
+      to: 'participant_journey_0101',
+      body,
+      occurred_at: occurredAt,
+      locale: 'ar-EG',
+      attributes: { journey: 'true' },
+      conversation_ref: conversationRef,
+    };
+  }
+
+  #outcome(
+    ok         ,
+    code               ,
+    conversationRef        ,
+    fromStep        ,
+    intent                       = null,
+    priority                         = null,
+    reply                = null,
+    state                = null,
+    assignee                = null,
+  )                 {
+    const outcome                 = {
+      ok,
+      code,
+      conversation_ref: conversationRef,
+      intent,
+      priority,
+      reply,
+      state,
+      assignee_actor_id: assignee,
+      steps: this.#steps.slice(fromStep),
+    };
+    this.#last = outcome;
+    return outcome;
+  }
+
+// ============================================================
+// ⭐⭐⭐⭐⭐ **المسار الصناعي للرحلة** — ⭐ **باستخدام دوال النواة نفسها**
+// ============================================================
+
+/**
+ * ⭐⭐⭐⭐⭐ **استقبال رسالة عميل** — ⭐ **المسار الكامل**:
+ * ⭐ ① بوّابة الهوية ⇒ ② استقبال الرسالة ⇒ ③ التصنيف الحتمي
+ * ⭐ ⇒ ④ ردّ بقالب ثابت ⇒ ⑤ الإسناد ⇒ ⑥ التقدّم إلى `pending`.
+ * ⭐⭐⭐ **الردّ يُخزَّن محلياً فقط** ⇒ ⭐⇒⇒ **ولا يُرسل إلى أي جهة.**
+ */
+receive(text        , options                               = {})                 {
+  const fromStep = this.#steps.length;
+  const conversationRef = options.conversationRef ?? this.#nextConversationRef();
+
+  // ① بوّابة الهوية (المالك يستقبل الطلب).
+  if (!this.#identityGate('owner')) {
+    return this.#outcome(false, 'identity_issuer_unverified', conversationRef, fromStep);
+  }
+
+  // ② استقبال الرسالة — عبر طبقة المعالجة (لا تخزين مباشر).
+  const ownerCtx = this.#context('owner', conversationRef, 'conversation.read');
+  if (!ownerCtx) {
+    return this.#outcome(false, 'context_denied', conversationRef, fromStep);
+  }
+  const processed = this.#layer.process(
+    ownerCtx,
+    this.#envelope(conversationRef, 'inbound', String(text ?? '')),
+  );
+  if (processed.decision !== 'accepted') {
+    this.#record('reject', 'الرسالة مرفوضة من طبقة المعالجة', processed.reason_code);
+    return this.#outcome(false, processed.reason_code, conversationRef, fromStep);
+  }
+  this.#record('receive', 'استُقبلت رسالة العميل وخُزّنت محلياً', null);
+
+  // ③ التصنيف — حتمي (جدول كلمات ثابت).
+  const classification = classifyJourneyMessage(text);
+  this.#record(
+    'classify',
+    `النية «${classification.intent}» · الأولوية «${classification.priority}»`,
+    null,
+  );
+
+  // ④ الردّ —الموظّف يكتب ردّه بقالب ثابت (محلي · بلا إرسال).
+  const reply = renderJourneyReply(classification.intent, classification.priority);
+  if (!this.#identityGate('agent')) {
+    return this.#outcome(
+      false,
+      'identity_issuer_unverified',
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+    );
+  }
+  const agentCtx = this.#context('agent', conversationRef, 'conversation.read');
+  if (!agentCtx) {
+    return this.#outcome(
+      false,
+      'context_denied',
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+    );
+  }
+  const replied = this.#layer.process(
+    agentCtx,
+    this.#envelope(conversationRef, 'outbound', reply),
+  );
+  if (replied.decision !== 'accepted') {
+    this.#record('reject', 'الردّ مرفوض من طبقة المعالجة', replied.reason_code);
+    return this.#outcome(
+      false,
+      replied.reason_code,
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+    );
+  }
+  this.#record('reply', 'حُرّر ردّ بقالب ثابت (لم يُرسل)', null);
+
+  // ⑤ فتح المحادثة ثم إسنادها — المالك فقط (صلاحية `conversation.assign`).
+  const openCtx = this.#context('owner', conversationRef, 'conversation.state.update');
+  if (!openCtx) {
+    return this.#outcome(
+      false,
+      'context_denied',
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+      reply,
+    );
+  }
+  try {
+    updateConversationState(openCtx, conversationRef, 'open', this.#deps, {
+      reason: 'فتح الطلب الوارد',
+    });
+  } catch (error) {
+    const code = this.#codeOf(error);
+    this.#record('reject', 'تعذّر فتح المحادثة', code);
+    return this.#outcome(
+      false,
+      code,
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+      reply,
+    );
+  }
+
+  const escalated = classification.priority === 'high';
+  const assignee = escalated ? ACTOR_ACTORS.supervisor : ACTOR_ACTORS.agent;
+  const assignCtx = this.#context('owner', conversationRef, 'conversation.assign');
+  if (!assignCtx) {
+    return this.#outcome(
+      false,
+      'context_denied',
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+      reply,
+    );
+  }
+  try {
+    assignConversation(assignCtx, conversationRef, assignee, this.#deps, {
+      reason: escalated ? 'تصعيد الطلب العاجل' : 'توزيع على خدمة العملاء',
+    });
+  } catch (error) {
+    const code = this.#codeOf(error);
+    this.#record('reject', 'تعذّر إسناد المحادثة', code);
+    return this.#outcome(
+      false,
+      code,
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+      reply,
+    );
+  }
+  this.#record(
+    'assign',
+    escalated ? 'صُعّد الطلب إلى المشرف (أولوية عالية)' : 'أُسندت المحادثة إلى الموظّف',
+    null,
+  );
+
+  // ⑥ التقدّم إلى `pending` — المشرف (صلاحية `conversation.state.update`).
+  const advanceCtx = this.#context('supervisor', conversationRef, 'conversation.state.update');
+  if (!advanceCtx) {
+    return this.#outcome(
+      false,
+      'context_denied',
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+      reply,
+      'assigned',
+      assignee,
+    );
+  }
+  try {
+    updateConversationState(advanceCtx, conversationRef, 'pending', this.#deps, {
+      reason: 'بانتظار ردّ العميل',
+    });
+  } catch (error) {
+    const code = this.#codeOf(error);
+    this.#record('reject', 'تعذّر تحديث حالة المحادثة', code);
+    return this.#outcome(
+      false,
+      code,
+      conversationRef,
+      fromStep,
+      classification.intent,
+      classification.priority,
+      reply,
+      'assigned',
+      assignee,
+    );
+  }
+  this.#record('advance', 'تقدّمت الحالة إلى «pending»', null);
+
+  return this.#outcome(
+    true,
+    null,
+    conversationRef,
+    fromStep,
+    classification.intent,
+    classification.priority,
+    reply,
+    'pending',
+    assignee,
+  );
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **تغيير حالة المحادثة** — ⭐ **المشرف أو المالك** (بحسب الصلاحية).
+ * ⭐⭐⭐ **انتقال غير مسموح أو حالة نهائية ⇒ رفض من النواة** (لا منطق موازٍ).
+ */
+advance(
+  conversationRef        ,
+  to        ,
+  actor               = 'supervisor',
+)                 {
+  const fromStep = this.#steps.length;
+  if (!this.#identityGate(actor)) {
+    return this.#outcome(false, 'identity_issuer_unverified', conversationRef, fromStep);
+  }
+  const ctx = this.#context(actor, conversationRef, 'conversation.state.update');
+  if (!ctx) {
+    return this.#outcome(false, 'context_denied', conversationRef, fromStep);
+  }
+  try {
+    updateConversationState(ctx, conversationRef, to         , this.#deps, {
+      reason: 'تحديث حالة الرحلة',
+    });
+  } catch (error) {
+    const code = this.#codeOf(error);
+    this.#record('reject', `تعذّر الانتقال إلى «${to}»`, code);
+    return this.#outcome(false, code, conversationRef, fromStep);
+  }
+  this.#record('advance', `تقدّمت الحالة إلى «${to}»`, null);
+  return this.#outcome(true, null, conversationRef, fromStep, null, null, null, to, null);
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **إغلاق المحادثة** — ⭐ `resolved ⇒ closed` ⇒ ⭐ **حالة نهائية**.
+ */
+close(conversationRef        )                 {
+  const fromStep = this.#steps.length;
+  if (!this.#identityGate('owner')) {
+    return this.#outcome(false, 'identity_issuer_unverified', conversationRef, fromStep);
+  }
+  const ctx = this.#context('owner', conversationRef, 'conversation.state.update');
+  if (!ctx) {
+    return this.#outcome(false, 'context_denied', conversationRef, fromStep);
+  }
+  try {
+    updateConversationState(ctx, conversationRef, 'closed', this.#deps, {
+      reason: 'إغلاق نهائي بعد الحل',
+    });
+  } catch (error) {
+    const code = this.#codeOf(error);
+    this.#record('reject', 'تعذّر الإغلاق', code);
+    return this.#outcome(false, code, conversationRef, fromStep);
+  }
+  this.#record('advance', 'أُغلقت المحادثة (حالة نهائية)', null);
+  return this.#outcome(true, null, conversationRef, fromStep, null, null, null, 'closed', null);
+}
+
+/** ⭐⭐⭐ **سجلّ الخطوات** — ⭐ (نسخة · في الذاكرة). */
+steps()                         {
+  return this.#steps.map((step) => ({ ...step }));
+}
+
+/** ⭐⭐⭐ **آخر نتيجة** — ⭐ (نسخة). */
+lastOutcome()                        {
+  return this.#last;
+}
+
+/** ⭐⭐⭐ **حالة المحادثة** — ⭐ (من متجر الحالة). */
+conversationState(conversationRef        )                {
+  const ctx = this.#context('owner', conversationRef, 'conversation.state.read');
+  if (!ctx) return null;
+  try {
+    return this.#deps.states.get(ctx, conversationRef)?.state ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** ⭐⭐⭐ **رسائل المحادثة** — ⭐ (نصّ محلي · لأغراض الفحص فقط). */
+messages(conversationRef        )                                                 {
+  const ctx = this.#context('owner', conversationRef, 'conversation.read');
+  if (!ctx) return [];
+  return this.#deps.store
+    .list(ctx, { limit: 100 })
+    .filter((row) => row.conversation_ref === conversationRef)
+    .map((row) => ({ direction: row.direction, body: row.body }));
+}
+}
+return { JOURNEY_NOW, JOURNEY_TENANT, JOURNEY_OTHER_TENANT, JourneySimulator };
+})();
+
+const __m_src_local_journey_index = (() => {
+// ============================================================
+// WASL AI — محاكاة رحلة خدمة العملاء (سطح شجرة المحلي · D-065)
+// ------------------------------------------------------------
+// ⭐⭐⭐ **هذا ليس نظام خدمة عملاء** ⇒ ⭐ محاكاة صناعية محلية بالكامل.
+// ⭐⭐ **مبدآن غير قابلين للتفاوض**:
+// ⭐   ① **لا نسخة موازية** ⇒ ⭐⇒⇒ كل قرار يمرّ على دوال النواة نفسها.
+// ⭐   ② **لا باب جانبي** ⇒ ⭐⇒⇒⇒ **وإصدار إثبات الهوية (M54) غير مُصدَّر
+//   من السطح العام** ⇒ ⭐⇒⇒⇒⇒ **فلا جهة خارجية تُصدر إثباتاً لهذه الرحلة.**
+// ⛔ بلا شبكة · ⛔ بلا تخزين دائم · ⛔ بلا إرسال · ⛔ بلا استدعاء خارجي.
+// ⛔ الشجرة خارج حزمة `npm` (نطاق الحزمة = `src/core/` فقط).
+// ============================================================
+
+const { JOURNEY_NOW, JOURNEY_OTHER_TENANT, JOURNEY_TENANT, JourneySimulator } = __m_src_local_journey_engine;
+
+const { classifyJourneyMessage, renderJourneyReply } = __m_src_local_journey_classification;
+
+const { JOURNEY_INTENTS, JOURNEY_PRIORITIES, JOURNEY_STEP_KINDS } = __m_src_local_journey_types;
+return { JOURNEY_NOW, JOURNEY_OTHER_TENANT, JOURNEY_TENANT, JourneySimulator, classifyJourneyMessage, renderJourneyReply, JOURNEY_INTENTS, JOURNEY_PRIORITIES, JOURNEY_STEP_KINDS };
+})();
+
+const __m_tools_wasl_workbench_preview_runtime = (() => {
+const { AuditLog, ConversationChangeLog, ConversationStateStore, LocalIdentityRegistry, MessageStore, OrderingState, ProcessingLayer, ReadAuditLog, ALLOWED_TRANSITIONS, CONVERSATION_STATES, TERMINAL_CONVERSATION_STATES, assignConversation, authorizeLocalRequest, createLocalIdentitySources, isTerminalState, listWorkQueue, readConversationChanges, unassignConversation, updateConversationState } = __m_src_core_index;
+const { issueIdentityAdminAuthority } = __m_src_core_identity;
+const { JourneySimulator } = __m_src_local_journey_index;
 // ============================================================
 // WASL AI — مُشغِّل المعاينة التفاعلية (Slice 07 · P0)
 // ------------------------------------------------------------
@@ -4660,6 +6000,9 @@ const { issueIdentityAdminAuthority } = __m_identity;
                 
               
                               
+
+// ⭐⭐ D-065 · المسار C — ⭐ محاكاة الرحلة الصناعية (شجرة المحلي · بلا شبكة).
+
 
 // ============================================================
 // ⭐ الثوابت
@@ -4759,6 +6102,31 @@ const PREVIEW_IDENTITIES                                 = Object.freeze([
                                                 
  
 
+// ⭐⭐ D-065 · المسار C — ⭐ **مشهد الرحلة الصناعية داخل المعاينة**
+//    (محاكاة محلية · بلا شبكة · بلا تخزين دائم · بلا إرسال فعلي)
+// ============================================================
+
+/** ⭐⭐⭐ **خطوة واحدة في مشهد الرحلة** — ⭐ (ترجمة فقط · بلا منطق). */
+                                     
+                       
+                        
+                          
+                               
+ 
+
+/** ⭐⭐⭐ **نتيجة مشهد الرحلة** — ⭐ (بلا منطق · ناتجة من المحاكاة). */
+                                       
+                       
+                               
+                                    
+                                 
+                                   
+                                
+                                
+                                            
+                                                
+ 
+
                                  
                                          
                                      
@@ -4781,6 +6149,8 @@ const PREVIEW_IDENTITIES                                 = Object.freeze([
                                     
                                                        
                                
+                                                                
+                                                 
  
 
 // ============================================================
@@ -4982,6 +6352,9 @@ function createPreviewRuntime()                 {
     return { ok: false, code, message, state: null, assignee_actor_id: null };
   };
 
+  // ⭐⭐⭐ **محاكي الرحلة** — ⭐ (الحالة كلّها في الذاكرة).
+  const journey = new JourneySimulator();
+
   const runtime                 = {
     roles: PREVIEW_ROLES,
     default_role: PREVIEW_DEFAULT_ROLE,
@@ -5133,6 +6506,31 @@ function createPreviewRuntime()                 {
       };
     },
 
+    /**
+     * ⭐⭐⭐ **مشهد الرحلة الصناعية (D-065)** — ⭐ **محاكاة محلية**:
+     * ⭐ تستدعي `JourneySimulator` ⇒ ⭐⇒⇒ **وكل رفض فيها صادر من النواة نفسها**
+     * ⭐⇒⇒⇒ (لا نسخة موازية · لا ردّ مُولَّد · لا إرسال).
+     */
+    runJourney(text        )                       {
+      const outcome = journey.receive(text);
+      return {
+        ok: outcome.ok,
+        code: outcome.code,
+        conversation_ref: outcome.conversation_ref,
+        intent: outcome.intent,
+        priority: outcome.priority,
+        reply: outcome.reply,
+        state: outcome.state,
+        assignee_actor_id: outcome.assignee_actor_id,
+        steps: outcome.steps.map((step) => ({
+          seq: step.seq,
+          kind: step.kind,
+          detail: step.detail,
+          code: step.code,
+        })),
+      };
+    },
+
     getStates()                    {
       return CONVERSATION_STATES;
     },
@@ -5159,7 +6557,7 @@ function createPreviewRuntime()                 {
 return { PREVIEW_NOW, PREVIEW_ROLES, PREVIEW_DEFAULT_ROLE, PREVIEW_TENANT, PREVIEW_OTHER_TENANT, PREVIEW_EMPLOYEES, PREVIEW_OTHER_TENANT_EMPLOYEE, PREVIEW_OTHER_TENANT_CONVERSATION, createPreviewRuntime };
 })();
 
-const __m_wasl_workbench_preview_ui = (() => {
+const __m_tools_wasl_workbench_preview_ui = (() => {
 // ============================================================
 // WASL AI — واجهة المعاينة التفاعلية (Slice 07 · P0)
 // ------------------------------------------------------------
@@ -5171,7 +6569,12 @@ const __m_wasl_workbench_preview_ui = (() => {
 // ⛔ لا طلبات شبكة · لا مكتبات خارجية · لا تخزين دائم · لا نصوص رسائل.
 // ============================================================
 
-                                                                                                          
+             
+                
+                       
+                  
+                 
+                                             
 
                           
                              
@@ -5334,6 +6737,94 @@ function installPreviewUi(runtime                )       {
   const isolationPanel = el('section', 'panel');
   isolationPanel.setAttribute('id', 'isolation-panel');
   root.appendChild(isolationPanel);
+
+  // ── ⭐⭐ D-065 · المسار C — ⭐ مشهد الرحلة الصناعية ──
+  const journeyPanel = el('section', 'panel');
+  journeyPanel.setAttribute('id', 'journey-panel');
+  root.appendChild(journeyPanel);
+
+  const journeyInput = el('input', 'journey-input');
+  journeyInput.setAttribute('id', 'journey-input');
+  journeyInput.setAttribute('type', 'text');
+  journeyInput.setAttribute('placeholder', 'اكتب رسالة عميل صناعية…');
+  let journeyResult                              = null;
+
+  const JOURNEY_PRESETS                                                               = [
+    { label: 'فاتورة', text: 'عندي استفسار عن الفاتورة الشهرية' },
+    { label: 'مشكلة تقنية', text: 'التطبيق فيه خطأ ولا يعمل' },
+    { label: 'شحن', text: 'الشحنة متأخرة والعنوان خاطئ' },
+    { label: 'عاجل', text: 'عندي مشكلة في الفاتورة وعاجل' },
+  ];
+
+  const renderJourney = ()       => {
+    journeyPanel.replaceChildren();
+    journeyPanel.appendChild(
+      el('h2', undefined, 'مشهد الرحلة الصناعية (محاكاة محلية · بلا إرسال)'),
+    );
+    journeyPanel.appendChild(
+      el(
+        'p',
+        'sub',
+        'التصنيف حتمي بقوالب ثابتة (بلا توليد) — وكل رفض ييصدر من نواة WASL نفسها.',
+      ),
+    );
+
+    const presetRow = el('div', 'btn-row');
+    for (const preset of JOURNEY_PRESETS) {
+      const button = el('button', 'journey-btn', preset.label);
+      button.setAttribute('type', 'button');
+      button.setAttribute('data-preset', preset.label);
+      button.addEventListener('click', () => {
+        journeyInput.value = preset.text;
+        journeyResult = runtime.runJourney(preset.text);
+        render();
+      });
+      presetRow.appendChild(button);
+    }
+    journeyPanel.appendChild(presetRow);
+
+    const inputRow = el('div', 'btn-row');
+    inputRow.appendChild(journeyInput);
+    const runButton = el('button', 'action-btn', 'شغّل الرحلة');
+    runButton.setAttribute('id', 'journey-run');
+    runButton.setAttribute('type', 'button');
+    runButton.addEventListener('click', () => {
+      journeyResult = runtime.runJourney(journeyInput.value);
+      render();
+    });
+    inputRow.appendChild(runButton);
+    journeyPanel.appendChild(inputRow);
+
+    if (!journeyResult) {
+      journeyPanel.appendChild(el('p', 'empty', 'لم تُشغَّل رحلة بعد.'));
+      return;
+    }
+
+    const meta = el('div', 'meta');
+    meta.appendChild(el('span', undefined, `النتيجة: ${journeyResult.ok ? 'نجاح' : 'رفض'}`));
+    meta.appendChild(el('span', undefined, `النية: ${journeyResult.intent ?? '—'}`));
+    meta.appendChild(el('span', undefined, `الأولوية: ${journeyResult.priority ?? '—'}`));
+    meta.appendChild(el('span', undefined, `الحالة: ${journeyResult.state ?? '—'}`));
+    meta.appendChild(el('span', undefined, `المُسنَد: ${journeyResult.assignee_actor_id ?? '—'}`));
+    meta.appendChild(el('span', undefined, `المحادثة: ${journeyResult.conversation_ref}`));
+    journeyPanel.appendChild(meta);
+
+    if (journeyResult.reply) {
+      journeyPanel.appendChild(el('p', 'reply', `ردّ الموظّف (لم يُرسل): ${journeyResult.reply}`));
+    }
+    if (journeyResult.code) {
+      journeyPanel.appendChild(el('p', 'err', `رمز الرفض: ${journeyResult.code}`));
+    }
+
+    const stepsList = el('ol', 'journey-steps');
+    for (const step of journeyResult.steps) {
+      stepsList.appendChild(
+        el('li', undefined, `[${step.kind}] ${step.detail}`),
+      );
+    }
+    journeyPanel.appendChild(stepsList);
+  };
+
 
   // ── ⭐ الحالة المختارة ──
   let selectedRef                = null;
@@ -5556,6 +7047,7 @@ function installPreviewUi(runtime                )       {
     renderDetail(detail);
     renderChanges(detail ? detail.changes : []);
     renderIsolation();
+    renderJourney();
   };
 
   render();
@@ -5563,9 +7055,9 @@ function installPreviewUi(runtime                )       {
 return { installPreviewUi };
 })();
 
-const __m_wasl_workbench_preview_entry = (() => {
-const { createPreviewRuntime } = __m_wasl_workbench_preview_runtime;
-const { installPreviewUi } = __m_wasl_workbench_preview_ui;
+const __m_tools_wasl_workbench_preview_entry = (() => {
+const { createPreviewRuntime } = __m_tools_wasl_workbench_preview_runtime;
+const { installPreviewUi } = __m_tools_wasl_workbench_preview_ui;
 // ============================================================
 // WASL AI — نقطة دخول المعاينة التفاعلية (Slice 07 · P0)
 // ------------------------------------------------------------
@@ -5587,7 +7079,7 @@ function bootPreview()       {
 }
 return { bootPreview };
 })();
-__m_wasl_workbench_preview_entry.bootPreview();
+__m_tools_wasl_workbench_preview_entry.bootPreview();
 </script>
 </body>
 </html>

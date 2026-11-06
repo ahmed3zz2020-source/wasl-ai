@@ -9,7 +9,12 @@
 // ⛔ لا طلبات شبكة · لا مكتبات خارجية · لا تخزين دائم · لا نصوص رسائل.
 // ============================================================
 
-import type { PreviewDetail, PreviewQueueRow, PreviewRuntime } from './wasl-workbench-preview-runtime.ts';
+import type {
+  PreviewDetail,
+  PreviewJourneyResult,
+  PreviewQueueRow,
+  PreviewRuntime,
+} from './wasl-workbench-preview-runtime.ts';
 
 interface PreviewElement {
   textContent: string | null;
@@ -172,6 +177,94 @@ export function installPreviewUi(runtime: PreviewRuntime): void {
   const isolationPanel = el('section', 'panel');
   isolationPanel.setAttribute('id', 'isolation-panel');
   root.appendChild(isolationPanel);
+
+  // ── ⭐⭐ D-065 · المسار C — ⭐ مشهد الرحلة الصناعية ──
+  const journeyPanel = el('section', 'panel');
+  journeyPanel.setAttribute('id', 'journey-panel');
+  root.appendChild(journeyPanel);
+
+  const journeyInput = el('input', 'journey-input');
+  journeyInput.setAttribute('id', 'journey-input');
+  journeyInput.setAttribute('type', 'text');
+  journeyInput.setAttribute('placeholder', 'اكتب رسالة عميل صناعية…');
+  let journeyResult: PreviewJourneyResult | null = null;
+
+  const JOURNEY_PRESETS: readonly { readonly label: string; readonly text: string }[] = [
+    { label: 'فاتورة', text: 'عندي استفسار عن الفاتورة الشهرية' },
+    { label: 'مشكلة تقنية', text: 'التطبيق فيه خطأ ولا يعمل' },
+    { label: 'شحن', text: 'الشحنة متأخرة والعنوان خاطئ' },
+    { label: 'عاجل', text: 'عندي مشكلة في الفاتورة وعاجل' },
+  ];
+
+  const renderJourney = (): void => {
+    journeyPanel.replaceChildren();
+    journeyPanel.appendChild(
+      el('h2', undefined, 'مشهد الرحلة الصناعية (محاكاة محلية · بلا إرسال)'),
+    );
+    journeyPanel.appendChild(
+      el(
+        'p',
+        'sub',
+        'التصنيف حتمي بقوالب ثابتة (بلا توليد) — وكل رفض ييصدر من نواة WASL نفسها.',
+      ),
+    );
+
+    const presetRow = el('div', 'btn-row');
+    for (const preset of JOURNEY_PRESETS) {
+      const button = el('button', 'journey-btn', preset.label);
+      button.setAttribute('type', 'button');
+      button.setAttribute('data-preset', preset.label);
+      button.addEventListener('click', () => {
+        journeyInput.value = preset.text;
+        journeyResult = runtime.runJourney(preset.text);
+        render();
+      });
+      presetRow.appendChild(button);
+    }
+    journeyPanel.appendChild(presetRow);
+
+    const inputRow = el('div', 'btn-row');
+    inputRow.appendChild(journeyInput);
+    const runButton = el('button', 'action-btn', 'شغّل الرحلة');
+    runButton.setAttribute('id', 'journey-run');
+    runButton.setAttribute('type', 'button');
+    runButton.addEventListener('click', () => {
+      journeyResult = runtime.runJourney(journeyInput.value);
+      render();
+    });
+    inputRow.appendChild(runButton);
+    journeyPanel.appendChild(inputRow);
+
+    if (!journeyResult) {
+      journeyPanel.appendChild(el('p', 'empty', 'لم تُشغَّل رحلة بعد.'));
+      return;
+    }
+
+    const meta = el('div', 'meta');
+    meta.appendChild(el('span', undefined, `النتيجة: ${journeyResult.ok ? 'نجاح' : 'رفض'}`));
+    meta.appendChild(el('span', undefined, `النية: ${journeyResult.intent ?? '—'}`));
+    meta.appendChild(el('span', undefined, `الأولوية: ${journeyResult.priority ?? '—'}`));
+    meta.appendChild(el('span', undefined, `الحالة: ${journeyResult.state ?? '—'}`));
+    meta.appendChild(el('span', undefined, `المُسنَد: ${journeyResult.assignee_actor_id ?? '—'}`));
+    meta.appendChild(el('span', undefined, `المحادثة: ${journeyResult.conversation_ref}`));
+    journeyPanel.appendChild(meta);
+
+    if (journeyResult.reply) {
+      journeyPanel.appendChild(el('p', 'reply', `ردّ الموظّف (لم يُرسل): ${journeyResult.reply}`));
+    }
+    if (journeyResult.code) {
+      journeyPanel.appendChild(el('p', 'err', `رمز الرفض: ${journeyResult.code}`));
+    }
+
+    const stepsList = el('ol', 'journey-steps');
+    for (const step of journeyResult.steps) {
+      stepsList.appendChild(
+        el('li', undefined, `[${step.kind}] ${step.detail}`),
+      );
+    }
+    journeyPanel.appendChild(stepsList);
+  };
+
 
   // ── ⭐ الحالة المختارة ──
   let selectedRef: string | null = null;
@@ -394,6 +487,7 @@ export function installPreviewUi(runtime: PreviewRuntime): void {
     renderDetail(detail);
     renderChanges(detail ? detail.changes : []);
     renderIsolation();
+    renderJourney();
   };
 
   render();

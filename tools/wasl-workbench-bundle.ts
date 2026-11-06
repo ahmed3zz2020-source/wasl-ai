@@ -26,8 +26,8 @@ interface BundledModule {
 
 /** ⭐ استخراج اسم المتغيّر الداخلي من اسم الملف. */
 function toVarName(file: string): string {
-  const base = path.basename(file).replace(/\.ts$/, '');
-  return `__m_${base.replace(/[^A-Za-z0-9_]/g, '_')}`;
+  const base = file.replace(/\.ts$/, '').replace(/[^A-Za-z0-9_]/g, '_');
+  return `__m_${base}`;
 }
 
 /**
@@ -185,6 +185,17 @@ export function bundleModules(entries: string[]): { code: string; files: string[
   };
 
   for (const entry of entries) load(entry);
+
+  // ⭐⭐⭐ **حارس تطابق الأسماء** — ⭐ اسماء متطابق يُسقط الوحدة → مودول يسقط صمتًًا ثم يُقلقه ويصل نقصًاًا مجهولاًًا من الحزمة.
+  const seenVarNames = new Set<string>();
+  for (const mod of modules.values()) {
+    if (seenVarNames.has(mod.varName)) {
+      throw new Error(
+        `⭐ تضادف في أسماء المجمّع — ⏘ أوقف البناء (${mod.file})`,
+      );
+    }
+    seenVarNames.add(mod.varName);
+  }
 
   const ordered = topoSort(modules);
   const chunks: string[] = [

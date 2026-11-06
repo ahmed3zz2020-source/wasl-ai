@@ -486,6 +486,43 @@ async function main(): Promise<void> {
   if (pageErrors.length > 0) fail('⑳ أخطاء JS', pageErrors.join(' | '));
   if (consoleErrors.length > 0) fail('⑳ console', consoleErrors.join(' | '));
 
+  // ── ⭐⭐ D-065 · المسار C — ⭐ مشهد الرحلة الصناعية داخل المعاينة ──
+  const journeyPanelExists = await page.locator('#journey-panel').count();
+  if (journeyPanelExists < 1) {
+    fail('ⓐ مشهد الرحلة', 'لوحة الرحلة غير موجودة في المعاينة');
+  } else {
+    await page.click('#journey-panel .journey-btn[data-preset="عاجل"]');
+    await page.waitForTimeout?.(80);
+    const urgentText = (await page.textContent('#journey-panel')) ?? '';
+    const urgentSteps = await page.locator('#journey-panel .journey-steps li').count();
+    if (!urgentText.includes('النية: billing')) {
+      fail('ⓐ مشهد الرحلة', `النية غير صحيحة: ${urgentText.slice(0, 160)}`);
+    }
+    if (!urgentText.includes('الأولوية: high')) {
+      fail('ⓑ تصعيد الأولوية', `الأولوية غير صحيحة: ${urgentText.slice(0, 160)}`);
+    }
+    if (!urgentText.includes('actor_journey_0002')) {
+      fail('ⓒ التصعيد للمشرف', `المُسنَد غير صحيح: ${urgentText.slice(0, 160)}`);
+    }
+    if (urgentSteps !== 7) {
+      fail('ⓓ سجل الخطوات', `عدد الخطوات = ${String(urgentSteps)} (المتوقّع ٧)`);
+    }
+
+    await page.click('#journey-panel .journey-btn[data-preset="فاتورة"]');
+    await page.waitForTimeout?.(80);
+    const normalText = (await page.textContent('#journey-panel')) ?? '';
+    if (!normalText.includes('actor_journey_0003')) {
+      fail('ⓔ الإسناد للموظّف', `المُسنَد غير صحيح: ${normalText.slice(0, 160)}`);
+    }
+    if (!normalText.includes('لم يُرسل')) {
+      fail('ⓕ لا إرسال', 'الردّ غير معلَّم بأنه لم يُرسل');
+    }
+    const journeyErrors = await page.locator('#journey-panel .err').count();
+    if (journeyErrors > 0) {
+      fail('ⓖ الرحلة بلا رفض', 'ظهر رمز رفض في مشهد الرحلة');
+    }
+  }
+
   // ── ⭐ لقطات الدليل ──
   const desktopShot = path.join(SHOT_DIR, 'wasl-workbench-interactive-desktop.png');
   await page.screenshot({ path: desktopShot, fullPage: true });

@@ -17,7 +17,7 @@ const OUT = path.join(ROOT, 'docs', 'wasl-workbench-interactive.html');
 
 /** ⭐ نقطة الدخول المُجمَّعة — ⭐ الاسم ثابت (يُحسب من اسم الملف). */
 const ENTRY_MODULE = 'tools/wasl-workbench-preview-entry.ts';
-const ENTRY_VAR = '__m_wasl_workbench_preview_entry';
+const ENTRY_VAR = '__m_tools_wasl_workbench_preview_entry';
 
 /**
  * ⭐ ⭐ حماية النص داخل `<script>` — ⭐ `<` لا يُغلق الوسم.
@@ -148,7 +148,7 @@ const CSS = `
   .meta span { background: var(--panel-2); border-radius: 6px; padding: 4px 9px; }
   .meta span.terminal { background: #3a1d1d; color: #ffb4ac; }
   .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .state-btn, .action-btn {
+  .state-btn, .action-btn, .journey-btn {
     background: var(--panel-2);
     color: var(--ink);
     border: 1px solid var(--line);
@@ -158,7 +158,7 @@ const CSS = `
     cursor: pointer;
     font-family: inherit;
   }
-  .state-btn:hover:not(:disabled), .action-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .state-btn:hover:not(:disabled), .action-btn:hover:not(:disabled), .journey-btn:hover { border-color: var(--accent); color: var(--accent); }
   .state-btn.blocked, .action-btn.blocked { opacity: .42; cursor: not-allowed; }
   select {
     background: var(--panel-2);
@@ -183,6 +183,21 @@ const CSS = `
   .proof { margin: 0; padding-right: 18px; font-size: 13px; }
   .proof li { margin: 3px 0; }
   .proof li.leak { color: #7ee787; font-weight: 700; }
+  .journey-input {
+    flex: 1;
+    min-width: 240px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .journey-steps { margin: 10px 0 0; padding-right: 20px; font-size: 13px; }
+  .journey-steps li { margin: 3px 0; }
+  p.reply { color: var(--muted); font-size: 13px; }
+  p.err { color: #ffb4ac; font-size: 13px; }
   @media (max-width: 820px) {
     .columns { grid-template-columns: 1fr; }
     h1 { font-size: 19px; }

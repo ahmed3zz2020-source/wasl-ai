@@ -42,6 +42,9 @@ import type {
   TrustedRole,
 } from '../src/core/index.ts';
 
+// ⭐⭐ D-065 · المسار C — ⭐ محاكاة الرحلة الصناعية (شجرة المحلي · بلا شبكة).
+import { JourneySimulator } from '../src/local/journey/index.ts';
+
 // ============================================================
 // ⭐ الثوابت
 // ============================================================
@@ -140,6 +143,31 @@ export interface PreviewDetail {
   readonly changes: readonly PreviewChangeRow[];
 }
 
+// ⭐⭐ D-065 · المسار C — ⭐ **مشهد الرحلة الصناعية داخل المعاينة**
+//    (محاكاة محلية · بلا شبكة · بلا تخزين دائم · بلا إرسال فعلي)
+// ============================================================
+
+/** ⭐⭐⭐ **خطوة واحدة في مشهد الرحلة** — ⭐ (ترجمة فقط · بلا منطق). */
+export interface PreviewJourneyStep {
+  readonly seq: number;
+  readonly kind: string;
+  readonly detail: string;
+  readonly code: string | null;
+}
+
+/** ⭐⭐⭐ **نتيجة مشهد الرحلة** — ⭐ (بلا منطق · ناتجة من المحاكاة). */
+export interface PreviewJourneyResult {
+  readonly ok: boolean;
+  readonly code: string | null;
+  readonly conversation_ref: string;
+  readonly intent: string | null;
+  readonly priority: string | null;
+  readonly reply: string | null;
+  readonly state: string | null;
+  readonly assignee_actor_id: string | null;
+  readonly steps: readonly PreviewJourneyStep[];
+}
+
 export interface PreviewRuntime {
   readonly roles: readonly TrustedRole[];
   readonly default_role: TrustedRole;
@@ -162,6 +190,8 @@ export interface PreviewRuntime {
   getEmployees(): readonly string[];
   /** ⭐⭐ موظف من مستأجر آخر — ⭐ لاختبار رفض الإسناد. */
   getForeignEmployee(): string;
+  /** ⭐⭐ D-065 — ⭐ تشغيل مشهد الرحلة الصناعية (محاكاة محلية). */
+  runJourney(text: string): PreviewJourneyResult;
 }
 
 // ============================================================
@@ -363,6 +393,9 @@ export function createPreviewRuntime(): PreviewRuntime {
     return { ok: false, code, message, state: null, assignee_actor_id: null };
   };
 
+  // ⭐⭐⭐ **محاكي الرحلة** — ⭐ (الحالة كلّها في الذاكرة).
+  const journey = new JourneySimulator();
+
   const runtime: PreviewRuntime = {
     roles: PREVIEW_ROLES,
     default_role: PREVIEW_DEFAULT_ROLE,
@@ -511,6 +544,31 @@ export function createPreviewRuntime(): PreviewRuntime {
         first_tenant_total: firstTenantRefs.size,
         other_tenant_own_total: otherTotal,
         leaked_total: leaked,
+      };
+    },
+
+    /**
+     * ⭐⭐⭐ **مشهد الرحلة الصناعية (D-065)** — ⭐ **محاكاة محلية**:
+     * ⭐ تستدعي `JourneySimulator` ⇒ ⭐⇒⇒ **وكل رفض فيها صادر من النواة نفسها**
+     * ⭐⇒⇒⇒ (لا نسخة موازية · لا ردّ مُولَّد · لا إرسال).
+     */
+    runJourney(text: string): PreviewJourneyResult {
+      const outcome = journey.receive(text);
+      return {
+        ok: outcome.ok,
+        code: outcome.code,
+        conversation_ref: outcome.conversation_ref,
+        intent: outcome.intent,
+        priority: outcome.priority,
+        reply: outcome.reply,
+        state: outcome.state,
+        assignee_actor_id: outcome.assignee_actor_id,
+        steps: outcome.steps.map((step) => ({
+          seq: step.seq,
+          kind: step.kind,
+          detail: step.detail,
+          code: step.code,
+        })),
       };
     },
 
