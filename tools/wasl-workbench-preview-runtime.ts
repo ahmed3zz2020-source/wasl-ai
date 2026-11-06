@@ -15,6 +15,7 @@ import {
   AuditLog,
   ConversationChangeLog,
   ConversationStateStore,
+  LocalIdentityRegistry,
   MessageStore,
   OrderingState,
   ProcessingLayer,
@@ -23,22 +24,22 @@ import {
   CONVERSATION_STATES,
   TERMINAL_CONVERSATION_STATES,
   assignConversation,
+  authorizeLocalRequest,
+  createLocalIdentitySources,
   isTerminalState,
   listWorkQueue,
   readConversationChanges,
-  resolveTenantContext,
   unassignConversation,
   updateConversationState,
 } from '../src/core/index.ts';
-// ⭐ `registerSessionSource` ليس في السطح العام ⇒ ⭐ استيراده مباشرة.
-import { registerSessionSource } from '../src/core/session.ts';
+// ⭐⭐ Slice 08 — ⭐ **إصدار سلطة الإدارة ليس في السطح العام** ⇒ ⭐ استيراده مباشرة.
+//    ⇒ ⭐⇒⇒ **السطح العام لا يستطيع تسجيل هوية أو إلغاؤها.**
+import { issueIdentityAdminAuthority } from '../src/core/identity.ts';
 import type {
   ConversationStateDependencies,
   MessageEnvelope,
-  SessionSource,
   TenantContext,
   TrustedRole,
-  VerifiedIdentity,
 } from '../src/core/index.ts';
 
 // ============================================================
@@ -70,93 +71,24 @@ export const PREVIEW_OTHER_TENANT_EMPLOYEE = 'actor_preview_0009';
 export const PREVIEW_OTHER_TENANT_CONVERSATION = 'conv_preview_0009';
 
 // ============================================================
-// ⭐ مصادر الجلسات الاصطناعية — ⭐ **مصدر لكل دور** (نطاق `test`)
-// ============================================================
-
-/** ⭐ ⭐ سجلّ الأدوار الداخلية — ⭐ **لا يُقرأ من العميل أبداً**. */
-const ROLE_BINDINGS = new WeakMap<object, TrustedRole>();
-
-function markSynthetic<T extends object>(claims: T, role: TrustedRole): T {
-  ROLE_BINDINGS.set(claims, role);
-  return claims;
+// ⭐⭐ Slice 08 — ⭐ **بذور الهوية المحلية** (محاكاة محلية · بلا تسجيل دخول)
+// ⭐⭐ (المستأجر · الدور · المنفّذ) ⇒ ⭐⇒⇒ **والدور لا يُقرأ من العميل أبداً**
+//   ⇒ ⭐⇒⇒ **وكل هوية تُربط بمستأجر واحد ودور واحد عند التسجيل.**
+interface PreviewIdentitySeed {
+  readonly identity_id: string;
+  readonly tenant_id: string;
+  readonly actor_id: string;
+  readonly role: TrustedRole;
 }
 
-function buildSyntheticSource(role: TrustedRole): SessionSource {
-  return {
-    id: `preview-synthetic-${role}`,
-    scope: 'test',
-    description: `مصدر اصطناعي للمعاينة التجريبية فقط (دور: ${role}) — بيانات صناعية بالكامل`,
-    verify(input: unknown): VerifiedIdentity | null {
-      if (!input || typeof input !== 'object') return null;
-      // ⭐ **السجلّ الداخلي هو مصدر الحقيقة** ⇒ ⭐ لا دور من حمولة العميل.
-      if (ROLE_BINDINGS.get(input as object) !== role) return null;
-      const claims = input as {
-        session_id: string;
-        tenant_id: string;
-        actor_id: string;
-        conversation_ref: string;
-        authenticated: boolean;
-      };
-      if (claims.authenticated !== true) return null;
-      // ⭐ كائن هوية **جديد** ⇒ ⭐ لا تمرير لحمولة العميل.
-      return {
-        session_id: claims.session_id,
-        tenant_id: claims.tenant_id,
-        actor_id: claims.actor_id,
-        conversation_ref: claims.conversation_ref,
-        authenticated: true,
-      };
-    },
-  };
-}
-
-/** ⭐ السقوف — ⭐ **سلطة المالك على ما يُمنح** (نفس السقوف في `tests/support/local-session.ts`). */
-const CEILINGS: Readonly<Record<TrustedRole, readonly string[]>> = Object.freeze({
-  owner: Object.freeze([
-    'conversation.list',
-    'conversation.read',
-    'conversation.audit',
-    'conversation.state.read',
-    'conversation.state.update',
-    'conversation.assign',
-    'conversation.queue.read',
-    'conversation.metrics.read',
-  ]),
-  supervisor: Object.freeze([
-    'conversation.list',
-    'conversation.read',
-    'conversation.audit',
-    'conversation.state.read',
-    'conversation.state.update',
-    'conversation.queue.read',
-    'conversation.metrics.read',
-  ]),
-  agent: Object.freeze([
-    'conversation.list',
-    'conversation.read',
-    'conversation.audit',
-    'conversation.state.read',
-    'conversation.queue.read',
-  ]),
-  viewer: Object.freeze(['conversation.list', 'conversation.read', 'conversation.audit']),
-  none: Object.freeze([]),
-});
-
-const SOURCES: Readonly<Record<TrustedRole, SessionSource>> = Object.freeze({
-  owner: buildSyntheticSource('owner'),
-  supervisor: buildSyntheticSource('supervisor'),
-  agent: buildSyntheticSource('agent'),
-  viewer: buildSyntheticSource('viewer'),
-  none: buildSyntheticSource('none'),
-});
-
-for (const role of Object.keys(SOURCES) as TrustedRole[]) {
-  registerSessionSource({
-    source: SOURCES[role],
-    grantedRole: role,
-    grantCeiling: CEILINGS[role],
-  });
-}
+/** ⭐⭐ هويات المستأجر الأول — ⭐ واحد لكل دور · ⭐ ومستأجر ثانٍ للتأكد من العزل. */
+const PREVIEW_IDENTITIES: readonly PreviewIdentitySeed[] = Object.freeze([
+  { identity_id: 'preview-ident-owner', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0001', role: 'owner' },
+  { identity_id: 'preview-ident-supervisor', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0002', role: 'supervisor' },
+  { identity_id: 'preview-ident-agent', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0007', role: 'agent' },
+  { identity_id: 'preview-ident-viewer', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0003', role: 'viewer' },
+  { identity_id: 'preview-ident-other-owner', tenant_id: PREVIEW_OTHER_TENANT, actor_id: 'actor_preview_0002', role: 'owner' },
+]);
 
 // ============================================================
 // ⭐ أنواع الواجهة العامة للمعاينة
@@ -298,27 +230,47 @@ export function createPreviewRuntime(): PreviewRuntime {
     },
   };
 
-  // ⭐ ⭐ **الدور لا يُمرَّر في الحمولة** ⇒ ⭐ `markSynthetic` يسجّله داخلياً.
-  const contextFor = (role: TrustedRole, tenantId: string, actorId: string, conversationRef: string): TenantContext => {
-    const claims = markSynthetic(
+  // ⭐⭐⭐ Slice 08 — ⭐ **سجلّ الهوية المحلي** (تسجيل صريح · بلا افتراضي).
+  const identityRegistry = new LocalIdentityRegistry({ now: () => PREVIEW_NOW });
+  const ownerSeed = PREVIEW_IDENTITIES[0];
+  const ownerAuthority = issueIdentityAdminAuthority({
+    ...ownerSeed,
+    status: 'active',
+    expires_at: null,
+  });
+  // ⭐ التأسيس: ⭐ المالك يسجّل نفسه ⇒ ثم يسجّل البقية.
+  identityRegistry.register(ownerSeed, ownerAuthority);
+  for (const seed of PREVIEW_IDENTITIES.slice(1)) {
+    identityRegistry.register(seed, ownerAuthority);
+  }
+  const identitySources = createLocalIdentitySources(identityRegistry);
+
+  const identityIdFor = (role: TrustedRole, tenantId: string): string =>
+    PREVIEW_IDENTITIES.find((seed) => seed.role === role && seed.tenant_id === tenantId)
+      ?.identity_id ?? '';
+
+  // ⭐⭐⭐ **السياق يبنيه طبقة التفويض** ⇒ ⭐⇒⇒ **الدور من السجلّ لا من الطلب**.
+  const contextFor = (role: TrustedRole, tenantId: string, conversationRef: string): TenantContext => {
+    const decision = authorizeLocalRequest(
       {
-        session_id: `sess_preview_${role}`,
-        tenant_id: tenantId,
-        actor_id: actorId,
+        identity_id: identityIdFor(role, tenantId),
         conversation_ref: conversationRef,
-        authenticated: true,
+        operation: 'conversation.read',
       },
-      role,
+      { registry: identityRegistry, sources: identitySources },
     );
-    return resolveTenantContext(claims, { source: SOURCES[role] });
+    if (!decision.allowed) {
+      throw new Error(`تعذّر بناء السياق: ${decision.code}`);
+    }
+    return decision.context;
   };
 
-  const ownerCtx = contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001');
-  const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, 'actor_preview_0002', PREVIEW_OTHER_TENANT_CONVERSATION);
+  const ownerCtx = contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001');
+  const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, PREVIEW_OTHER_TENANT_CONVERSATION);
 
   // ── ⭐ التوليد: كل محادثة تُبنى عبر **عمليات النواة نفسها** ──
   const seed = (ref: string, actorId: string, msgs: Array<{ at: string; dir?: 'inbound' | 'outbound' }>): void => {
-    const ctx = contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', ref);
+    const ctx = contextFor('owner', PREVIEW_TENANT, ref);
     msgs.forEach((msg, index) => {
       layer.process(
         ctx,
@@ -335,31 +287,31 @@ export function createPreviewRuntime(): PreviewRuntime {
 
   // ① محادثة مُسندة — عامل.
   seed('conv_preview_0001', 'actor_preview_0007', [{ at: '2026-01-05T08:00:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001'), 'conv_preview_0001', 'open', deps, { reason: 'فتح الطلب' });
-  assignConversation(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001'), 'conv_preview_0001', 'actor_preview_0007', deps, { reason: 'توزيع على خدمة العملاء' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001'), 'conv_preview_0001', 'open', deps, { reason: 'فتح الطلب' });
+  assignConversation(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001'), 'conv_preview_0001', 'actor_preview_0007', deps, { reason: 'توزيع على خدمة العملاء' });
 
   // ② محادثة قيد المعالجة.
   seed('conv_preview_0002', 'actor_preview_0008', [
     { at: '2026-01-05T09:00:00.000Z' },
     { at: '2026-01-05T09:30:00.000Z', dir: 'outbound' },
   ]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0002'), 'conv_preview_0002', 'open', deps, { reason: 'فتح الطلب' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0002'), 'conv_preview_0002', 'pending', deps, { reason: 'بانتظار رد العميل' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0002'), 'conv_preview_0002', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0002'), 'conv_preview_0002', 'pending', deps, { reason: 'بانتظار رد العميل' });
 
   // ③ محادثة مفتوحة بلا إسناد.
   seed('conv_preview_0003', 'actor_preview_0001', [{ at: '2026-01-05T11:50:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0003'), 'conv_preview_0003', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0003'), 'conv_preview_0003', 'open', deps, { reason: 'فتح الطلب' });
 
   // ④ محادثة قابلة للإغلاق (`resolved`).
   seed('conv_preview_0004', 'actor_preview_0001', [{ at: '2026-01-05T10:00:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0004'), 'conv_preview_0004', 'open', deps, { reason: 'فتح الطلب' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0004'), 'conv_preview_0004', 'resolved', deps, { reason: 'تم الحل' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0004'), 'conv_preview_0004', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0004'), 'conv_preview_0004', 'resolved', deps, { reason: 'تم الحل' });
 
   // ⑤ محادثة مغلقة — **نهائية** (لا تُعدَّل ولا تُسند).
   seed('conv_preview_0005', 'actor_preview_0001', [{ at: '2026-01-05T07:00:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'open', deps, { reason: 'فتح الطلب' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'resolved', deps, { reason: 'تم الحل' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'closed', deps, { reason: 'إغلاق نهائي' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0005'), 'conv_preview_0005', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0005'), 'conv_preview_0005', 'resolved', deps, { reason: 'تم الحل' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0005'), 'conv_preview_0005', 'closed', deps, { reason: 'إغلاق نهائي' });
 
   // ⑥ محادثة المستأجر الثاني — **يجب ألا تظهر في رؤية المستأجر الأول**.
   layer.process(
@@ -374,14 +326,9 @@ export function createPreviewRuntime(): PreviewRuntime {
   // ── ⭐ حالة الدور الحالي ──
   let currentRole: TrustedRole = PREVIEW_DEFAULT_ROLE;
 
+  // ⭐⭐ **سياق الدور الحالي** ⇒ ⭐⇒⇒ **من هوية الدور نفسه** (بلا تصعيد).
   const context = (role: TrustedRole, conversationRef: string): TenantContext =>
-    role === 'agent'
-      ? contextFor('agent', PREVIEW_TENANT, 'actor_preview_0007', conversationRef)
-      : role === 'viewer'
-        ? contextFor('viewer', PREVIEW_TENANT, 'actor_preview_0001', conversationRef)
-        : role === 'owner'
-          ? contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', conversationRef)
-          : contextFor('supervisor', PREVIEW_TENANT, 'actor_preview_0002', conversationRef);
+    contextFor(role, PREVIEW_TENANT, conversationRef);
 
   const toRows = (items: readonly unknown[]): PreviewQueueRow[] =>
     (items as Array<Record<string, unknown>>).map((item) => ({
@@ -440,12 +387,11 @@ export function createPreviewRuntime(): PreviewRuntime {
     },
 
     listAll(): PreviewQueueRow[] {
+      // ⭐⭐ **بلا تصعيد** ⇒ ⭐⇒⇒ **سياق الدور الحالي نفسه** (لا دور أعلى).
       try {
-        const page = listWorkQueue(
-          context(currentRole === 'agent' ? 'supervisor' : currentRole, 'conv_preview_0001'),
-          deps,
-          { now: PREVIEW_NOW },
-        );
+        const page = listWorkQueue(context(currentRole, 'conv_preview_0001'), deps, {
+          now: PREVIEW_NOW,
+        });
         return toRows(page.items);
       } catch {
         return [];
@@ -547,10 +493,13 @@ export function createPreviewRuntime(): PreviewRuntime {
       other_tenant_own_total: number;
       leaked_total: number;
     } {
+      // ⭐⭐ **تشخيص صريح**: ⭐ هوية **المالك** (لكل المستأجر) ⇒ ⭐⇒⇒ رقمان قابلان للمقارنة.
       const firstTenantRefs = new Set(
-        runtime.listAll().map((item) => item.conversation_ref),
+        listWorkQueue(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001'), deps, {
+          now: PREVIEW_NOW,
+        }).items.map((item) => item.conversation_ref),
       );
-      const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, 'actor_preview_0002', PREVIEW_OTHER_TENANT_CONVERSATION);
+      const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, PREVIEW_OTHER_TENANT_CONVERSATION);
       let otherTotal = 0;
       try {
         otherTotal = listWorkQueue(otherCtx, deps, { now: PREVIEW_NOW }).pagination.total;

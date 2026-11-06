@@ -321,10 +321,17 @@ test('⭐⭐ Slice 07 — سلوك المحرّك يطابق قواعد النو
 
   await t.test('⭐ ⭐ محاكاة الأدوار لا تعتمد على حمولة العميل', () => {
     const source = fs.readFileSync(path.join(ROOT, 'tools', 'wasl-workbench-preview-runtime.ts'), 'utf8');
-    // ⭐ ⭐ لا يجوز تمرير الدور في الحمولة ⇒ ⭐ المصدر هو سجلّ داخلي.
-    assert.ok(source.includes('markSynthetic'), 'لا تسجيل داخلي للدور');
-    assert.ok(source.includes('SOURCES[role]'), 'الدور لا يُشتقّ من مصدر الجلسة');
-    assert.ok(source.includes("scope: 'test'"), 'المصدر ليس بنطاق test');
+    // ⭐⭐ Slice 08 — ⭐ **التطبيق انتقل لطبقة الهوية** ⇒ ⭐⇒⇒ والحارس صار أقوى:
+    //   ⭐ **المعاينة لا تبني سياقاً بنفسها إطلاقاً** (بل عبر طبقة التفويض).
+    assert.ok(source.includes('authorizeLocalRequest'), 'المعاينة لا تمرّ بطبقة التفويض');
+    assert.ok(
+      !source.includes('resolveTenantContext'),
+      'المعاينة تبني سياقاً خارج طبقة التفويض ⇒ دور من الخارج ممكن',
+    );
+    assert.ok(source.includes('identityRegistry'), 'المعاينة لا تستخدم سجلّ الهوية');
+    // ⭐⭐ **مصدر الهوية المحلي نطاقه `test`** ⇒ ⇒⇒ مرفوض في المسار الإنتاجي.
+    const coreSource = fs.readFileSync(path.join(ROOT, 'src', 'core', 'authorization.ts'), 'utf8');
+    assert.ok(coreSource.includes("scope: 'test'"), 'مصدر الهوية المحلي ليس بنطاق test');
     // ⭐ ⭐ واجهة المُشغِّل **لا تقبل دوراً من الخارج** ⇒ ⭐ لا ادّعاء هوية.
     assert.equal(
       /applyTransition\([^)]*role/.test(source),

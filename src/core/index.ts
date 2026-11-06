@@ -221,6 +221,33 @@ export {
   type ServiceMetricsOptions,
 } from './service-metrics.ts';
 
+// ⭐ Slice 08 — طبقة الهوية والتفويض المحلية (محاكاة محلية · ⛔ ليست مصادقة إنتاجية)
+// ⭐ ⛔ `issueIdentityAdminAuthority` **غير مُصدَّر من السطح العام** ⇒ ⇒⇒
+//    ⇒⇒⇒ **السطح العام لا يصدر سلطة إدارة** ⇒ ⇒⇒⇒ **⇒ فالتسجيل والإلغاء
+//    يحتاجان طبقة التطبيق المحلية** ⇒ ⇒⇒⇒⇒ **والتسجيل لا يتم عند تحميل
+//    الوحدة** ⇒ ⇒⇒⇒⇒⇒ **⇒ لا مصدر افتراضي ولا مسار إنتاجي.**
+export {
+  LOCAL_IDENTITY_ID_PATTERN,
+  LocalIdentityError,
+  LocalIdentityRegistry,
+  type LocalIdentity,
+  type LocalIdentityInput,
+  type LocalIdentityStatus,
+} from './identity.ts';
+
+export {
+  LOCAL_AUTHORIZATION_OPERATIONS,
+  LocalAuthorizationError,
+  authorizeLocalRequest,
+  createLocalIdentitySources,
+  requireLocalAuthorization,
+  type LocalAuthorizationDecision,
+  type LocalAuthorizationDependencies,
+  type LocalAuthorizationOperation,
+  type LocalAuthorizationRequest,
+  type LocalIdentitySources,
+} from './authorization.ts';
+
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
 // ⛔ لا مصدر جلسات اختباري هنا — ولا حتى واحد.

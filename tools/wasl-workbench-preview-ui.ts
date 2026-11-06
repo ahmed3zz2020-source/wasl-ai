@@ -109,6 +109,17 @@ export function installPreviewUi(runtime: PreviewRuntime): void {
   }
   root.appendChild(roleBar);
 
+  // ⭐⭐ Slice 08 — ⭐ **وسم دائم: هذه محاكاة محلية بهويات اصطناعية**
+  //   (بلا تسجيل دخول · بلا مستخدم حقيقي · بلا مصادقة) ⇒ ⭐ فلا تُقرأ
+  //   كأنّها بيانات حقيقية.
+  root.appendChild(
+    el(
+      'div',
+      'sim-badge',
+      'محاكاة محلية — شخصيات اصطناعية (بلا تسجيل دخول) · Slice 08',
+    ),
+  );
+
   const capabilities = el('div', 'capabilities');
   root.appendChild(capabilities);
 

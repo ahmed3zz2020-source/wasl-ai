@@ -95,6 +95,17 @@ const CSS = `
     color: var(--muted);
   }
   .role-now { color: var(--accent); font-weight: 700; font-size: 13px; }
+  .sim-badge {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 6px 12px;
+    border: 1px dashed var(--accent);
+    border-radius: 8px;
+    color: var(--accent);
+    background: rgba(0, 0, 0, 0.04);
+    font-size: 12px;
+    font-weight: 700;
+  }
   .caps { direction: ltr; unicode-bidi: isolate; }
   .columns {
     display: grid;

@@ -74,6 +74,17 @@
     color: var(--muted);
   }
   .role-now { color: var(--accent); font-weight: 700; font-size: 13px; }
+  .sim-badge {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 6px 12px;
+    border: 1px dashed var(--accent);
+    border-radius: 8px;
+    color: var(--accent);
+    background: rgba(0, 0, 0, 0.04);
+    font-size: 12px;
+    font-weight: 700;
+  }
   .caps { direction: ltr; unicode-bidi: isolate; }
   .columns {
     display: grid;
@@ -3960,6 +3971,586 @@ function getServiceMetrics(
 return { CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics };
 })();
 
+const __m_identity = (() => {
+const { ACTOR_ID_PATTERN, TENANT_ID_PATTERN } = __m_tenant;
+const { isTrustedRole } = __m_capability;
+// ============================================================
+// WASL AI — الهوية المحلية (Slice 08 · P0)
+// ------------------------------------------------------------
+// ⭐⭐⭐ **هذا ليس نظام مصادقة** ⇒ ⭐ نموذج أولي **محلي** لطبقة الهوية
+//   والدور (Local Identity & Role Authorization Prototype).
+// ⛔ بلا كلمات مرور · ⛔ بلا حسابات حقيقية · ⛔ بلا رموز مصادقة إنتاجية
+//   · ⛔ بلا جلسات حقيقية · ⛔ بلا قاعدة بيانات · ⛔ بلا شبكة.
+// ⭐ **المبدأ الحاكم**: ⭐ الهوية = (مستأجر · دور · حالة) **مسجَّلة من جهة
+//   موثوقة** ⇒ ⭐⇒⇒ **والدور يُشتق من السجلّ لا من مدخلات الطلب.**
+// ⭐ **نطاق المصادر**: ⭐ كل مصدر هوية محلية نطاقه `test` ⇒ ⇒⇒
+//   ⇒⇒⇒ **المسار الإنتاجي يرفضها بنيوياً** (`resolveProductionTenantContext`).
+// ⭐⭐ **إجابة M34 (مصدر صلاحية الإدارة)**: ⭐ «إثبات الأصل» بـ`WeakSet` يكفي
+//   لقراءة نطاق إداري، ⭐ **لكنه لا يثبت الأحقية** ⇒ ⇒⇒ **فصّلنا الأمرين**:
+//   ⭐ ① **سلطة الإدارة** = كائن بنَسَب مثبت **+mربوطة بهوية مالك مسجَّلة**
+//   ⭐ ② **صلاحية العملية** = قرار منفصل في طبقة التفويض (يستعمل جدول النواة)
+// ⭐⇒⇒ **فلا طبقة واحدة تفعل الاثنين معاً.**
+// ============================================================
+
+
+
+
+/** ⭐ نمط معرّف الهوية المحلية. */
+const LOCAL_IDENTITY_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$/;
+
+/** ⭐⭐ حالة الهوية — ⭐ مغلقة (لا قيمة خارجها). */
+                                                       
+
+/** ⭐⭐ هوية محلية — ⭐ **(مستأجر · دور · حالة)** ⇒ ⭐ محفوظة في السجلّ. */
+                                
+                               
+                             
+                            
+                             
+                                       
+                                                        
+                                     
+ 
+
+/** ⭐ مدخل تسجيل هوية (قبل الحفظ). */
+                                     
+                               
+                             
+                            
+                             
+                                      
+ 
+
+class LocalIdentityError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'LocalIdentityError';
+    this.code = code;
+  }
+}
+
+/**
+ * ⭐⭐⭐ **سلطة الإدارة المحلية** — ⭐ **نَسَب مثبت + هوية مالك**.
+ * ⭐ تُصدر **داخل هذه الوحدة فقط** ⇒ ⇒⇒ **نسخة مزوَّرة مرفوضة بنيوياً.**
+ * ⭐ ⭐ **ولا تكفي وحدها** ⇒ ⭐⇒⇒ **السجلّ نفسه يعيد التحقّق**: ⭐ الهوية
+ *   المصدِرة يجب أن تكون **مسجَّلة في هذا السجلّ · بدور `owner` · غير ملغاة
+ *   وغير منتهية** ⇒ ⇒⇒⇒ **فمن يُلغى أو تنتهي صلاحيته يفقد الأحقية فوراً.**
+ */
+                                         
+                                  
+                               
+ 
+
+/** ⭐ سجلّ السلطات — ⭐ خاصة بالوحدة ولا تُصدَّر. */
+const ADMIN_AUTHORITIES = new WeakSet        ();
+
+/**
+ * ⭐ إصدار سلطة إدارة — ⭐ **غير مُصدَّر من `index.ts`**.
+ * ⛔ يُستدعى من طبقة التطبيق المحلية (المعاينة · شجرة الاختبار) فقط.
+ */
+function issueIdentityAdminAuthority(identity               )                         {
+  const authority                         = {
+    kind: 'identity.admin',
+    identity_id: identity.identity_id,
+  };
+  ADMIN_AUTHORITIES.add(authority);
+  return authority;
+}
+
+/** ⭐⭐ فحص النَسَب — ⭐ **كائن مزوَّر = مرفوض**. */
+function isIdentityAdminAuthority(value         )                                  {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value                      ).kind === 'identity.admin' &&
+    ADMIN_AUTHORITIES.has(value          )
+  );
+}
+
+function assertIdentityShape(input                    )       {
+  if (!input || typeof input !== 'object') {
+    throw new LocalIdentityError('identity_input_missing', 'مدخل الهوية مفقود');
+  }
+  if (!LOCAL_IDENTITY_ID_PATTERN.test(String(input.identity_id ?? ''))) {
+    throw new LocalIdentityError('identity_id_invalid', 'معرّف الهوية غير صالح');
+  }
+  if (!TENANT_ID_PATTERN.test(String(input.tenant_id ?? ''))) {
+    throw new LocalIdentityError('tenant_invalid', 'معرّف المستأجر غير صالح');
+  }
+  if (!ACTOR_ID_PATTERN.test(String(input.actor_id ?? ''))) {
+    throw new LocalIdentityError('actor_invalid', 'معرّف المنفّذ غير صالح');
+  }
+  if (!isTrustedRole(input.role)) {
+    throw new LocalIdentityError('role_invalid', 'الدور خارج المجموعة المغلقة');
+  }
+}
+
+/**
+ * ⭐⭐⭐ **سجلّ الهوية المحلي** — ⭐ **السلطة الوحيدة** على (المستأجر · الدور).
+ * ⭐ ⭐ **قواعد ثابتة**:
+ *   ⭐ ① **تسجيل واحد** ⇒ ⭐ لا تغيير دور ولا مستأجر ولا منفّذ بعد التسجيل.
+ *   ⭐ ② **لا كتابة بلا سلطة** ⇒ ⭐ والسلطة يجب أن تكون **لهوية مالك فعّالة**.
+ *   ⭐ ③ **التأسيس**: ⭐ أول هوية تُسجَّل هي **المالك نفسه** (دور `owner`).
+ *   ⭐ ④ **لا إلغاء المالك الأخير الفعّال** (إلا يتعطّل سلطة الحكم).
+ *   ⭐ ⑤ **القراءة تُعيد نسخة** ⇒ ⭐ لا تعديل من الخارج.
+ */
+/** ⭐⭐ عدّاد السجلّات — ⭐ (وحدة فقط) ⇒ ⭐ يميّز النسخ. */
+let REGISTRY_COUNTER = 0;
+
+class LocalIdentityRegistry {
+           #identities = new Map                       ();
+           #now              ;
+  /** ⭐⭐ معرّف النسخة — ⭐ **فريد داخل العملية** ⇒ ⭐ ⇒⇒ مصادر الهوية تأخذ منه ⇒ ⇒⇒ فلا تصادم بين سجلّين. */
+           instanceId        ;
+
+  constructor(options                         = {}) {
+    this.#now = options.now ?? (() => new Date().toISOString());
+    REGISTRY_COUNTER += 1;
+    this.instanceId = `ident-${REGISTRY_COUNTER}`;
+  }
+
+  /** ⭐⭐ اللحظة الحالية من ساعة السجلّ نفسه ⇒ ⭐ (خطّ زمني واحد للتسجيل والتفويض). */
+  currentTime()         {
+    return this.#now();
+  }
+
+  /** ⭐⭐⭐ إعادة التحقّق من **الأحقية** — ⭐ (مصدرُها السجلّ نفسه). */
+  #assertEntitled(authority                        )                {
+    if (!isIdentityAdminAuthority(authority)) {
+      throw new LocalIdentityError('admin_authority_invalid', 'سلطة الإدارة غير صالحة');
+    }
+    const owner = this.#identities.get(authority.identity_id);
+    if (!owner) {
+      throw new LocalIdentityError(
+        'admin_identity_unregistered',
+        'هوية صاحب السلطة غير مسجَّلة في هذا السجلّ',
+      );
+    }
+    if (owner.role !== 'owner') {
+      throw new LocalIdentityError('admin_not_owner', 'هوية صاحب السلطة ليست بدور مالك');
+    }
+    if (owner.status !== 'active') {
+      throw new LocalIdentityError('admin_revoked', 'سلطة الإدارة ملغاة');
+    }
+    if (this.#isExpired(owner, this.#now())) {
+      throw new LocalIdentityError('admin_expired', 'صلاحية صاحب السلطة منتهية');
+    }
+    return owner;
+  }
+
+  #isExpired(identity               , now        )          {
+    if (identity.expires_at === null || identity.expires_at === undefined) return false;
+    const expiry = Date.parse(identity.expires_at);
+    if (!Number.isFinite(expiry)) return false;
+    return expiry <= Date.parse(now);
+  }
+
+  /**
+   * ⭐⭐⭐ تسجيل هوية — ⭐ **يستلزم سلطة إدارة صالحة**.
+   * ⭐ **تسجيل واحد** ⇒ ⭐ إعادة التسجيل لنفس المعرّف = نفس القيم أو رفض.
+   */
+  register(input                    , authority                        )                {
+    assertIdentityShape(input);
+    if (!isIdentityAdminAuthority(authority)) {
+      throw new LocalIdentityError('admin_authority_invalid', 'سلطة الإدارة غير صالحة');
+    }
+    if (authority.identity_id !== input.identity_id) {
+      // ⭐ ⭐التأسيس: ⭐ المالك يسجّل نفسه أو يسجّل غيره.
+      this.#assertEntitled(authority);
+    } else {
+      // ⭐ ⭐ التأسيس: ⭐ لا سجلّ بعد ⇒ ⭐ لازم يكون المالك نفسه.
+      if (this.#identities.size > 0) {
+        this.#assertEntitled(authority);
+      } else if (input.role !== 'owner') {
+        throw new LocalIdentityError(
+          'admin_bootstrap_requires_owner',
+          'أول هوية مسجَّلة لازم تكون بدور المالك',
+        );
+      }
+    }
+    const existing = this.#identities.get(input.identity_id);
+    if (existing) {
+      if (existing.role !== input.role || existing.tenant_id !== input.tenant_id) {
+        throw new LocalIdentityError(
+          'identity_immutable',
+          'الهوية مسجَّلة بدور أو مستأجر مختلف ⇒ لا تعديل',
+        );
+      }
+      return existing;
+    }
+    const identity                = {
+      identity_id: input.identity_id,
+      tenant_id: input.tenant_id,
+      actor_id: input.actor_id,
+      role: input.role,
+      status: 'active',
+      expires_at: input.expires_at ?? null,
+    };
+    this.#identities.set(identity.identity_id, identity);
+    return identity;
+  }
+
+  /** ⭐⭐⭐ إلغاء هوية — ⭐ **يستلزم مالكاً فعّالاً** ⇒ ⭐ و⛔ لا إلغاء المالك الأخير. */
+  revoke(identityId        , authority                        )          {
+    this.#assertEntitled(authority);
+    const identity = this.#identities.get(identityId);
+    if (!identity) {
+      throw new LocalIdentityError('identity_unknown', 'الهوية غير مسجَّلة');
+    }
+    if (identity.status === 'revoked') return false;
+    if (identity.role === 'owner') {
+      const activeOwners = [...this.#identities.values()].filter(
+        (row) => row.role === 'owner' && row.status === 'active',
+      );
+      if (activeOwners.length <= 1) {
+        throw new LocalIdentityError(
+          'cannot_revoke_last_owner',
+          'لا يمكن إلغاء آخر مالك فعّال — يتعطّل الحكم الإداري',
+        );
+      }
+    }
+    this.#identities.set(identityId, { ...identity, status: 'revoked' });
+    return true;
+  }
+
+  /** ⭐⭐⭐ قراءة هوية — ⭐ **نسخة** (لا تعديل من الخارج). */
+  find(identityId        )                            {
+    const identity = this.#identities.get(identityId);
+    return identity ? { ...identity } : undefined;
+  }
+
+  /** ⭐⭐⭐ قائمة الهويات — ⭐ **تستلزم سلطة إدارة** (بيانات إدارية). */
+  list(authority                        )                           {
+    this.#assertEntitled(authority);
+    return [...this.#identities.values()].map((identity) => ({ ...identity }));
+  }
+
+  /** ⭐⭐ عدد الهويات (تشخيص محلّي فقط — ⛔ بلا كشف تركيبة المستأجرين). */
+  size()         {
+    return this.#identities.size;
+  }
+
+  /** ⭐⭐ هل انتهت صلاحية الهوية عند لحظة معيّنة؟ */
+  isExpired(identityId        , now         = this.#now())          {
+    const identity = this.#identities.get(identityId);
+    if (!identity) return true;
+    return this.#isExpired(identity, now);
+  }
+}
+return { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, issueIdentityAdminAuthority, isIdentityAdminAuthority, LocalIdentityRegistry };
+})();
+
+const __m_authorization = (() => {
+const { assertCapability, ROLE_CAPABILITIES, TRUSTED_ROLES } = __m_capability;
+const { CONVERSATION_REF_PATTERN } = __m_tenant;
+const { registerSessionSource, resolveTenantContext } = __m_session;
+const { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityRegistry } = __m_identity;
+const { CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, CONVERSATION_AUDIT_CAPABILITY } = __m_conversation_query;
+const { CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY } = __m_conversation_state;
+const { CONVERSATION_QUEUE_CAPABILITY } = __m_agent_queue;
+const { CONVERSATION_METRICS_CAPABILITY } = __m_service_metrics;
+// ============================================================
+// WASL AI — طبقة التفويض المحلية (Slice 08 · P0)
+// ------------------------------------------------------------
+// ⭐⭐⭐ **ليست نظام مصادقة** ⇒ ⭐ طبقة **محلية تجريبية** تفصل بين:
+//   ⭐ ① **مصدر الهوية** (من هي؟) ⇒ ⭐ `identity.ts` (سجلّ محلي موثوق)
+//   ⭐ ② **قرار السماح** (يحق له؟) ⇒ ⭐ **هذه الوحدة** (باستعمال جدول النواة)
+// ⛔ بلا رموز مصادقة · ⛔ بلا جلسات حقيقية · ⛔ بلا قاعدة بيانات · ⛔ بلا شبكة.
+// ⭐⭐ **المبدأ الحاكم**: ⭐ **الدور يُشتق من السجلّ لا من الطلب** ⇒
+//   ⭐⇒⇒ **مصدر الهوية يبني «هوية موثّقة» جديدة** ⇒ ⇒⇒ **لا حقل من
+//   الحمولة (دور · مستأجر · صلاحيات) يصل إلى السياق — أبداً.**
+// ⭐⭐ **لا محرك صلاحيات موازٍ** ⇒ ⭐ العمليات تُترجم إلى **الصلاحيات
+//   الموجودة في `src/core/capability.ts`** ⇒ ⇒⇒ **والقرار = `assertCapability`**
+//   ⇒ ⇒⇒⇒ **فالقاعدة واحدة: سياسة النواة.**
+// ⭐ **الفصل عن المسار الإنتاجي**: ⭐ مصادر الهوية المحلية نطاقها `test` ⇒
+//   ⇒⇒⇒ **`resolveProductionTenantContext` يرفضها بنيوياً.**
+// ============================================================
+
+
+
+
+
+
+
+
+
+                                                    
+
+/**
+ * ⭐⭐⭐ **عمليات التفويض المحلية** — ⭐ **مترجمة إلى صلاحيات النواة نفسها**.
+ * ⭐ ⛔ **لا اسم صلاحية جديد هنا** ⇒ ⇒⇒ (لا محرك موازٍ).
+ */
+const LOCAL_AUTHORIZATION_OPERATIONS                                   = Object.freeze({
+  'conversation.list': CONVERSATION_LIST_CAPABILITY,
+  'conversation.read': CONVERSATION_READ_CAPABILITY,
+  'conversation.audit': CONVERSATION_AUDIT_CAPABILITY,
+  'conversation.state.read': CONVERSATION_STATE_READ_CAPABILITY,
+  'conversation.state.update': CONVERSATION_STATE_UPDATE_CAPABILITY,
+  'conversation.assign': CONVERSATION_ASSIGN_CAPABILITY,
+  'conversation.changes': CONVERSATION_STATE_READ_CAPABILITY,
+  'conversation.queue.read': CONVERSATION_QUEUE_CAPABILITY,
+  'conversation.metrics.read': CONVERSATION_METRICS_CAPABILITY,
+});
+
+/** ⭐⭐ اسم عملية التفويض المعلنة. */
+                                                                                      
+
+/** ⭐⭐⭐ طلب التفويض — ⭐ **مرجع فقط** (بلا دور ولا مستأجر من العميل). */
+                                            
+                                                      
+                               
+                                                                              
+                                    
+                            
+                                                  
+                                                                        
+                                       
+     
+                                                            
+                                                                    
+                                                       
+     
+                                                     
+ 
+
+/** ⭐⭐⭐ نتيجة تفويض — ⭐ **مفصولة عن مصدر الهوية** (إجابة M34 · ①/②). */
+                                        
+     
+                             
+                                      
+                                  
+                                 
+                                 
+     
+     
+                              
+                            
+                              
+      
+
+/** ⭐⭐⭐ اعتماديات طبقة التفويض. */
+                                                 
+                                             
+                                           
+                                       
+                                         
+                                                               
+                                    
+                                                           
+                              
+ 
+
+/** ⭐⭐ مصادر الهوية المحلية — ⭐ واحد لكل دور موثّق. */
+                                       
+                                                                
+ 
+
+class LocalAuthorizationError extends Error {
+           code        ;
+  constructor(code        , message        ) {
+    super(message);
+    this.name = 'LocalAuthorizationError';
+    this.code = code;
+  }
+}
+
+/**
+ * ⭐⭐⭐ **بناء مصدر هوية محلية لدور واحد** — ⭐ **مصدر جلسات حقيقي** (نفس
+ *   عقد `SessionSource`) ⇒ ⇒⇒ **لا مسار موازٍ لتفويض النواة**.
+ * ⭐ ⭐ **يقرأ من السجلّ فقط** ⇒ ⇒⇒ **لا دور ولا مستأجر ولا صلاحية من الحمولة**.
+ */
+function buildLocalIdentitySource(
+  registry                       ,
+  role             ,
+)                {
+  return {
+    id: `test-local-identity-${registry.instanceId}-${role}`,
+    scope: 'test',
+    description:
+      `مصدر هوية محلية (Slice 08 · محاكاة محلية · بلا تسجيل دخول) — الدور ${role}`,
+    verify(input         )                          {
+      if (!input || typeof input !== 'object') return null;
+      const raw = input                                                         ;
+      if (typeof raw.identity_id !== 'string' || !LOCAL_IDENTITY_ID_PATTERN.test(raw.identity_id)) {
+        return null;
+      }
+      if (
+        typeof raw.conversation_ref !== 'string' ||
+        !CONVERSATION_REF_PATTERN.test(raw.conversation_ref)
+      ) {
+        return null;
+      }
+      const identity = registry.find(raw.identity_id);
+      if (!identity) return null;
+      // ⭐⭐⇦⇦ **الدور من السجلّ** ⇒ ⇒⇒ مصدر دور أعلى لا يقبل هوية أدنى.
+      if (identity.role !== role) return null;
+      if (identity.status !== 'active') return null;
+      if (registry.isExpired(identity.identity_id)) return null;
+      // ⭐⭐⭐ **هوية جديدة بالكامل** ⇒ ⭐⇒⇒ لا تمرير للحمولة إطلاقاً.
+      return {
+        session_id: `sess_local_${identity.identity_id}`,
+        tenant_id: identity.tenant_id,
+        actor_id: identity.actor_id,
+        conversation_ref: raw.conversation_ref,
+        authenticated: true,
+      };
+    },
+  };
+}
+
+/**
+ * ⭐⭐⭐ **إنشاء مصادر الهوية المحلية** — ⭐ **تسجيل صريح** (لا تسجيل عند
+ *   تحميل الوحدة) ⇒ ⇒⇒ **لا مصدر افتراضي** ⇒ ⇒⇒⇒ **والمسار الإنتاجي يبقى
+ *   بلا مصادر** (`activeSessionSources()` فارغة).
+ */
+function createLocalIdentitySources(
+  registry                       ,
+)                       {
+  const byRole = {}                                      ;
+  for (const role of TRUSTED_ROLES) {
+    const source = buildLocalIdentitySource(registry, role);
+    registerSessionSource({
+      source,
+      grantedRole: role,
+      grantCeiling: ROLE_CAPABILITIES[role],
+    });
+    byRole[role] = source;
+  }
+  return Object.freeze({ byRole: Object.freeze(byRole) });
+}
+
+function deny(code        , reason        )                             {
+  return { allowed: false, code, reason };
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **طبقة التفويض المحلية** — ⭐ **البوّابة الوحيدة** بين «طلب» و«سياق تنفيذ».
+ * ⭐⭐ **الترتيب (Fail-closed)**:
+ *   ⭐ ① **شكل الطلب** ⇒ ② **الهوية** (موجودة · غير ملغاة · غير منتهية)
+ *   ⭐ ⇒ ③ **المستأجر** (المعلن يطابق) ⇒ ④ **الدور** (من السجلّ ⇒ مصدر مطابق)
+ *   ⭐ ⇒ ⑤ **بناء السياق** (المصدر يبني هوية جديدة) ⇒ ⑥ **صلاحية العملية**
+ * ⭐ ⇒⇒⇒ **أي خطوة تفشل = رفض صريح (لا سياق ⇒ لا تنفيذ).**
+ */
+function authorizeLocalRequest(
+  request                           ,
+  deps                                ,
+)                             {
+  const now = deps.now ? deps.now() : deps.registry.currentTime();
+
+  // ⭐ ① شكل الطلب — ⭐ ⛔ الرفض الافتراضي عند غياب أي حقل.
+  if (!request || typeof request !== 'object') {
+    return deny('request_invalid', 'طلب التفويض مفقود أو غير صالح');
+  }
+  if (typeof request.identity_id !== 'string' || !LOCAL_IDENTITY_ID_PATTERN.test(request.identity_id)) {
+    return deny('identity_id_invalid', 'معرّف الهوية غير صالح');
+  }
+  if (
+    typeof request.conversation_ref !== 'string' ||
+    !CONVERSATION_REF_PATTERN.test(request.conversation_ref)
+  ) {
+    return deny('conversation_invalid', 'معرّف المحادثة غير صالح');
+  }
+  const capability = LOCAL_AUTHORIZATION_OPERATIONS[request.operation];
+  if (!capability) {
+    return deny('operation_unknown', 'العملية المطلوبة خارج المجموعة المعلنة');
+  }
+
+  // ⭐ ② الهوية — ⭐ من السجلّ وحده.
+  const identity = deps.registry.find(request.identity_id);
+  if (!identity) {
+    return deny('identity_unknown', 'الهوية غير مسجَّلة');
+  }
+  if (identity.status !== 'active') {
+    return deny('identity_revoked', 'الهوية ملغاة');
+  }
+  if (deps.registry.isExpired(identity.identity_id, now)) {
+    return deny('identity_expired', 'صلاحية الهوية منتهية');
+  }
+
+  // ⭐ ③ المستأجر — ⭐ المعلن من العميل لا يُقدَّم على مستأجر الهوية.
+  if (
+    request.declared_tenant_id !== undefined &&
+    request.declared_tenant_id !== identity.tenant_id
+  ) {
+    return deny('tenant_mismatch', 'المستأجر المعلن لا يطابق مستأجر الهوية');
+  }
+
+  // ⭐ ④ الدور — ⭐ من السجلّ ⇒ ⇒⇒ مصدر مطابق للدور (لا دور أعلى).
+  const source = deps.sources.byRole[identity.role];
+  if (!source) {
+    return deny('identity_role_unsupported', 'لا مصدر مسجَّل لهذا الدور');
+  }
+
+  // ⭐ ⑤ بناء السياق — ⭐ الحقول الواردة من العميل تُمرَّر **لتجاهلها** عمداً.
+  let context               ;
+  try {
+    context = resolveTenantContext(
+      {
+        identity_id: identity.identity_id,
+        conversation_ref: request.conversation_ref,
+        ...(request.extra ?? {}),
+      }         ,
+      { source, now: () => now },
+    );
+  } catch (error) {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error                     ).code)
+        : 'identity_rejected';
+    return deny('identity_rejected', `رفض مصدر الهوية: ${code}`);
+  }
+
+  // ⭐ ⑥ قرار السماح — ⭐ **جدول النواة** (لا قاعدة موازية).
+  try {
+    assertCapability(context, capability);
+  } catch {
+    deps.readAudit?.record({
+      tenant_id: context.tenantId,
+      actor_id: context.actorId,
+      operation: request.operation         ,
+      capability,
+      result: 'denied',
+      target: request.conversation_ref,
+    });
+    return deny('capability_missing', `الصلاحية غير متاحة للدور: ${capability}`);
+  }
+
+  deps.readAudit?.record({
+    tenant_id: context.tenantId,
+    actor_id: context.actorId,
+    operation: request.operation         ,
+    capability,
+    result: 'allowed',
+    target: request.conversation_ref,
+  });
+
+  return {
+    allowed: true,
+    context,
+    capability,
+    role: context.role,
+    tenant_id: context.tenantId,
+  };
+}
+
+/**
+ * ⭐⭐⭐ **بوّابة تفويض فاشلة-مغلقة** — ⭐ **ترمي عند الرفض** ⇒ ⇒⇒
+ *   لا تنفيذ بلا سياق ⇒ ⇒⇒ (الافتراضي = المنع).
+ */
+function requireLocalAuthorization(
+  request                           ,
+  deps                                ,
+)                {
+  const decision = authorizeLocalRequest(request, deps);
+  if (!decision.allowed) {
+    throw new LocalAuthorizationError(decision.code, decision.reason);
+  }
+  return decision.context;
+}
+return { LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, createLocalIdentitySources, authorizeLocalRequest, requireLocalAuthorization };
+})();
+
 const __m_index = (() => {
 // ============================================================
 // WASL AI — النواة الداخلية للشريحة الأولى (تصدير موحّد)
@@ -4027,16 +4618,25 @@ const { AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHO
 // ⭐ Slice 05 — مؤشرات الخدمة (⭐ قراءة فقط · لا قيمة مخترَعة · المشرف والمالك فقط)
 const { CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics } = __m_service_metrics;
 
+// ⭐ Slice 08 — طبقة الهوية والتفويض المحلية (محاكاة محلية · ⛔ ليست مصادقة إنتاجية)
+// ⭐ ⛔ `issueIdentityAdminAuthority` **غير مُصدَّر من السطح العام** ⇒ ⇒⇒
+//    ⇒⇒⇒ **السطح العام لا يصدر سلطة إدارة** ⇒ ⇒⇒⇒ **⇒ فالتسجيل والإلغاء
+//    يحتاجان طبقة التطبيق المحلية** ⇒ ⇒⇒⇒⇒ **والتسجيل لا يتم عند تحميل
+//    الوحدة** ⇒ ⇒⇒⇒⇒⇒ **⇒ لا مصدر افتراضي ولا مسار إنتاجي.**
+const { LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, LocalIdentityRegistry } = __m_identity;
+
+const { LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, authorizeLocalRequest, createLocalIdentitySources, requireLocalAuthorization } = __m_authorization;
+
 // ⛔⛔ لا مولّد بيانات اصطناعية هنا.
 // ⭐ نُقل إلى شجرة الاختبار (خارج حزمة الإنتاج) ⇒ ولا ذكر لأدوات الاختبار هنا.
 // ⛔ لا مصدر جلسات اختباري هنا — ولا حتى واحد.
 // ⛔ ولا مصدر إنتاجي مسجَّل ⇒ لا افتراض افتراضي لمصدر الجلسات.
-return { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope, CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities, ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow, activeSessionSources, resolveProductionTenantContext, resolveTenantContext, AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS, MessageStore, PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome, OrderingState, evaluateOrdering, ReadAuditError, ReadAuditLog, CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit, CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH, ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState, AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue, CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics };
+return { ENVELOPE_RULES, ENVELOPE_SCHEMA_VERSION, ENVELOPE_SUPPORTED_SCHEMA_VERSIONS, EnvelopeValidationError, parseEnvelope, validateEnvelope, CAPABILITY_PATTERN, CapabilityError, ROLE_CAPABILITIES, TRUSTED_ROLES, assertCapability, isTrustedRole, normalizeCapabilities, resolveGrantedCapabilities, ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_ID_PATTERN, TenantContextError, assertConversationMatches, assertTenantMatches, defaultNow, activeSessionSources, resolveProductionTenantContext, resolveTenantContext, AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS, MessageStore, PROCESSING_OUTCOME_RULES, ProcessingLayer, ProcessingOutcomeError, parseProcessingOutcome, validateProcessingOutcome, OrderingState, evaluateOrdering, ReadAuditError, ReadAuditLog, CONVERSATION_AUDIT_CAPABILITY, CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, ConversationQueryError, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, getConversation, listConversations, readConversationAudit, CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, ConversationChangeError, ConversationChangeLog, assertChangeEntry, assertChangeReason, MAX_CHANGE_REASON_LENGTH, ALLOWED_TRANSITIONS, CONVERSATION_ASSIGN_CAPABILITY, CONVERSATION_STATE_OPERATIONS, CONVERSATION_STATE_READ_CAPABILITY, CONVERSATION_STATE_UPDATE_CAPABILITY, CONVERSATION_STATES, ConversationStateError, ConversationStateStore, TERMINAL_CONVERSATION_STATES, isTerminalState, MAX_CHANGE_PAGE_SIZE, assignConversation, getConversationState, readConversationChanges, unassignConversation, updateConversationState, AgentWorkQueueError, CONVERSATION_QUEUE_CAPABILITY, DEFAULT_IDLE_THRESHOLD_MINUTES, DEFAULT_QUEUE_PAGE_SIZE, MAX_QUEUE_PAGE_SIZE, computeConversationActivity, listWorkQueue, CONVERSATION_METRICS_CAPABILITY, ServiceMetricsError, getServiceMetrics, LOCAL_IDENTITY_ID_PATTERN, LocalIdentityError, LocalIdentityRegistry, LOCAL_AUTHORIZATION_OPERATIONS, LocalAuthorizationError, authorizeLocalRequest, createLocalIdentitySources, requireLocalAuthorization };
 })();
 
 const __m_wasl_workbench_preview_runtime = (() => {
-const { AuditLog, ConversationChangeLog, ConversationStateStore, MessageStore, OrderingState, ProcessingLayer, ReadAuditLog, ALLOWED_TRANSITIONS, CONVERSATION_STATES, TERMINAL_CONVERSATION_STATES, assignConversation, isTerminalState, listWorkQueue, readConversationChanges, resolveTenantContext, unassignConversation, updateConversationState } = __m_index;
-const { registerSessionSource } = __m_session;
+const { AuditLog, ConversationChangeLog, ConversationStateStore, LocalIdentityRegistry, MessageStore, OrderingState, ProcessingLayer, ReadAuditLog, ALLOWED_TRANSITIONS, CONVERSATION_STATES, TERMINAL_CONVERSATION_STATES, assignConversation, authorizeLocalRequest, createLocalIdentitySources, isTerminalState, listWorkQueue, readConversationChanges, unassignConversation, updateConversationState } = __m_index;
+const { issueIdentityAdminAuthority } = __m_identity;
 // ============================================================
 // WASL AI — مُشغِّل المعاينة التفاعلية (Slice 07 · P0)
 // ------------------------------------------------------------
@@ -4051,15 +4651,14 @@ const { registerSessionSource } = __m_session;
 // ============================================================
 
 
-// ⭐ `registerSessionSource` ليس في السطح العام ⇒ ⭐ استيراده مباشرة.
+// ⭐⭐ Slice 08 — ⭐ **إصدار سلطة الإدارة ليس في السطح العام** ⇒ ⭐ استيراده مباشرة.
+//    ⇒ ⭐⇒⇒ **السطح العام لا يستطيع تسجيل هوية أو إلغاؤها.**
 
              
                                 
                   
                 
-                
               
-                   
                               
 
 // ============================================================
@@ -4091,93 +4690,24 @@ const PREVIEW_OTHER_TENANT_EMPLOYEE = 'actor_preview_0009';
 const PREVIEW_OTHER_TENANT_CONVERSATION = 'conv_preview_0009';
 
 // ============================================================
-// ⭐ مصادر الجلسات الاصطناعية — ⭐ **مصدر لكل دور** (نطاق `test`)
-// ============================================================
-
-/** ⭐ ⭐ سجلّ الأدوار الداخلية — ⭐ **لا يُقرأ من العميل أبداً**. */
-const ROLE_BINDINGS = new WeakMap                     ();
-
-function markSynthetic                  (claims   , role             )    {
-  ROLE_BINDINGS.set(claims, role);
-  return claims;
-}
-
-function buildSyntheticSource(role             )                {
-  return {
-    id: `preview-synthetic-${role}`,
-    scope: 'test',
-    description: `مصدر اصطناعي للمعاينة التجريبية فقط (دور: ${role}) — بيانات صناعية بالكامل`,
-    verify(input         )                          {
-      if (!input || typeof input !== 'object') return null;
-      // ⭐ **السجلّ الداخلي هو مصدر الحقيقة** ⇒ ⭐ لا دور من حمولة العميل.
-      if (ROLE_BINDINGS.get(input          ) !== role) return null;
-      const claims = input     
-                           
-                          
-                         
-                                 
+// ⭐⭐ Slice 08 — ⭐ **بذور الهوية المحلية** (محاكاة محلية · بلا تسجيل دخول)
+// ⭐⭐ (المستأجر · الدور · المنفّذ) ⇒ ⭐⇒⇒ **والدور لا يُقرأ من العميل أبداً**
+//   ⇒ ⭐⇒⇒ **وكل هوية تُربط بمستأجر واحد ودور واحد عند التسجيل.**
                                
-       ;
-      if (claims.authenticated !== true) return null;
-      // ⭐ كائن هوية **جديد** ⇒ ⭐ لا تمرير لحمولة العميل.
-      return {
-        session_id: claims.session_id,
-        tenant_id: claims.tenant_id,
-        actor_id: claims.actor_id,
-        conversation_ref: claims.conversation_ref,
-        authenticated: true,
-      };
-    },
-  };
-}
+                               
+                             
+                            
+                             
+ 
 
-/** ⭐ السقوف — ⭐ **سلطة المالك على ما يُمنح** (نفس السقوف في `tests/support/local-session.ts`). */
-const CEILINGS                                                   = Object.freeze({
-  owner: Object.freeze([
-    'conversation.list',
-    'conversation.read',
-    'conversation.audit',
-    'conversation.state.read',
-    'conversation.state.update',
-    'conversation.assign',
-    'conversation.queue.read',
-    'conversation.metrics.read',
-  ]),
-  supervisor: Object.freeze([
-    'conversation.list',
-    'conversation.read',
-    'conversation.audit',
-    'conversation.state.read',
-    'conversation.state.update',
-    'conversation.queue.read',
-    'conversation.metrics.read',
-  ]),
-  agent: Object.freeze([
-    'conversation.list',
-    'conversation.read',
-    'conversation.audit',
-    'conversation.state.read',
-    'conversation.queue.read',
-  ]),
-  viewer: Object.freeze(['conversation.list', 'conversation.read', 'conversation.audit']),
-  none: Object.freeze([]),
-});
-
-const SOURCES                                               = Object.freeze({
-  owner: buildSyntheticSource('owner'),
-  supervisor: buildSyntheticSource('supervisor'),
-  agent: buildSyntheticSource('agent'),
-  viewer: buildSyntheticSource('viewer'),
-  none: buildSyntheticSource('none'),
-});
-
-for (const role of Object.keys(SOURCES)                 ) {
-  registerSessionSource({
-    source: SOURCES[role],
-    grantedRole: role,
-    grantCeiling: CEILINGS[role],
-  });
-}
+/** ⭐⭐ هويات المستأجر الأول — ⭐ واحد لكل دور · ⭐ ومستأجر ثانٍ للتأكد من العزل. */
+const PREVIEW_IDENTITIES                                 = Object.freeze([
+  { identity_id: 'preview-ident-owner', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0001', role: 'owner' },
+  { identity_id: 'preview-ident-supervisor', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0002', role: 'supervisor' },
+  { identity_id: 'preview-ident-agent', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0007', role: 'agent' },
+  { identity_id: 'preview-ident-viewer', tenant_id: PREVIEW_TENANT, actor_id: 'actor_preview_0003', role: 'viewer' },
+  { identity_id: 'preview-ident-other-owner', tenant_id: PREVIEW_OTHER_TENANT, actor_id: 'actor_preview_0002', role: 'owner' },
+]);
 
 // ============================================================
 // ⭐ أنواع الواجهة العامة للمعاينة
@@ -4319,27 +4849,47 @@ function createPreviewRuntime()                 {
     },
   };
 
-  // ⭐ ⭐ **الدور لا يُمرَّر في الحمولة** ⇒ ⭐ `markSynthetic` يسجّله داخلياً.
-  const contextFor = (role             , tenantId        , actorId        , conversationRef        )                => {
-    const claims = markSynthetic(
+  // ⭐⭐⭐ Slice 08 — ⭐ **سجلّ الهوية المحلي** (تسجيل صريح · بلا افتراضي).
+  const identityRegistry = new LocalIdentityRegistry({ now: () => PREVIEW_NOW });
+  const ownerSeed = PREVIEW_IDENTITIES[0];
+  const ownerAuthority = issueIdentityAdminAuthority({
+    ...ownerSeed,
+    status: 'active',
+    expires_at: null,
+  });
+  // ⭐ التأسيس: ⭐ المالك يسجّل نفسه ⇒ ثم يسجّل البقية.
+  identityRegistry.register(ownerSeed, ownerAuthority);
+  for (const seed of PREVIEW_IDENTITIES.slice(1)) {
+    identityRegistry.register(seed, ownerAuthority);
+  }
+  const identitySources = createLocalIdentitySources(identityRegistry);
+
+  const identityIdFor = (role             , tenantId        )         =>
+    PREVIEW_IDENTITIES.find((seed) => seed.role === role && seed.tenant_id === tenantId)
+      ?.identity_id ?? '';
+
+  // ⭐⭐⭐ **السياق يبنيه طبقة التفويض** ⇒ ⭐⇒⇒ **الدور من السجلّ لا من الطلب**.
+  const contextFor = (role             , tenantId        , conversationRef        )                => {
+    const decision = authorizeLocalRequest(
       {
-        session_id: `sess_preview_${role}`,
-        tenant_id: tenantId,
-        actor_id: actorId,
+        identity_id: identityIdFor(role, tenantId),
         conversation_ref: conversationRef,
-        authenticated: true,
+        operation: 'conversation.read',
       },
-      role,
+      { registry: identityRegistry, sources: identitySources },
     );
-    return resolveTenantContext(claims, { source: SOURCES[role] });
+    if (!decision.allowed) {
+      throw new Error(`تعذّر بناء السياق: ${decision.code}`);
+    }
+    return decision.context;
   };
 
-  const ownerCtx = contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001');
-  const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, 'actor_preview_0002', PREVIEW_OTHER_TENANT_CONVERSATION);
+  const ownerCtx = contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001');
+  const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, PREVIEW_OTHER_TENANT_CONVERSATION);
 
   // ── ⭐ التوليد: كل محادثة تُبنى عبر **عمليات النواة نفسها** ──
   const seed = (ref        , actorId        , msgs                                                     )       => {
-    const ctx = contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', ref);
+    const ctx = contextFor('owner', PREVIEW_TENANT, ref);
     msgs.forEach((msg, index) => {
       layer.process(
         ctx,
@@ -4356,31 +4906,31 @@ function createPreviewRuntime()                 {
 
   // ① محادثة مُسندة — عامل.
   seed('conv_preview_0001', 'actor_preview_0007', [{ at: '2026-01-05T08:00:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001'), 'conv_preview_0001', 'open', deps, { reason: 'فتح الطلب' });
-  assignConversation(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0001'), 'conv_preview_0001', 'actor_preview_0007', deps, { reason: 'توزيع على خدمة العملاء' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001'), 'conv_preview_0001', 'open', deps, { reason: 'فتح الطلب' });
+  assignConversation(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001'), 'conv_preview_0001', 'actor_preview_0007', deps, { reason: 'توزيع على خدمة العملاء' });
 
   // ② محادثة قيد المعالجة.
   seed('conv_preview_0002', 'actor_preview_0008', [
     { at: '2026-01-05T09:00:00.000Z' },
     { at: '2026-01-05T09:30:00.000Z', dir: 'outbound' },
   ]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0002'), 'conv_preview_0002', 'open', deps, { reason: 'فتح الطلب' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0002'), 'conv_preview_0002', 'pending', deps, { reason: 'بانتظار رد العميل' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0002'), 'conv_preview_0002', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0002'), 'conv_preview_0002', 'pending', deps, { reason: 'بانتظار رد العميل' });
 
   // ③ محادثة مفتوحة بلا إسناد.
   seed('conv_preview_0003', 'actor_preview_0001', [{ at: '2026-01-05T11:50:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0003'), 'conv_preview_0003', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0003'), 'conv_preview_0003', 'open', deps, { reason: 'فتح الطلب' });
 
   // ④ محادثة قابلة للإغلاق (`resolved`).
   seed('conv_preview_0004', 'actor_preview_0001', [{ at: '2026-01-05T10:00:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0004'), 'conv_preview_0004', 'open', deps, { reason: 'فتح الطلب' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0004'), 'conv_preview_0004', 'resolved', deps, { reason: 'تم الحل' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0004'), 'conv_preview_0004', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0004'), 'conv_preview_0004', 'resolved', deps, { reason: 'تم الحل' });
 
   // ⑤ محادثة مغلقة — **نهائية** (لا تُعدَّل ولا تُسند).
   seed('conv_preview_0005', 'actor_preview_0001', [{ at: '2026-01-05T07:00:00.000Z' }]);
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'open', deps, { reason: 'فتح الطلب' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'resolved', deps, { reason: 'تم الحل' });
-  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', 'conv_preview_0005'), 'conv_preview_0005', 'closed', deps, { reason: 'إغلاق نهائي' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0005'), 'conv_preview_0005', 'open', deps, { reason: 'فتح الطلب' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0005'), 'conv_preview_0005', 'resolved', deps, { reason: 'تم الحل' });
+  updateConversationState(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0005'), 'conv_preview_0005', 'closed', deps, { reason: 'إغلاق نهائي' });
 
   // ⑥ محادثة المستأجر الثاني — **يجب ألا تظهر في رؤية المستأجر الأول**.
   layer.process(
@@ -4395,14 +4945,9 @@ function createPreviewRuntime()                 {
   // ── ⭐ حالة الدور الحالي ──
   let currentRole              = PREVIEW_DEFAULT_ROLE;
 
+  // ⭐⭐ **سياق الدور الحالي** ⇒ ⭐⇒⇒ **من هوية الدور نفسه** (بلا تصعيد).
   const context = (role             , conversationRef        )                =>
-    role === 'agent'
-      ? contextFor('agent', PREVIEW_TENANT, 'actor_preview_0007', conversationRef)
-      : role === 'viewer'
-        ? contextFor('viewer', PREVIEW_TENANT, 'actor_preview_0001', conversationRef)
-        : role === 'owner'
-          ? contextFor('owner', PREVIEW_TENANT, 'actor_preview_0001', conversationRef)
-          : contextFor('supervisor', PREVIEW_TENANT, 'actor_preview_0002', conversationRef);
+    contextFor(role, PREVIEW_TENANT, conversationRef);
 
   const toRows = (items                    )                    =>
     (items                                  ).map((item) => ({
@@ -4461,12 +5006,11 @@ function createPreviewRuntime()                 {
     },
 
     listAll()                    {
+      // ⭐⭐ **بلا تصعيد** ⇒ ⭐⇒⇒ **سياق الدور الحالي نفسه** (لا دور أعلى).
       try {
-        const page = listWorkQueue(
-          context(currentRole === 'agent' ? 'supervisor' : currentRole, 'conv_preview_0001'),
-          deps,
-          { now: PREVIEW_NOW },
-        );
+        const page = listWorkQueue(context(currentRole, 'conv_preview_0001'), deps, {
+          now: PREVIEW_NOW,
+        });
         return toRows(page.items);
       } catch {
         return [];
@@ -4568,10 +5112,13 @@ function createPreviewRuntime()                 {
                                      
                            
       {
+      // ⭐⭐ **تشخيص صريح**: ⭐ هوية **المالك** (لكل المستأجر) ⇒ ⭐⇒⇒ رقمان قابلان للمقارنة.
       const firstTenantRefs = new Set(
-        runtime.listAll().map((item) => item.conversation_ref),
+        listWorkQueue(contextFor('owner', PREVIEW_TENANT, 'conv_preview_0001'), deps, {
+          now: PREVIEW_NOW,
+        }).items.map((item) => item.conversation_ref),
       );
-      const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, 'actor_preview_0002', PREVIEW_OTHER_TENANT_CONVERSATION);
+      const otherCtx = contextFor('owner', PREVIEW_OTHER_TENANT, PREVIEW_OTHER_TENANT_CONVERSATION);
       let otherTotal = 0;
       try {
         otherTotal = listWorkQueue(otherCtx, deps, { now: PREVIEW_NOW }).pagination.total;
@@ -4723,6 +5270,17 @@ function installPreviewUi(runtime                )       {
     roleBar.appendChild(button);
   }
   root.appendChild(roleBar);
+
+  // ⭐⭐ Slice 08 — ⭐ **وسم دائم: هذه محاكاة محلية بهويات اصطناعية**
+  //   (بلا تسجيل دخول · بلا مستخدم حقيقي · بلا مصادقة) ⇒ ⭐ فلا تُقرأ
+  //   كأنّها بيانات حقيقية.
+  root.appendChild(
+    el(
+      'div',
+      'sim-badge',
+      'محاكاة محلية — شخصيات اصطناعية (بلا تسجيل دخول) · Slice 08',
+    ),
+  );
 
   const capabilities = el('div', 'capabilities');
   root.appendChild(capabilities);
