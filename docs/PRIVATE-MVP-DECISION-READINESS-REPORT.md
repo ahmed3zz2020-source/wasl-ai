@@ -350,7 +350,7 @@
 > ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md`
 >
 > ⭐ **رابط الـcommit (يُملأ بعد الدفع):**
-> ⭐ `https://github.com/ahmed3zz2020-source/wasl-ai/commit/«COMMIT_HASH_PLACEHOLDER»`
+> ⭐ `https://github.com/ahmed3zz2020-source/wasl-ai/commit/7b3b06d50fa1f6d17b9c2dd9140f083e664d5012`
 >
 > ⭐ **الملف داخل المستودع:**
 > ⭐ `docs/PRIVATE-MVP-DECISION-READINESS-REPORT.md`
