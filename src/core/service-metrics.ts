@@ -134,7 +134,7 @@ export function getServiceMetrics(
   let idleOverThresholdTotal = 0;
 
   for (const ref of refs) {
-    const row = deps.states.get(context.tenantId, ref);
+    const row = deps.states.get(context, ref);
     const state: ConversationState = row?.state ?? 'new';
     const assignee = row?.assignee_actor_id ?? null;
     byState[state] += 1;

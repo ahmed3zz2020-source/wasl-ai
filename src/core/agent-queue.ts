@@ -239,7 +239,7 @@ export function listWorkQueue(
   const refs = deps.store.conversationRefs(context);
   const items: WorkQueueItem[] = [];
   for (const ref of refs) {
-    const row: ConversationStateView | undefined = deps.states.get(context.tenantId, ref);
+    const row: ConversationStateView | undefined = deps.states.get(context, ref);
     const state: ConversationState = row?.state ?? 'new';
     const assignee = row?.assignee_actor_id ?? null;
     // ⭐⭐ نطاق الدور: ⭐ الوكيل يرى **محادثاته فقط**.

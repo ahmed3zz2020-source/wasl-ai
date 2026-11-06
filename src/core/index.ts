@@ -81,11 +81,17 @@ export {
   AuditLog,
   AuditLogError,
   SECRET_PATTERNS,
+  type AuditAdminScope,
   type AuditEntry,
   type AuditInput,
   type AuditOutcome,
   type AuditSink,
 } from './audit-log.ts';
+
+// ⛔ `issueAuditAdminScope` **غير مُصدَّر من السطح العام** (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)
+//    ⇒ ⭐ ⇒⇒ **السطح العام الإنتاجي لا يستطيع إصدار نطاق إدارة** ⇒ ⇒⇒
+//    ⇒⇒⇒ **ولا يوجد مسار لتفريغ كل المستأجرين من أي مقبض شائع**
+//    ⇒ ⇒⇒⇒ **والتفريغ الشامل = سلطان إداري محلي (نطاق بنَسَب مثبت) لا تُصدَّر منه.**
 
 export {
   MessageStore,

@@ -415,15 +415,15 @@ test('١٠) ⭐⭐⭐⭐⭐ القراءة فقط (بلا أي أثر كتابة
     const ctxA = context('supervisor');
     const ctxB = context('supervisor', 2, 21, 9);
     seed(layer, ctxA, ctxB);
-    const statesBefore = states.sizeFor(TENANT_A);
-    const rowsBefore = changes.size();
+    const statesBefore = states.sizeFor(ctxA);
+    const rowsBefore = changes.sizeFor(ctxA);
     const messagesBefore = store.countFor(ctxA);
 
     listWorkQueue(ctxA, deps, { now: NOW });
     getServiceMetrics(ctxA, deps, { now: NOW });
 
-    assert.equal(states.sizeFor(TENANT_A), statesBefore, 'القراءة أنشأت صفوف حالة');
-    assert.equal(changes.size(), rowsBefore, 'القراءة كتبت في سجل التغييرات');
+    assert.equal(states.sizeFor(ctxA), statesBefore, 'القراءة أنشأت صفوف حالة');
+    assert.equal(changes.sizeFor(ctxA), rowsBefore, 'القراءة كتبت في سجل التغييرات');
     assert.equal(store.countFor(ctxA), messagesBefore, 'القراءة كتبت رسائل');
   });
 });

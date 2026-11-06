@@ -454,7 +454,7 @@ export function createPreviewRuntime(): PreviewRuntime {
 
     getDetail(conversationRef: string): PreviewDetail | null {
       const ctx = context(currentRole, conversationRef);
-      const view = states.get(PREVIEW_TENANT, conversationRef);
+      const view = states.get(ctx, conversationRef);
       if (!view) return null;
       const queue = runtime.listQueue();
       const row = queue.find((item) => item.conversation_ref === conversationRef);

@@ -48,6 +48,7 @@ import {
   type TenantContext,
   type TrustedRole,
 } from '../src/core/index.ts';
+import { issueAuditAdminScope } from '../src/core/audit-log.ts';
 // ⭐ أدوات الاختبار موجودة في شجرة الاختبار ⇒ خارج حزمة الإنتاج
 import {
   LOCAL_RESTRICTED_SOURCES,
@@ -585,7 +586,7 @@ test('١١) عدم كسر Slice 01 وSlice 02', async (t) => {
   });
 
   await t.test('⭐ قيم سجل التدقيق لم تتغيّر (ولا قيمة قراءة داخله)', () => {
-    const outcomes = new Set(audit.entries().map((entry) => entry.outcome));
+    const outcomes = new Set(audit.entries(issueAuditAdminScope()).map((entry) => entry.outcome));
     assert.ok(outcomes.size > 0);
     for (const outcome of outcomes) {
       assert.ok(

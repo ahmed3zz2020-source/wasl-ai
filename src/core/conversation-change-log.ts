@@ -10,7 +10,7 @@
 // ⭐ والقراءة **معزولة بالمستأجر** ⇒ ⭐ ولا `entries()` غير المعزولة في مسار القراءة.
 // ============================================================
 
-import { SECRET_PATTERNS } from './audit-log.ts';
+import { SECRET_PATTERNS, assertAdminScope, type AuditAdminScope } from './audit-log.ts';
 import { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } from './tenant.ts';
 import type { TenantContext } from './tenant.ts';
 
@@ -151,11 +151,21 @@ export class ConversationChangeLog {
     this.#now = options.now ?? (() => new Date().toISOString());
   }
 
-  /** ⭐ يسجّل تغييراً واحداً — ⭐ **بتحقّق كامل قبل الكتابة**. */
-  record(input: ConversationChangeInput): ConversationChangeEntry {
+  /**
+   * ⭐ يسجّل تغييراً واحداً — ⭐ **بتحقّق كامل قبل الكتابة**.
+   * ⛔⭐⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061): ⭐ **السياق إلزامي** ⇒
+   *   ⇒⇒⇒ **لا كتابة باسم مستأجر آخر** ⇒ ⇒⇒ وحدّ الثقة عند الحقن لا عند الحقل.
+   */
+  record(context: TenantContext, input: ConversationChangeInput): ConversationChangeEntry {
     // ⭐⭐ كل الفحوص في مكان واحد (`assertChangeEntry`) ⇒ ⇒ **نفس القاعدة** التي
     // ⭐ تُستدعى قبل تعديل الحالة ⇒ ⇒ فلا كتابة بلا سجل.
     assertChangeEntry(input);
+    if (input.tenant_id !== context.tenantId) {
+      throw new ConversationChangeError(
+        'tenant_mismatch',
+        'معرّف المستأجر في مدخل السجل لا يطابق سياق التنفيذ الموثوق',
+      );
+    }
     const reason = input.reason ?? '';
     const assigneeFrom = assertOptionalActor(input.assignee_from, 'assignee_from');
     const assigneeTo = assertOptionalActor(input.assignee_to, 'assignee_to');
@@ -186,8 +196,20 @@ export class ConversationChangeLog {
       .map((entry) => ({ ...entry }));
   }
 
-  /** ⭐⭐ **لا `entries()` غير المعزولة** ⇒ ⭐ مسار القراءة معزول بنيوياً. */
-  size(): number {
+  /**
+   * ⭐⭐⭐ عدّاد **مقيَّد بالمستأجر** — ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061).
+   */
+  sizeFor(context: TenantContext, conversationRef?: string): number {
+    return this.#entries.filter(
+      (entry) =>
+        entry.tenant_id === context.tenantId &&
+        (conversationRef === undefined || entry.conversation_ref === conversationRef),
+    ).length;
+  }
+
+  /** ⭐⭐⭐ عدّاد عام — ⭐ **يتطلّب نطاق إدارة** (بلا نطاق = رفض). */
+  size(scope: AuditAdminScope): number {
+    assertAdminScope(scope, 'changes.size');
     return this.#entries.length;
   }
 }

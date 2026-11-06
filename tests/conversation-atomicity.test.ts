@@ -51,7 +51,10 @@ const EMPLOYEE = 'actor_synth_0011';
 
 /** ⭐ سجل تغييرات **يفشل عند الكتابة** — ⭐ يحاكي سجلاً دائماً (خطوة الإنتاج القادمة). */
 class FailingChangeLog extends ConversationChangeLog {
-  override record(_input: ConversationChangeInput): ConversationChangeEntry {
+  override record(
+    _context: TenantContext,
+    _input: ConversationChangeInput,
+  ): ConversationChangeEntry {
     throw new Error('محاكاة: فشل كتابة سجل التغييرات');
   }
 }
@@ -102,8 +105,8 @@ test('١) ⭐ فشل تسجيل التغيير ⇒ لا تغيير في الحا
     );
 
     // ⭐ لا صف حالة على الإطلاق ⇒ لا تغيّر ولا أثر.
-    assert.equal(states.get(TENANT, REF), undefined);
-    assert.equal(failing.size(), 0);
+    assert.equal(states.get(ctx, REF), undefined);
+    assert.equal(failing.sizeFor(ctx), 0);
   });
 
   await t.test('⭐⭐⭐⭐⭐ المحاولة الفاشلة لا تُسجَّل في سجل القراءة', () => {
@@ -129,7 +132,7 @@ test('٢) ⭐ فشل تسجيل التغيير ⇒ لا إسناد (ولا تغ�
     seed(layer, ctx);
     updateConversationState(ctx, REF, 'open', deps, { reason: 'فتح الطلب' });
     const before = getConversationState(ctx, REF, deps);
-    const rowsBefore = changes.size();
+    const rowsBefore = changes.sizeFor(ctx);
 
     const brokenDeps: ConversationStateDependencies = { ...deps, changes: new FailingChangeLog() };
     assert.throws(
@@ -141,8 +144,8 @@ test('٢) ⭐ فشل تسجيل التغيير ⇒ لا إسناد (ولا تغ�
     assert.equal(after.state, before.state);
     assert.equal(after.version, before.version);
     assert.equal(after.assignee_actor_id, null);
-    assert.equal(changes.size(), rowsBefore, 'سطر جديد في السجل رغم فشل الإسناد');
-    assert.equal(states.get(TENANT, REF)?.assignee_actor_id, null);
+    assert.equal(changes.sizeFor(ctx), rowsBefore, 'سطر جديد في السجل رغم فشل الإسناد');
+    assert.equal(states.get(ctx, REF)?.assignee_actor_id, null);
   });
 });
 
@@ -169,8 +172,8 @@ test('٣) ⭐ مدخل غير صالح ⇒ لا كتابة على الإطلاق
       (error: unknown) => (error as { code?: string }).code === 'actor_invalid',
     );
 
-    assert.equal(states.get(TENANT, REF), undefined);
-    assert.equal(changes.size(), 0);
+    assert.equal(states.get(ctx, REF), undefined);
+    assert.equal(changes.sizeFor(ctx), 0);
   });
 
   await t.test('⭐⭐⭐⭐⭐ سبب مرفوض (يشبه سرّاً) ⇒ لا كتابة (ضمان D-056 محفوظ)', () => {
@@ -180,8 +183,8 @@ test('٣) ⭐ مدخل غير صالح ⇒ لا كتابة على الإطلاق
     assert.throws(() =>
       updateConversationState(ctx, REF, 'open', deps, { reason: 'token=sk-abcdef123456' }),
     );
-    assert.equal(states.get(TENANT, REF), undefined);
-    assert.equal(changes.size(), 0);
+    assert.equal(states.get(ctx, REF), undefined);
+    assert.equal(changes.sizeFor(ctx), 0);
   });
 });
 
@@ -193,7 +196,7 @@ test('٤) ⭐ النجاح العادي ⇒ تغيير واحد + سجل واح�
     updateConversationState(ctx, REF, 'open', deps, { reason: 'فتح الطلب' });
     assignConversation(ctx, REF, EMPLOYEE, deps, { reason: 'توزيع على خدمة العملاء' });
 
-    const state = states.get(TENANT, REF);
+    const state = states.get(ctx, REF);
     assert.equal(state?.state, 'assigned');
     assert.equal(state?.assignee_actor_id, EMPLOYEE);
 
@@ -215,7 +218,7 @@ test('٥) ⭐ التعارض (expectedVersion) ⇒ لا تغيير ولا سطر
     seed(layer, ctx);
     updateConversationState(ctx, REF, 'open', deps, { reason: 'فتح الطلب' });
     const before = getConversationState(ctx, REF, deps);
-    const rowsBefore = changes.size();
+    const rowsBefore = changes.sizeFor(ctx);
 
     assert.throws(
       () =>
@@ -229,8 +232,8 @@ test('٥) ⭐ التعارض (expectedVersion) ⇒ لا تغيير ولا سطر
     const after = getConversationState(ctx, REF, deps);
     assert.equal(after.state, before.state);
     assert.equal(after.version, before.version);
-    assert.equal(changes.size(), rowsBefore);
-    assert.equal(states.get(TENANT, REF)?.state, 'open');
+    assert.equal(changes.sizeFor(ctx), rowsBefore);
+    assert.equal(states.get(ctx, REF)?.state, 'open');
   });
 });
 
@@ -238,7 +241,7 @@ test('٦) ⭐⭐⭐ الضمان مُثبَّت بنيوياً (حارس على 
   await t.test('⭐⭐⭐⭐⭐ التحقّق المسبق قبل `setState`', () => {
     const source = fs.readFileSync(path.join(ROOT, 'src/core/conversation-state.ts'), 'utf8');
     const guardIndex = source.indexOf('assertChangeEntry(input)');
-    const setStateIndex = source.indexOf('deps.states.setState(context.tenantId, conversationRef, next)');
+    const setStateIndex = source.indexOf('deps.states.setState(context, conversationRef, next)');
     assert.ok(guardIndex >= 0, 'التحقّق المسبق (assertChangeEntry) غير موجود');
     assert.ok(setStateIndex >= 0, 'كتابة الحالة غير موجودة');
     assert.ok(
@@ -286,7 +289,10 @@ test('٦) ⭐⭐⭐ الضمان مُثبَّت بنيوياً (حارس على 
       'ظهر `await` داخل commitStateChange ⇒ يفقد التراجع أمانه ⇒ يلزم مراجعة + تصريح مستقل',
     );
 
-    const recordBody = functionBody(changeSource, 'record(input: ConversationChangeInput)');
+    const recordBody = functionBody(
+      changeSource,
+      'record(context: TenantContext, input: ConversationChangeInput)',
+    );
     assert.ok(
       !/\bawait\b/.test(recordBody),
       'ظهر `await` داخل سجل التغييرات (record) ⇒ يفقد التراجع أمانه ⇒ يلزم مراجعة + تصريح مستقل',

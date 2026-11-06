@@ -8,7 +8,7 @@
 // ⛔ لا اتصال خارجي · ⛔ لا استيراد من أي مصدر خارجي.
 // ============================================================
 
-import { SECRET_PATTERNS } from './audit-log.ts';
+import { SECRET_PATTERNS, assertAdminScope, type AuditAdminScope } from './audit-log.ts';
 import { CONVERSATION_REF_PATTERN } from './tenant.ts';
 import type { TenantContext } from './tenant.ts';
 
@@ -149,7 +149,16 @@ export class ReadAuditLog {
       .map((event) => ({ ...event }));
   }
 
-  size(): number {
+  /**
+   * ⭐⭐⭐ عدّاد **مقيَّد بالمستأجر** — ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061).
+   */
+  sizeFor(context: TenantContext): number {
+    return this.#events.filter((event) => event.tenant_id === context.tenantId).length;
+  }
+
+  /** ⭐⭐⭐ عدّاد عام — ⭐ **يتطلّب نطاق إدارة** (بلا نطاق = رفض). */
+  size(scope: AuditAdminScope): number {
+    assertAdminScope(scope, 'read-audit.size');
     return this.#events.length;
   }
 }

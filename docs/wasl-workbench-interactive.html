@@ -1133,6 +1133,54 @@ class AuditLogError extends Error {
   }
 }
 
+// ============================================================
+// ⭐⭐⭐ نطاق الإدارة (حدّ الثقة · تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)
+// ------------------------------------------------------------
+// ⭐ **السبب**: ⭐ `entries()` · `toJsonl()` · `size()` كانت تُعيد **كل
+//   المستأجرين** بلا سياق ولا صلاحية ⇒ ⭐⇒⇒ **قدرة حسّاسة غير مقيّدة**
+//   (الم-note M23 · M26 · M29) ⇒ ⇒⇒ **وغياب الاستدعاء ⛔ ليس ضماناً**.
+// ⭐ **الحل**: ⭐ تفريغ السجل الشامل صار **يتطلّب نطاق إدارة** ⇒
+//   ⇒⇒⇒ **والنطاق لا يُصنَّع ولا يُقلَّد** ⇒ ⭐ كائن في **سجلّ خاص بالوحدة**
+//   ⇒ ⇒⇒ **نسخة بنفس الشكل مرفوضة** (المعيار = النَسَب لا الشكل).
+// ⛔ **غير مُصدَّر من `src/core/index.ts`** ⇒ ⭐ ⇒⇒ **السطح العام الإنتاجي
+//   لا يستطيع إصدار نطاق إدارة** ⇒ ⇒⇒ **فلا مسار لتفريغ كل المستأجرين**
+//   من أي مقبض شائع (المخزن · الاستعلام · الطابور · الحالة · المؤشرات).
+// ⭐⭐ والقياس = **محلّي** ⛔ ⇒ **ليس ضماناً لأمان بيئة إنتاجية غير موجودة.**
+// ============================================================
+
+/** ⭐⭐⭐ نطاق الإدارة — ⭐ **كائن سلطان للتشغيل الإداري المحلي**. */
+                                  
+                               
+ 
+
+/** ⭐⭐⭐ سجلّ النطاقات — ⭐ **خاص بالوحدة** ولا يُصدَّر. */
+const ADMIN_SCOPES = new WeakSet        ();
+
+/**
+ * ⭐⭐⭐ إصدار نطاق إدارة — ⭐ **غير مُصدَّر من `index.ts`** (السطح العام).
+ * ⛔ يستدعيه: ⭐ طبقة التطبيق المحلية · ⭐ وشجرة الاختبار فقط.
+ */
+function issueAuditAdminScope()                  {
+  const scope                  = { kind: 'audit.admin' };
+  ADMIN_SCOPES.add(scope);
+  return scope;
+}
+
+/** ⭐⭐⭐ فحص النطاق — ⭐ **النَسَب لا الشكل** (كائن مزوَّر ⇒ مرفوض). */
+function isAdminScope(scope         )                           {
+  return typeof scope === 'object' && scope !== null && ADMIN_SCOPES.has(scope          );
+}
+
+/** ⭐⭐⭐ حارس النطاق — ⭐ **الفشل = المنع** (لا تجاوز). */
+function assertAdminScope(scope         , operation        )       {
+  if (!isAdminScope(scope)) {
+    throw new AuditLogError(
+      'admin_scope_required',
+      `القدرة الحسّاسة «${operation}» تتطلّب نطاق إدارة صالحاً`,
+    );
+  }
+}
+
 const OPERATION_PATTERN = /^[a-z][a-z0-9._]{1,47}$/;
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{1,63}$/;
 
@@ -1226,8 +1274,14 @@ class AuditLog {
     return entry;
   }
 
-  /** ⭐ نسخة للقراءة — غير قابلة للتعديل. */
-  entries()                        {
+  /**
+   * ⭐⭐⭐ نسخة للقراءة — ⭐ **غير قابلة للتعديل**.
+   * ⛔⭐⭐ **تتطلّب نطاق إدارة صالحاً** ⇒ ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)
+   *   ⇒ ⇒⇒ **التفريغ الشامل (كل المستأجرين) لم يعد متاحاً بلا سلطان صريح**.
+   * ⭐ والقراءة داخل نطاق مستأجر ⇒ ⭐ `entriesFor(context)` (معزولة أصلاً).
+   */
+  entries(scope                 )                        {
+    assertAdminScope(scope, 'entries');
     return this.#entries.map((entry) => ({ ...entry }));
   }
 
@@ -1251,16 +1305,30 @@ class AuditLog {
       .map((entry) => ({ ...entry }));
   }
 
-  /** ⭐ سطر JSONL لكل عملية (للعرض أو الحفظ). */
-  toJsonl()         {
+  /**
+   * ⭐ سطر JSONL لكل عملية (للعرض أو الحفظ) — ⭐ **يتطلّب نطاق إدارة**.
+   * ⛔⭐⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061) ⇒ ⭐ بلا نطاق = رفض صريح.
+   */
+  toJsonl(scope                 )         {
+    assertAdminScope(scope, 'toJsonl');
     return this.#entries.map((entry) => JSON.stringify(entry)).join('\n');
   }
 
-  size()         {
+  /**
+   * ⭐⭐⭐ عدّاد **مقيَّد بالمستأجر** — ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061).
+   * ⛔ العدّاد العام لم يعد متاحاً بلا نطاق إدارة ⇒ ⇒⇒ والعدّاد العام = سلطان إداري.
+   */
+  sizeFor(context               )         {
+    return this.#entries.filter((entry) => entry.tenant_id === context.tenantId).length;
+  }
+
+  /** ⭐⭐⭐ عدّاد عام — ⭐ **يتطلّب نطاق إدارة** (بلا نطاق = رفض). */
+  size(scope                 )         {
+    assertAdminScope(scope, 'size');
     return this.#entries.length;
   }
 }
-return { AUDIT_META_ALLOWLIST, SECRET_PATTERNS, AuditLogError, AuditLog };
+return { AUDIT_META_ALLOWLIST, SECRET_PATTERNS, AuditLogError, issueAuditAdminScope, isAdminScope, assertAdminScope, AuditLog };
 })();
 
 const __m_store = (() => {
@@ -1940,7 +2008,7 @@ return { PROCESSING_OUTCOME_RULES, ProcessingOutcomeError, validateProcessingOut
 })();
 
 const __m_read_audit = (() => {
-const { SECRET_PATTERNS } = __m_audit_log;
+const { SECRET_PATTERNS, assertAdminScope } = __m_audit_log;
 const { CONVERSATION_REF_PATTERN } = __m_tenant;
 // ============================================================
 // WASL AI — سجل أحداث القراءة (الشريحة الثالثة)
@@ -2093,7 +2161,16 @@ class ReadAuditLog {
       .map((event) => ({ ...event }));
   }
 
-  size()         {
+  /**
+   * ⭐⭐⭐ عدّاد **مقيَّد بالمستأجر** — ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061).
+   */
+  sizeFor(context               )         {
+    return this.#events.filter((event) => event.tenant_id === context.tenantId).length;
+  }
+
+  /** ⭐⭐⭐ عدّاد عام — ⭐ **يتطلّب نطاق إدارة** (بلا نطاق = رفض). */
+  size(scope                 )         {
+    assertAdminScope(scope, 'read-audit.size');
     return this.#events.length;
   }
 }
@@ -2414,7 +2491,7 @@ return { CONVERSATION_LIST_CAPABILITY, CONVERSATION_READ_CAPABILITY, CONVERSATIO
 })();
 
 const __m_conversation_change_log = (() => {
-const { SECRET_PATTERNS } = __m_audit_log;
+const { SECRET_PATTERNS, assertAdminScope } = __m_audit_log;
 const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } = __m_tenant;
 // ============================================================
 // WASL AI — سجل تغييرات المحادثات (الشريحة الرابعة)
@@ -2569,11 +2646,21 @@ class ConversationChangeLog {
     this.#now = options.now ?? (() => new Date().toISOString());
   }
 
-  /** ⭐ يسجّل تغييراً واحداً — ⭐ **بتحقّق كامل قبل الكتابة**. */
-  record(input                         )                          {
+  /**
+   * ⭐ يسجّل تغييراً واحداً — ⭐ **بتحقّق كامل قبل الكتابة**.
+   * ⛔⭐⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061): ⭐ **السياق إلزامي** ⇒
+   *   ⇒⇒⇒ **لا كتابة باسم مستأجر آخر** ⇒ ⇒⇒ وحدّ الثقة عند الحقن لا عند الحقل.
+   */
+  record(context               , input                         )                          {
     // ⭐⭐ كل الفحوص في مكان واحد (`assertChangeEntry`) ⇒ ⇒ **نفس القاعدة** التي
     // ⭐ تُستدعى قبل تعديل الحالة ⇒ ⇒ فلا كتابة بلا سجل.
     assertChangeEntry(input);
+    if (input.tenant_id !== context.tenantId) {
+      throw new ConversationChangeError(
+        'tenant_mismatch',
+        'معرّف المستأجر في مدخل السجل لا يطابق سياق التنفيذ الموثوق',
+      );
+    }
     const reason = input.reason ?? '';
     const assigneeFrom = assertOptionalActor(input.assignee_from, 'assignee_from');
     const assigneeTo = assertOptionalActor(input.assignee_to, 'assignee_to');
@@ -2604,8 +2691,20 @@ class ConversationChangeLog {
       .map((entry) => ({ ...entry }));
   }
 
-  /** ⭐⭐ **لا `entries()` غير المعزولة** ⇒ ⭐ مسار القراءة معزول بنيوياً. */
-  size()         {
+  /**
+   * ⭐⭐⭐ عدّاد **مقيَّد بالمستأجر** — ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061).
+   */
+  sizeFor(context               , conversationRef         )         {
+    return this.#entries.filter(
+      (entry) =>
+        entry.tenant_id === context.tenantId &&
+        (conversationRef === undefined || entry.conversation_ref === conversationRef),
+    ).length;
+  }
+
+  /** ⭐⭐⭐ عدّاد عام — ⭐ **يتطلّب نطاق إدارة** (بلا نطاق = رفض). */
+  size(scope                 )         {
+    assertAdminScope(scope, 'changes.size');
     return this.#entries.length;
   }
 }
@@ -2614,7 +2713,7 @@ return { CONVERSATION_CHANGE_OPERATIONS, CONVERSATION_CHANGE_STATES, Conversatio
 
 const __m_conversation_state = (() => {
 const { assertCapability } = __m_capability;
-const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } = __m_tenant;
+const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } = __m_tenant;
 const { assertChangeEntry, assertChangeReason } = __m_conversation_change_log;
 const { CONVERSATION_CHANGE_STATES } = __m_conversation_change_log;
 // ============================================================
@@ -2708,7 +2807,27 @@ function isTerminalState(state                   )          {
                            
  
 
-/** ⭐⭐ سجلّ الحالات (في الذاكرة) — ⭐ **معزول بالمستأجر بنيوياً**. */
+/**
+ * ⭐⭐⭐⭐⭐ **حدّ الثقة عند الحقن (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)**:
+ * ⭐ كان المخزن يقرأ **معرّف المستأجر نصّاً خاماً** ⇒ ⭐⇒⇒ **أي حامل
+ *   للمخزن (وهو اعتماديات محقونة) كان يستطيع addressing أي مستأجر**
+ *   ⇒ ⇒⇒ ⇒⇒⇒ **استعلام عابر ممكن بنيوياً — بخلاف `MessageStore`**.
+ * ⭐ **الإصلاح**: ⭐ كل دالة هنا تأخذ **سياق التنفيذ الموثوق** ⇒ ⇒⇒
+ *   ⇒⇒⇒ **ولا ممرّر نصّي ⇒ ⇒⇒⇒ ⇒ استعلام عابر = غير قابل للتعبير أصلاً.**
+ * ⛔ **الفشل = المنع** ⇒ ⭐ مدخل غير صالح = رفض (لا تمرير صامت).
+ */
+function tenantIdOf(context               )         {
+  if (!context || typeof context !== 'object') {
+    throw new ConversationStateError('tenant_context_missing', 'سياق التنفيذ مطلوب');
+  }
+  const tenantId = (context                          ).tenantId;
+  if (typeof tenantId !== 'string' || !TENANT_ID_PATTERN.test(tenantId)) {
+    throw new ConversationStateError('tenant_context_invalid', 'سياق التنفيذ غير صالح');
+  }
+  return tenantId;
+}
+
+/** ⭐⭐⭐ سجلّ الحالات (في الذاكرة) — ⭐ **معزول بالمستأجر بنيوياً**. */
 class ConversationStateStore {
            #rows                                                  = new Map();
            #now              ;
@@ -2717,9 +2836,9 @@ class ConversationStateStore {
     this.#now = options.now ?? (() => new Date().toISOString());
   }
 
-  /** ⭐ قراءة حالة — ⭐ **لنطاق مستأجر واحد فقط**. */
-  get(tenantId        , conversationRef        )                                    {
-    const row = this.#rows.get(tenantId)?.get(conversationRef);
+  /** ⭐ قراءة حالة — ⭐ **لنطاق مستأجر واحد فقط** (من السياق الموثوق). */
+  get(context               , conversationRef        )                                    {
+    const row = this.#rows.get(tenantIdOf(context))?.get(conversationRef);
     return row ? { ...row } : undefined;
   }
 
@@ -2727,8 +2846,9 @@ class ConversationStateStore {
    * ⭐ إنشاء صف الحالة (لو لم يوجد) — ⭐ الحالة الابتدائية `new`.
    * ⭐ **لا يُنشئ صفاً لمحادثة لا تخص المستأجر** ⇒ ⭐ (الم existence يُفحص قبل).
    */
-  ensure(tenantId        , conversationRef        )                        {
-    const existing = this.get(tenantId, conversationRef);
+  ensure(context               , conversationRef        )                        {
+    const tenantId = tenantIdOf(context);
+    const existing = this.get(context, conversationRef);
     if (existing) return existing;
     const row                        = {
       conversation_ref: conversationRef,
@@ -2745,11 +2865,12 @@ class ConversationStateStore {
 
   /** ⭐⭐ تحديث الحالة — ⭐ **ما لم تتغيّر حالة أخرى** (كاشف التعارض). */
   setState(
-    tenantId        ,
+    context               ,
     conversationRef        ,
     next                                                                                 ,
   )                        {
-    const current = this.get(tenantId, conversationRef);
+    const tenantId = tenantIdOf(context);
+    const current = this.get(context, conversationRef);
     if (!current) {
       throw new ConversationStateError('conversation_not_found', 'لا يوجد صف حالة لهذه المحادثة');
     }
@@ -2778,11 +2899,11 @@ class ConversationStateStore {
    * ⛔ لا يُنشئ صفاً ولا يحذف شيئاً — ⭐ يستعيد ما كان موجوداً فقط.
    */
   restore(
-    tenantId        ,
+    context               ,
     conversationRef        ,
     previous                       ,
   )       {
-    const tenantRows = this.#rows.get(tenantId);
+    const tenantRows = this.#rows.get(tenantIdOf(context));
     if (!tenantRows || !tenantRows.has(conversationRef)) return;
     tenantRows.set(conversationRef, { ...previous });
   }
@@ -2791,13 +2912,13 @@ class ConversationStateStore {
    * ⭐⭐⭐ تجاهل صف لم يكن موجوداً — ⭐ **يُستخدم مع التراجع المعوَّض**
    * ⭐ (حين أُنشئ الصف لأول مرة في محاولة فاشلة ⇒ ⇒ يُحذف ⇒ ⇒ ولا أثر).
    */
-  discard(tenantId        , conversationRef        )       {
-    this.#rows.get(tenantId)?.delete(conversationRef);
+  discard(context               , conversationRef        )       {
+    this.#rows.get(tenantIdOf(context))?.delete(conversationRef);
   }
 
-  /** ⭐ عدد الصفوف لمستخدم واحد — ⭐ (تشخيص محلي فقط). */
-  sizeFor(tenantId        )         {
-    return this.#rows.get(tenantId)?.size ?? 0;
+  /** ⭐⭐⭐ عدّاد الصفوف — ⭐ **لنطاق مستأجر واحد فقط** (من السياق الموثوق). */
+  sizeFor(context               )         {
+    return this.#rows.get(tenantIdOf(context))?.size ?? 0;
   }
 }
 
@@ -2935,17 +3056,17 @@ function commitStateChange(
   // (ولا حتى إنشاء صف الحالة ⇒ ⇒ ولا أثر متبقٍّ بعد الرفض).
   assertChangeEntry(input);
   // ⭐ (٢) صف الحالة — ⭐ **بعد** كل الفحوص ⇒ ⇒ رفضٌ لا يترك صفاً خلفه.
-  deps.states.ensure(context.tenantId, conversationRef);
-  const updated = deps.states.setState(context.tenantId, conversationRef, next);
+  deps.states.ensure(context, conversationRef);
+  const updated = deps.states.setState(context, conversationRef, next);
   try {
     // ⭐ (٤) تسجيل التغيير — ⭐ نفس المدخل الذي تحقّق منه قبل الكتابة.
-    deps.changes.record(input);
+    deps.changes.record(context, input);
   } catch (error) {
     // ⭐⬀ (٤ب) تراجع مُعوَّض ⇒ ⇒ **لا تغيير بلا سجل**.
     if (existedBefore) {
-      deps.states.restore(context.tenantId, conversationRef, current);
+      deps.states.restore(context, conversationRef, current);
     } else {
-      deps.states.discard(context.tenantId, conversationRef);
+      deps.states.discard(context, conversationRef);
     }
     throw error;
   }
@@ -2990,7 +3111,7 @@ function getConversationState(
     conversationRef,
   );
   requireConversation(context, conversationRef, deps);
-  const row = deps.states.ensure(context.tenantId, conversationRef);
+  const row = deps.states.ensure(context, conversationRef);
   deps.readAudit.record({
     tenant_id: context.tenantId,
     actor_id: context.actorId,
@@ -3031,9 +3152,9 @@ function updateConversationState(
   }
   requireConversation(context, conversationRef, deps);
   // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
-  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const existedBefore = deps.states.get(context, conversationRef) !== undefined;
   const current = existedBefore
-    ? (deps.states.get(context.tenantId, conversationRef)                         )
+    ? (deps.states.get(context, conversationRef)                         )
     : initialConversationState(conversationRef);
 
   // ⭐⬀ حارس النهائية — ⭐ المحادثة المغلقة لا تُعدل ولا تُسند (ولا حتى إغلاقً مريرًاً).
@@ -3124,9 +3245,9 @@ function assignConversation(
   }
   requireConversation(context, conversationRef, deps);
   // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
-  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const existedBefore = deps.states.get(context, conversationRef) !== undefined;
   const current = existedBefore
-    ? (deps.states.get(context.tenantId, conversationRef)                         )
+    ? (deps.states.get(context, conversationRef)                         )
     : initialConversationState(conversationRef);
 
   // ⭐⬀ حارس النهائية — ⭐ لا إسناد لمحادثة مغلقة أبداً.
@@ -3206,9 +3327,9 @@ function unassignConversation(
   requireCapability(context, CONVERSATION_ASSIGN_CAPABILITY, 'conversation.assign', deps, conversationRef);
   requireConversation(context, conversationRef, deps);
   // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
-  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const existedBefore = deps.states.get(context, conversationRef) !== undefined;
   const current = existedBefore
-    ? (deps.states.get(context.tenantId, conversationRef)                         )
+    ? (deps.states.get(context, conversationRef)                         )
     : initialConversationState(conversationRef);
   // ⭐⬀ حارس النهائية — ⭐ لا إلغاء إسناد لمحادثة مغلقة.
   if (isTerminalState(current.state)) {
@@ -3561,7 +3682,7 @@ function listWorkQueue(
   const refs = deps.store.conversationRefs(context);
   const items                  = [];
   for (const ref of refs) {
-    const row                                    = deps.states.get(context.tenantId, ref);
+    const row                                    = deps.states.get(context, ref);
     const state                    = row?.state ?? 'new';
     const assignee = row?.assignee_actor_id ?? null;
     // ⭐⭐ نطاق الدور: ⭐ الوكيل يرى **محادثاته فقط**.
@@ -3761,7 +3882,7 @@ function getServiceMetrics(
   let idleOverThresholdTotal = 0;
 
   for (const ref of refs) {
-    const row = deps.states.get(context.tenantId, ref);
+    const row = deps.states.get(context, ref);
     const state                    = row?.state ?? 'new';
     const assignee = row?.assignee_actor_id ?? null;
     byState[state] += 1;
@@ -3874,6 +3995,11 @@ const { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, SESSION_ID_PATTERN, TENANT_I
 const { activeSessionSources, resolveProductionTenantContext, resolveTenantContext } = __m_session;
 
 const { AUDIT_META_ALLOWLIST, AuditLog, AuditLogError, SECRET_PATTERNS } = __m_audit_log;
+
+// ⛔ `issueAuditAdminScope` **غير مُصدَّر من السطح العام** (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)
+//    ⇒ ⭐ ⇒⇒ **السطح العام الإنتاجي لا يستطيع إصدار نطاق إدارة** ⇒ ⇒⇒
+//    ⇒⇒⇒ **ولا يوجد مسار لتفريغ كل المستأجرين من أي مقبض شائع**
+//    ⇒ ⇒⇒⇒ **والتفريغ الشامل = سلطان إداري محلي (نطاق بنَسَب مثبت) لا تُصدَّر منه.**
 
 const { MessageStore } = __m_store;
 
@@ -4349,7 +4475,7 @@ function createPreviewRuntime()                 {
 
     getDetail(conversationRef        )                       {
       const ctx = context(currentRole, conversationRef);
-      const view = states.get(PREVIEW_TENANT, conversationRef);
+      const view = states.get(ctx, conversationRef);
       if (!view) return null;
       const queue = runtime.listQueue();
       const row = queue.find((item) => item.conversation_ref === conversationRef);

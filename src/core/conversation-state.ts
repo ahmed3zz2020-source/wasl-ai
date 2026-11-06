@@ -12,7 +12,7 @@
 // ============================================================
 
 import { assertCapability } from './capability.ts';
-import { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN } from './tenant.ts';
+import { ACTOR_ID_PATTERN, CONVERSATION_REF_PATTERN, TENANT_ID_PATTERN } from './tenant.ts';
 import type { TenantContext } from './tenant.ts';
 import type { MessageStore } from './store.ts';
 import type { ReadAuditLog } from './read-audit.ts';
@@ -96,7 +96,27 @@ export interface ConversationStateView {
   readonly version: number;
 }
 
-/** ⭐⭐ سجلّ الحالات (في الذاكرة) — ⭐ **معزول بالمستأجر بنيوياً**. */
+/**
+ * ⭐⭐⭐⭐⭐ **حدّ الثقة عند الحقن (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)**:
+ * ⭐ كان المخزن يقرأ **معرّف المستأجر نصّاً خاماً** ⇒ ⭐⇒⇒ **أي حامل
+ *   للمخزن (وهو اعتماديات محقونة) كان يستطيع addressing أي مستأجر**
+ *   ⇒ ⇒⇒ ⇒⇒⇒ **استعلام عابر ممكن بنيوياً — بخلاف `MessageStore`**.
+ * ⭐ **الإصلاح**: ⭐ كل دالة هنا تأخذ **سياق التنفيذ الموثوق** ⇒ ⇒⇒
+ *   ⇒⇒⇒ **ولا ممرّر نصّي ⇒ ⇒⇒⇒ ⇒ استعلام عابر = غير قابل للتعبير أصلاً.**
+ * ⛔ **الفشل = المنع** ⇒ ⭐ مدخل غير صالح = رفض (لا تمرير صامت).
+ */
+function tenantIdOf(context: TenantContext): string {
+  if (!context || typeof context !== 'object') {
+    throw new ConversationStateError('tenant_context_missing', 'سياق التنفيذ مطلوب');
+  }
+  const tenantId = (context as { tenantId?: unknown }).tenantId;
+  if (typeof tenantId !== 'string' || !TENANT_ID_PATTERN.test(tenantId)) {
+    throw new ConversationStateError('tenant_context_invalid', 'سياق التنفيذ غير صالح');
+  }
+  return tenantId;
+}
+
+/** ⭐⭐⭐ سجلّ الحالات (في الذاكرة) — ⭐ **معزول بالمستأجر بنيوياً**. */
 export class ConversationStateStore {
   readonly #rows: Map<string, Map<string, ConversationStateView>> = new Map();
   readonly #now: () => string;
@@ -105,9 +125,9 @@ export class ConversationStateStore {
     this.#now = options.now ?? (() => new Date().toISOString());
   }
 
-  /** ⭐ قراءة حالة — ⭐ **لنطاق مستأجر واحد فقط**. */
-  get(tenantId: string, conversationRef: string): ConversationStateView | undefined {
-    const row = this.#rows.get(tenantId)?.get(conversationRef);
+  /** ⭐ قراءة حالة — ⭐ **لنطاق مستأجر واحد فقط** (من السياق الموثوق). */
+  get(context: TenantContext, conversationRef: string): ConversationStateView | undefined {
+    const row = this.#rows.get(tenantIdOf(context))?.get(conversationRef);
     return row ? { ...row } : undefined;
   }
 
@@ -115,8 +135,9 @@ export class ConversationStateStore {
    * ⭐ إنشاء صف الحالة (لو لم يوجد) — ⭐ الحالة الابتدائية `new`.
    * ⭐ **لا يُنشئ صفاً لمحادثة لا تخص المستأجر** ⇒ ⭐ (الم existence يُفحص قبل).
    */
-  ensure(tenantId: string, conversationRef: string): ConversationStateView {
-    const existing = this.get(tenantId, conversationRef);
+  ensure(context: TenantContext, conversationRef: string): ConversationStateView {
+    const tenantId = tenantIdOf(context);
+    const existing = this.get(context, conversationRef);
     if (existing) return existing;
     const row: ConversationStateView = {
       conversation_ref: conversationRef,
@@ -133,11 +154,12 @@ export class ConversationStateStore {
 
   /** ⭐⭐ تحديث الحالة — ⭐ **ما لم تتغيّر حالة أخرى** (كاشف التعارض). */
   setState(
-    tenantId: string,
+    context: TenantContext,
     conversationRef: string,
     next: { state: ConversationState; assignee: string | null; expectedVersion?: number },
   ): ConversationStateView {
-    const current = this.get(tenantId, conversationRef);
+    const tenantId = tenantIdOf(context);
+    const current = this.get(context, conversationRef);
     if (!current) {
       throw new ConversationStateError('conversation_not_found', 'لا يوجد صف حالة لهذه المحادثة');
     }
@@ -166,11 +188,11 @@ export class ConversationStateStore {
    * ⛔ لا يُنشئ صفاً ولا يحذف شيئاً — ⭐ يستعيد ما كان موجوداً فقط.
    */
   restore(
-    tenantId: string,
+    context: TenantContext,
     conversationRef: string,
     previous: ConversationStateView,
   ): void {
-    const tenantRows = this.#rows.get(tenantId);
+    const tenantRows = this.#rows.get(tenantIdOf(context));
     if (!tenantRows || !tenantRows.has(conversationRef)) return;
     tenantRows.set(conversationRef, { ...previous });
   }
@@ -179,13 +201,13 @@ export class ConversationStateStore {
    * ⭐⭐⭐ تجاهل صف لم يكن موجوداً — ⭐ **يُستخدم مع التراجع المعوَّض**
    * ⭐ (حين أُنشئ الصف لأول مرة في محاولة فاشلة ⇒ ⇒ يُحذف ⇒ ⇒ ولا أثر).
    */
-  discard(tenantId: string, conversationRef: string): void {
-    this.#rows.get(tenantId)?.delete(conversationRef);
+  discard(context: TenantContext, conversationRef: string): void {
+    this.#rows.get(tenantIdOf(context))?.delete(conversationRef);
   }
 
-  /** ⭐ عدد الصفوف لمستخدم واحد — ⭐ (تشخيص محلي فقط). */
-  sizeFor(tenantId: string): number {
-    return this.#rows.get(tenantId)?.size ?? 0;
+  /** ⭐⭐⭐ عدّاد الصفوف — ⭐ **لنطاق مستأجر واحد فقط** (من السياق الموثوق). */
+  sizeFor(context: TenantContext): number {
+    return this.#rows.get(tenantIdOf(context))?.size ?? 0;
   }
 }
 
@@ -323,17 +345,17 @@ function commitStateChange(
   // (ولا حتى إنشاء صف الحالة ⇒ ⇒ ولا أثر متبقٍّ بعد الرفض).
   assertChangeEntry(input);
   // ⭐ (٢) صف الحالة — ⭐ **بعد** كل الفحوص ⇒ ⇒ رفضٌ لا يترك صفاً خلفه.
-  deps.states.ensure(context.tenantId, conversationRef);
-  const updated = deps.states.setState(context.tenantId, conversationRef, next);
+  deps.states.ensure(context, conversationRef);
+  const updated = deps.states.setState(context, conversationRef, next);
   try {
     // ⭐ (٤) تسجيل التغيير — ⭐ نفس المدخل الذي تحقّق منه قبل الكتابة.
-    deps.changes.record(input);
+    deps.changes.record(context, input);
   } catch (error) {
     // ⭐⬀ (٤ب) تراجع مُعوَّض ⇒ ⇒ **لا تغيير بلا سجل**.
     if (existedBefore) {
-      deps.states.restore(context.tenantId, conversationRef, current);
+      deps.states.restore(context, conversationRef, current);
     } else {
-      deps.states.discard(context.tenantId, conversationRef);
+      deps.states.discard(context, conversationRef);
     }
     throw error;
   }
@@ -378,7 +400,7 @@ export function getConversationState(
     conversationRef,
   );
   requireConversation(context, conversationRef, deps);
-  const row = deps.states.ensure(context.tenantId, conversationRef);
+  const row = deps.states.ensure(context, conversationRef);
   deps.readAudit.record({
     tenant_id: context.tenantId,
     actor_id: context.actorId,
@@ -419,9 +441,9 @@ export function updateConversationState(
   }
   requireConversation(context, conversationRef, deps);
   // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
-  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const existedBefore = deps.states.get(context, conversationRef) !== undefined;
   const current = existedBefore
-    ? (deps.states.get(context.tenantId, conversationRef) as ConversationStateView)
+    ? (deps.states.get(context, conversationRef) as ConversationStateView)
     : initialConversationState(conversationRef);
 
   // ⭐⬀ حارس النهائية — ⭐ المحادثة المغلقة لا تُعدل ولا تُسند (ولا حتى إغلاقً مريرًاً).
@@ -512,9 +534,9 @@ export function assignConversation(
   }
   requireConversation(context, conversationRef, deps);
   // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
-  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const existedBefore = deps.states.get(context, conversationRef) !== undefined;
   const current = existedBefore
-    ? (deps.states.get(context.tenantId, conversationRef) as ConversationStateView)
+    ? (deps.states.get(context, conversationRef) as ConversationStateView)
     : initialConversationState(conversationRef);
 
   // ⭐⬀ حارس النهائية — ⭐ لا إسناد لمحادثة مغلقة أبداً.
@@ -594,9 +616,9 @@ export function unassignConversation(
   requireCapability(context, CONVERSATION_ASSIGN_CAPABILITY, 'conversation.assign', deps, conversationRef);
   requireConversation(context, conversationRef, deps);
   // ⭐⭐ قراءة بحت — ⭐ **بدون إنشاء صف** ⇒ ⇒ رفضٌ لا يترك أثراً.
-  const existedBefore = deps.states.get(context.tenantId, conversationRef) !== undefined;
+  const existedBefore = deps.states.get(context, conversationRef) !== undefined;
   const current = existedBefore
-    ? (deps.states.get(context.tenantId, conversationRef) as ConversationStateView)
+    ? (deps.states.get(context, conversationRef) as ConversationStateView)
     : initialConversationState(conversationRef);
   // ⭐⬀ حارس النهائية — ⭐ لا إلغاء إسناد لمحادثة مغلقة.
   if (isTerminalState(current.state)) {

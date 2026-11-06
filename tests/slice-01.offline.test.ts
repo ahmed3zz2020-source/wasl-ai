@@ -20,6 +20,7 @@ import {
   MessageStore,
   SECRET_PATTERNS,
 } from '../src/core/index.ts';
+import { issueAuditAdminScope } from '../src/core/audit-log.ts';
 // ⭐ أدوات الاختبار موجودة في `tests/support/` ⇒ خارج حزمة الإنتاج
 import {
   createSyntheticContext,
@@ -142,7 +143,7 @@ test('٥) لا اتصالات خارجية ولا أسرار ولا بيانات
       assert.ok(!/\+201[0-9]{9}/.test(row.body), 'هاتف في البيانات');
       assert.ok(row.tenant_id.startsWith('tnt_synth_'), 'معرّف مستأجر غير اصطناعي');
     }
-    const jsonl = store.audit().toJsonl();
+    const jsonl = store.audit().toJsonl(issueAuditAdminScope());
     assert.ok(!jsonl.includes('@'), 'بريد في سجل التدقيق');
     assert.ok(!/\b\d{14}\b/.test(jsonl), 'رقم قومي في سجل التدقيق');
   });

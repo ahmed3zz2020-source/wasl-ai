@@ -27,6 +27,7 @@ import {
   validateEnvelope,
   type MessageEnvelope,
 } from '../src/core/index.ts';
+import { issueAuditAdminScope } from '../src/core/audit-log.ts';
 // ⭐ أدوات الاختبار موجودة في `tests/support/` ⇒ خارج حزمة الإنتاج
 import {
   createSyntheticContext,
@@ -292,6 +293,8 @@ test('٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد #١٣): �
 
 test('٤) سجل التدقيق: سطر واحد لكل عملية · بلا أسرار · بلا بيانات حقيقية', async (t) => {
   const audit = new AuditLog({ now: () => FIXED_NOW });
+  // ⭐ نطاق إدارة محلي — ⭐ (تصريح D-061) ⇒ ⭐ التفريغ الشامل يتطلّب سلطاناً صريحاً.
+  const adminScope = issueAuditAdminScope();
   const store = new MessageStore({ audit, now: () => FIXED_NOW });
   const context = createSyntheticContext(1, 11, 101);
   const other = createSyntheticContext(2, 22, 202);
@@ -305,9 +308,9 @@ test('٤) سجل التدقيق: سطر واحد لكل عملية · بلا أ�
       other,
       createSyntheticEnvelope({ tenantIndex: 2, messageIndex: 4, declaredTenantId: context.tenantId }),
     ); // ٤ مرفوض (انتحال)
-    assert.equal(audit.size(), 4);
-    assert.equal(audit.toJsonl().split('\n').length, 4);
-    for (const entry of audit.entries()) {
+    assert.equal(audit.size(adminScope), 4);
+    assert.equal(audit.toJsonl(adminScope).split('\n').length, 4);
+    for (const entry of audit.entries(adminScope)) {
       assert.ok(entry.ts.length > 0, 'الوقت موجود');
       assert.ok(entry.tenant_id.length > 0, 'المستأجر موجود');
       assert.ok(entry.actor_id.length > 0, 'المُحدِّد موجود');
@@ -324,7 +327,7 @@ test('٤) سجل التدقيق: سطر واحد لكل عملية · بلا أ�
       createSyntheticEnvelope({ tenantIndex: 1, messageIndex: 8, seed: 5, body: secretBody }),
     );
     assert.equal(outcome.status, 'accepted');
-    const jsonl = audit.toJsonl();
+    const jsonl = audit.toJsonl(adminScope);
     assert.ok(!jsonl.includes(fakeSecret), 'سرّ ظاهر في سجل التدقيق');
     assert.ok(!jsonl.includes('نص اصطناعي'), 'نص الرسالة ظاهر في سجل التدقيق');
   });
@@ -347,7 +350,7 @@ test('٤) سجل التدقيق: سطر واحد لكل عملية · بلا أ�
   });
 
   await t.test('⭐ لا بريد ولا رقم ولا هاتف في السجل', () => {
-    const jsonl = audit.toJsonl();
+    const jsonl = audit.toJsonl(adminScope);
     assert.ok(!jsonl.includes('@'), 'بريد في السجل');
     assert.ok(!/\b\d{14}\b/.test(jsonl), 'رقم قومي في السجل');
     assert.ok(!/\+201[0-9]{9}/.test(jsonl), 'هاتف في السجل');

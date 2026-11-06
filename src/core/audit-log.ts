@@ -65,6 +65,54 @@ export class AuditLogError extends Error {
   }
 }
 
+// ============================================================
+// ⭐⭐⭐ نطاق الإدارة (حدّ الثقة · تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)
+// ------------------------------------------------------------
+// ⭐ **السبب**: ⭐ `entries()` · `toJsonl()` · `size()` كانت تُعيد **كل
+//   المستأجرين** بلا سياق ولا صلاحية ⇒ ⭐⇒⇒ **قدرة حسّاسة غير مقيّدة**
+//   (الم-note M23 · M26 · M29) ⇒ ⇒⇒ **وغياب الاستدعاء ⛔ ليس ضماناً**.
+// ⭐ **الحل**: ⭐ تفريغ السجل الشامل صار **يتطلّب نطاق إدارة** ⇒
+//   ⇒⇒⇒ **والنطاق لا يُصنَّع ولا يُقلَّد** ⇒ ⭐ كائن في **سجلّ خاص بالوحدة**
+//   ⇒ ⇒⇒ **نسخة بنفس الشكل مرفوضة** (المعيار = النَسَب لا الشكل).
+// ⛔ **غير مُصدَّر من `src/core/index.ts`** ⇒ ⭐ ⇒⇒ **السطح العام الإنتاجي
+//   لا يستطيع إصدار نطاق إدارة** ⇒ ⇒⇒ **فلا مسار لتفريغ كل المستأجرين**
+//   من أي مقبض شائع (المخزن · الاستعلام · الطابور · الحالة · المؤشرات).
+// ⭐⭐ والقياس = **محلّي** ⛔ ⇒ **ليس ضماناً لأمان بيئة إنتاجية غير موجودة.**
+// ============================================================
+
+/** ⭐⭐⭐ نطاق الإدارة — ⭐ **كائن سلطان للتشغيل الإداري المحلي**. */
+export interface AuditAdminScope {
+  readonly kind: 'audit.admin';
+}
+
+/** ⭐⭐⭐ سجلّ النطاقات — ⭐ **خاص بالوحدة** ولا يُصدَّر. */
+const ADMIN_SCOPES = new WeakSet<object>();
+
+/**
+ * ⭐⭐⭐ إصدار نطاق إدارة — ⭐ **غير مُصدَّر من `index.ts`** (السطح العام).
+ * ⛔ يستدعيه: ⭐ طبقة التطبيق المحلية · ⭐ وشجرة الاختبار فقط.
+ */
+export function issueAuditAdminScope(): AuditAdminScope {
+  const scope: AuditAdminScope = { kind: 'audit.admin' };
+  ADMIN_SCOPES.add(scope);
+  return scope;
+}
+
+/** ⭐⭐⭐ فحص النطاق — ⭐ **النَسَب لا الشكل** (كائن مزوَّر ⇒ مرفوض). */
+export function isAdminScope(scope: unknown): scope is AuditAdminScope {
+  return typeof scope === 'object' && scope !== null && ADMIN_SCOPES.has(scope as object);
+}
+
+/** ⭐⭐⭐ حارس النطاق — ⭐ **الفشل = المنع** (لا تجاوز). */
+export function assertAdminScope(scope: unknown, operation: string): void {
+  if (!isAdminScope(scope)) {
+    throw new AuditLogError(
+      'admin_scope_required',
+      `القدرة الحسّاسة «${operation}» تتطلّب نطاق إدارة صالحاً`,
+    );
+  }
+}
+
 const OPERATION_PATTERN = /^[a-z][a-z0-9._]{1,47}$/;
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{1,63}$/;
 
@@ -158,8 +206,14 @@ export class AuditLog {
     return entry;
   }
 
-  /** ⭐ نسخة للقراءة — غير قابلة للتعديل. */
-  entries(): readonly AuditEntry[] {
+  /**
+   * ⭐⭐⭐ نسخة للقراءة — ⭐ **غير قابلة للتعديل**.
+   * ⛔⭐⭐ **تتطلّب نطاق إدارة صالحاً** ⇒ ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061)
+   *   ⇒ ⇒⇒ **التفريغ الشامل (كل المستأجرين) لم يعد متاحاً بلا سلطان صريح**.
+   * ⭐ والقراءة داخل نطاق مستأجر ⇒ ⭐ `entriesFor(context)` (معزولة أصلاً).
+   */
+  entries(scope: AuditAdminScope): readonly AuditEntry[] {
+    assertAdminScope(scope, 'entries');
     return this.#entries.map((entry) => ({ ...entry }));
   }
 
@@ -183,12 +237,26 @@ export class AuditLog {
       .map((entry) => ({ ...entry }));
   }
 
-  /** ⭐ سطر JSONL لكل عملية (للعرض أو الحفظ). */
-  toJsonl(): string {
+  /**
+   * ⭐ سطر JSONL لكل عملية (للعرض أو الحفظ) — ⭐ **يتطلّب نطاق إدارة**.
+   * ⛔⭐⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061) ⇒ ⭐ بلا نطاق = رفض صريح.
+   */
+  toJsonl(scope: AuditAdminScope): string {
+    assertAdminScope(scope, 'toJsonl');
     return this.#entries.map((entry) => JSON.stringify(entry)).join('\n');
   }
 
-  size(): number {
+  /**
+   * ⭐⭐⭐ عدّاد **مقيَّد بالمستأجر** — ⭐ (تصريح المالك ٦ نوفمبر ٢٠٢٦ · D-061).
+   * ⛔ العدّاد العام لم يعد متاحاً بلا نطاق إدارة ⇒ ⇒⇒ والعدّاد العام = سلطان إداري.
+   */
+  sizeFor(context: TenantContext): number {
+    return this.#entries.filter((entry) => entry.tenant_id === context.tenantId).length;
+  }
+
+  /** ⭐⭐⭐ عدّاد عام — ⭐ **يتطلّب نطاق إدارة** (بلا نطاق = رفض). */
+  size(scope: AuditAdminScope): number {
+    assertAdminScope(scope, 'size');
     return this.#entries.length;
   }
 }

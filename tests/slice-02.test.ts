@@ -43,6 +43,7 @@ import {
   type SessionSource,
   type VerifiedIdentity,
 } from '../src/core/index.ts';
+import { issueAuditAdminScope } from '../src/core/audit-log.ts';
 import { registerSessionSource } from '../src/core/session.ts';
 // ⭐ أدوات الاختبار موجودة في شجرة الاختبار ⇒ خارج حزمة الإنتاج
 import {
@@ -485,7 +486,7 @@ test('٩) التوافق مع Slice 01 وAuditOutcome بما فيه deferred', a
       });
       assert.equal(entry.outcome, outcome);
     }
-    assert.equal(audit.size(), 4);
+    assert.equal(audit.size(issueAuditAdminScope()), 4);
   });
 
   await t.test('⭐ عقد النتيجة يعلن كل الأسباب الممكنة', () => {
@@ -573,6 +574,7 @@ test('١٠) أمان أثر التدقيق: سطر واحد لكل عملية ·
   const store = new MessageStore();
   const audit = new AuditLog({ now: () => FIXED_NOW });
   const layer = new ProcessingLayer({ store, audit });
+  const adminScope = issueAuditAdminScope();
 
   await t.test('أربع عمليات معالجة ⇒ أربعة أسطر معالجة', () => {
     layer.process(context, createSyntheticEnvelope({ tenantIndex: 1, messageIndex: 1 }));
@@ -580,9 +582,9 @@ test('١٠) أمان أثر التدقيق: سطر واحد لكل عملية ·
     layer.process(context, createSyntheticEnvelope({ tenantIndex: 1, messageIndex: 3 }));
     layer.process(context, createSyntheticEnvelope({ tenantIndex: 1, messageIndex: 3 }));
 
-    const entries = audit.entries();
-    assert.equal(audit.size(), 4);
-    assert.equal(audit.toJsonl().split('\n').length, 4);
+    const entries = audit.entries(adminScope);
+    assert.equal(audit.size(adminScope), 4);
+    assert.equal(audit.toJsonl(adminScope).split('\n').length, 4);
     for (const entry of entries) {
       assert.equal(entry.operation, 'message.process');
       assert.ok(entry.tenant_id.length > 0);
@@ -600,7 +602,9 @@ test('١٠) أمان أثر التدقيق: سطر واحد لكل عملية ·
     localLayer.process(localContext, envelopeAt(81, '2026-01-09T10:00:00.000Z'));
     localLayer.process(localContext, envelopeAt(82, '2026-01-01T10:00:00.000Z'));
 
-    const deferred = localAudit.entries().filter((entry) => entry.outcome === 'deferred');
+    const deferred = localAudit
+      .entries(issueAuditAdminScope())
+      .filter((entry) => entry.outcome === 'deferred');
     assert.equal(deferred.length, 1);
     assert.equal(deferred[0].reason_code, 'deferred_out_of_order');
   });
@@ -620,13 +624,13 @@ test('١٠) أمان أثر التدقيق: سطر واحد لكل عملية ·
       }),
     );
     assert.equal(outcome.decision, 'accepted');
-    const jsonl = localAudit.toJsonl();
+    const jsonl = localAudit.toJsonl(issueAuditAdminScope());
     assert.ok(!jsonl.includes(fakeSecret), 'سرّ ظاهر في سجل المعالجة');
     assert.ok(!jsonl.includes('نص اصطناعي'), 'نص الرسالة ظاهر في سجل المعالجة');
   });
 
   await t.test('⭐ لا بريد ولا رقم ولا هاتف في سجل المعالجة', () => {
-    const jsonl = audit.toJsonl();
+    const jsonl = audit.toJsonl(adminScope);
     assert.ok(!jsonl.includes('@'), 'بريد في السجل');
     assert.ok(!/\b\d{14}\b/.test(jsonl), 'رقم قومي في السجل');
     assert.ok(!/\+201[0-9]{9}/.test(jsonl), 'هاتف في السجل');
@@ -686,7 +690,7 @@ test('١١) لا اتصالات خارجية ولا أسرار ولا بيانا
     const audit = new AuditLog({ now: () => FIXED_NOW });
     const layer = new ProcessingLayer({ store, audit });
     layer.process(context, createSyntheticEnvelope({ tenantIndex: 1, messageIndex: 1 }));
-    const jsonl = audit.toJsonl();
+    const jsonl = audit.toJsonl(issueAuditAdminScope());
     assert.ok(!jsonl.includes('@'), 'بريد في سجل المعالجة');
     assert.ok(!/\b\d{14}\b/.test(jsonl), 'رقم قومي في سجل المعالجة');
     assert.ok(!/\+201[0-9]{9}/.test(jsonl), 'هاتف في سجل المعالجة');
