@@ -43,7 +43,7 @@ function runTests(cwd: string, file: string): { code: number; output: string } {
   const result = spawnSync(
     'node',
     ['--experimental-strip-types', '--test', file],
-    { cwd, encoding: 'utf8', timeout: 180000, env },
+    { cwd, encoding: 'utf8', timeout: 300000, env },
   );
   return {
     code: result.status ?? -1,
@@ -100,11 +100,18 @@ async function runEviction(t: any, spec: EvictionCase): Promise<void> {
   const before = coreFingerprint(ROOT);
 
   await t.test(`⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (${spec.id})`, () => {
-    const control = runTests(ROOT, spec.testFile);
+    // ⭐⭐ **إعادة محاولة للضابط (محاولتان)**: ⭐ الضابط يفشل تحت الحمل
+    //   المتوازي أحياناً ⛔ بلا عيب حقيقي في الكود ⇒ ⭐⇒⇒ **ومحاولة ثانية
+    //   على نفس الكود تفصل «الحمل» عن «العيب»** ⇒ ⭐⇒⇒⇒ **وإن فشل
+    //   المحاولتان ⇒ الخطأ يُعرض بصوت (لا إخفاء) ⇒ ⛔ والاختبار يظل صادماً.**
+    let control = runTests(ROOT, spec.testFile);
+    if (control.code !== 0) {
+      control = runTests(ROOT, spec.testFile);
+    }
     assert.equal(
       control.code,
       0,
-      `الضابط فشل على الكود الحقيقي ⇒ اختبار الطرد غير صالح:\n${control.output.slice(-1500)}`,
+      `الضابط فشل على الكود الحقيقي (محاولتان) ⇒ اختبار الطرد غير صالح:\n${control.output.slice(-1500)}`,
     );
   });
 

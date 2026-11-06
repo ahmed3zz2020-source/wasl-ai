@@ -73,12 +73,39 @@ export function isAncestor(cwd: string, ancestor: string, descendant = 'HEAD'): 
  * ⭐ `⛔ --no-hardlinks` ⇒ ⭐ تعديل الملفات في النسخة **لا يمسّ الأصل أبداً**.
  * ⭐ المجلد = **خارج المستودع** وداخل مساحة العمل ⇒ ⭐ لا يلوّث الريبو.
  */
+/** ⭐⭐⭐ نوم متزامن قصير (بلا `async`) ⇒ ⭐ لتهدئة الملفات تحت الحمل. */
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * ⭐⭐⭐⭐⭐ **نسخة معزولة من المستودع** — ⭐ لاختبار الطرد.
+ * ⭐ `⛔ --no-hardlinks` ⇒ ⭐ تعديل الملفات في النسخة **لا يمسّ الأصل أبداً**.
+ * ⭐ المجلد = **خارج المستودع** وداخل مساحة العمل ⇒ ⭐ لا يلوّث الريبو.
+ * ⭐⭐ **إعادة محاولة (٣ محاولات)**: ⭐ تحت الحمل المتوازي قد يفشل
+ *   `git clone` عابراً (قفل ملف أو ضغط I/O) ⇒ ⭐⇒⇒ **والمحاولة
+ *   الواحدة الفاشلة ⛔ كانت تُسقط الاختبار بلا سبب حقيقي** ⇒ ⭐⇒⇒⇒
+ *   **⇒ القاعدة: كل محاولة تفشل ⇒ الخطأ الأخير يُعرض بصوت (لا إخفاء).**
+ */
 export function cloneIsolated(repoRoot: string, targetDir: string): void {
-  fs.rmSync(targetDir, { recursive: true, force: true });
-  execFileSync(
-    'git',
-    ['clone', '--local', '--no-hardlinks', '--quiet', repoRoot, targetDir],
-    { cwd: repoRoot, stdio: 'ignore' },
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      fs.rmSync(targetDir, { recursive: true, force: true });
+      execFileSync(
+        'git',
+        ['clone', '--local', '--no-hardlinks', '--quiet', repoRoot, targetDir],
+        { cwd: repoRoot, stdio: 'ignore' },
+      );
+      return;
+    } catch (error) {
+      lastError = error;
+      fs.rmSync(targetDir, { recursive: true, force: true });
+      if (attempt < 3) sleepSync(500 * attempt);
+    }
+  }
+  throw new Error(
+    `\u2b50 فشل استنساخ النسخة المعزولة بعد 3 محاولات: ${String(lastError)}`,
   );
 }
 
