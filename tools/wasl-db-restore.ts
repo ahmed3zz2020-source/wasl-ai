@@ -27,8 +27,12 @@ import path from 'node:path';
 import { loadConfig } from '../server/config.ts';
 import { createPool, type PgPool } from '../server/db/pool.ts';
 import { hashPasscode, verifyPasscode } from '../server/auth/password.ts';
-import { decryptArtifact } from '../server/backup/cipher.ts';
-import { assertBackupPermissions, readBackupKey, verifyBackup } from './wasl-db-backup.ts';
+import {
+  assertBackupPermissions,
+  decryptArtifactToFile,
+  readBackupKey,
+  verifyBackup,
+} from './wasl-db-backup.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -126,12 +130,14 @@ export async function runRestore(options: RestoreOptions): Promise<RestoreReport
     'restore.dump',
   );
   fs.mkdirSync(path.dirname(temporary), { recursive: true });
-  fs.writeFileSync(temporary, fs.readFileSync(options.dumpFile), { mode: 0o600 });
   try {
-    const plain = verified
-      ? decryptArtifact(fs.readFileSync(options.dumpFile), key)
-      : fs.readFileSync(options.dumpFile);
-    fs.writeFileSync(temporary, plain, { mode: 0o600 });
+    // ⭐⭐ M-72: the artifact is DECRYPTED AS A STREAM into the private
+    //   temporary file: the whole backup is never held in memory.
+    if (verified) {
+      await decryptArtifactToFile(options.dumpFile, key, temporary);
+    } else {
+      fs.writeFileSync(temporary, fs.readFileSync(options.dumpFile), { mode: 0o600 });
+    }
 
     const admin = await createScratchDatabase(superuserUrl, options.targetDatabase);
     const started = Date.now();

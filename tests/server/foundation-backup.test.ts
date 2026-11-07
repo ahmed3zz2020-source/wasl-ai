@@ -43,7 +43,7 @@ test('FOUNDATION 11) the backup and the restore drill (M-04)', async (t) => {
   }
 
   await t.test('⭐⭐ M-04a: the backup is written and the restore brings the data back', async () => {
-    const backup = runBackup();
+    const backup = await runBackup();
     assert.ok(backup.bytes > 0, 'the backup file is empty');
     // ⭐ D-069 / M69: the artifact is ENCRYPTED and the manifest holds
     //   the hash of the clear text dump.
@@ -80,7 +80,7 @@ test('FOUNDATION 11) the backup and the restore drill (M-04)', async (t) => {
 
   await t.test('⭐⭐ M-04b: the drill leaves nothing behind', async () => {
     const check = await runRestore({
-      dumpFile: runBackup().file,
+      dumpFile: (await runBackup()).file,
       targetDatabase: scratch,
       superuserUrl: SUPERUSER_URL,
     });

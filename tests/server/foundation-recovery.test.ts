@@ -83,20 +83,30 @@ test('FOUNDATION 15) the backup, the encryption and the restore drill (M-69)', a
   });
 
   await t.test('⭐⭐⭐ M-69a: the artifact is encrypted and the manifest matches', async () => {
-    const backup = runBackup();
+    const backup = await runBackup();
     temporary.push(backup.file);
 
     // ⭐ The artifact is encrypted: it does not start with the magic
     //   bytes of a PostgreSQL dump.
+    // ⭐⭐ M-72: the STREAMING layout is used now (the tag is at the
+    //   end, so the dump never has to be held in memory). The first
+    //   layout is still accepted by the reader, so an artifact taken
+    //   before this change stays restorable.
     const artifact = fs.readFileSync(backup.file);
-    assert.equal(artifact.subarray(0, 8).toString('ascii'), 'WLSLBK01', 'the artifact is not encrypted');
+    const magic = artifact.subarray(0, 8).toString('ascii');
+    assert.ok(
+      magic === 'WLSLBK01' || magic === 'WLSLBK02',
+      `the artifact is not encrypted: ${magic}`,
+    );
+    assert.equal(magic, 'WLSLBK02', 'the streaming layout is not used');
     assert.notEqual(
       artifact.subarray(0, 5).toString('ascii'),
       'PGDMP',
       'the artifact is a plain dump',
     );
 
-    // ⭐ The clear text dump is GONE: only the encrypted artifact stays.
+    // ⭐⭐ M-72: the clear text dump NEVER touches the disk, not even
+    //   for a moment: there is no file with the name of the dump.
     const plainFile = backup.file.replace(/\.enc$/, '');
     assert.equal(fs.existsSync(plainFile), false, 'the clear text dump is still on the disk');
 
@@ -119,7 +129,7 @@ test('FOUNDATION 15) the backup, the encryption and the restore drill (M-69)', a
   });
 
   await t.test('⭐⭐⭐ M-69b: the restore brings the data back and is measured', async () => {
-    const backup = runBackup();
+    const backup = await runBackup();
     temporary.push(backup.file);
     try {
       const report = await runRestore({
@@ -143,7 +153,7 @@ test('FOUNDATION 15) the backup, the encryption and the restore drill (M-69)', a
   });
 
   await t.test('⭐⭐⭐ M-69c: a corrupted artifact is refused', async () => {
-    const backup = runBackup();
+    const backup = await runBackup();
     temporary.push(backup.file);
 
     // ⭐⭐ One byte of the artifact is changed: the manifest hash does
@@ -202,7 +212,7 @@ test('FOUNDATION 15) the backup, the encryption and the restore drill (M-69)', a
   });
 
   await t.test('⭐⭐⭐ M-69d: an artifact with open permissions is refused', async () => {
-    const backup = runBackup();
+    const backup = await runBackup();
     temporary.push(backup.file);
 
     // ⭐ The artifact is made readable by everybody.
@@ -221,12 +231,12 @@ test('FOUNDATION 15) the backup, the encryption and the restore drill (M-69)', a
   });
 
   await t.test('⭐⭐ M-69e: a replaced artifact is detected', async () => {
-    const backup = runBackup();
+    const backup = await runBackup();
     temporary.push(backup.file);
 
     // ⭐ The artifact of ANOTHER backup is put in place: the manifest
     //   does not match it any more.
-    const other = runBackup();
+    const other = await runBackup();
     temporary.push(other.file);
     const original = fs.readFileSync(backup.file);
     fs.writeFileSync(backup.file, fs.readFileSync(other.file), { mode: 0o600 });
