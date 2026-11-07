@@ -123,7 +123,7 @@ def test_counts() -> tuple[int, int, int] | None:
     """⭐ عدّادات الاختبارات من **تشغيل فعلي** ⇒ رقم حيّ لا رقم مكتوب يدوياً."""
     try:
         p = subprocess.run(
-            ["npm", "test", "--silent"], cwd=str(REPO), capture_output=True, text=True, timeout=240
+            ["npm", "test", "--silent"], cwd=str(REPO), capture_output=True, text=True, timeout=900
         )
     except Exception:
         return None
@@ -262,9 +262,9 @@ def summary_block(sha: str) -> str:
 
     # ⑥ الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)
     docs = [
-        ("docs/SLICE-01-REPORT.md", "تقرير الشريحة الأولى"),
-        ("docs/SLICE-02-REPORT.md", "تقرير Slice 02"),
-        ("docs/SECOND-SLICE-PROPOSAL.md", "مقترح الشريحة الثانية (🔵 بلا تصريح)"),
+        ("docs/FOUNDATION-BUILD-02-PHASE-02-REPORT.md", "تقرير FOUNDATION BUILD 02 / PHASE 02"),
+        ("docs/TEST-MATRIX.md", "مصفوفة الاختبارات"),
+        ("docs/FOUNDATION-BUILD-02-PHASE-01-REPORT.md", "تقرير FOUNDATION BUILD 02 / PHASE 01"),
         ("DECISIONS.md", "سجل القرارات"),
     ]
     links = [
