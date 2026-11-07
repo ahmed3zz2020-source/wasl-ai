@@ -32,6 +32,8 @@ LOG = REPO / "docs/CHATGPT-REVIEW-LOG.md"
 OWNER_REPO = "ahmed3zz2020-source/wasl-ai"
 BASE_RAW = f"https://raw.githubusercontent.com/{OWNER_REPO}"
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/122.0 Safari/537.36"}
+# ⭐⭐ M85 — أي تعارض بين رقم ال-commit والقياس الحيَّ = خطأ يُرفض نشره (لا نجاح كاذب).
+PROBLEMS: list[str] = []
 
 
 def fence(heading: str) -> str:
@@ -139,36 +141,67 @@ def test_counts() -> tuple[int, int, int] | None:
     return total, grab("pass"), grab("fail")
 
 
-def pending_owner_items() -> tuple[str, list[str]]:
-    """⭐ «ما ينتظر قرار المالك» يُشتق من **رقم القسم الفعلي** ⇒ ⭐ لا يتقادم ولا يُكتب يدوياً."""
-    if not LOG.exists():
-        return ("", [])
-    text = LOG.read_text(encoding="utf-8")
-    start = text.find("## ٣.")
-    if start < 0:
-        return ("", [])
-    end = text.find("\n## ", start + 1)
-    block = text[start: end if end > 0 else len(text)]
-    heads = [m for m in re.finditer(r"^###\s*([^\n]*ما ينتظر[^\n]*)$", block, re.M)]
-    if not heads:
-        return ("", [])
-    # ⭐ رقم القسم من عنوانه الفعلي (مثال: «٣.٦»).
-    num = re.match(r"^\s*([٠-٩]+[.\-][٠-٩]+)", heads[-1].group(1))
-    section = num.group(1) if num else ""
-    tail = block[heads[-1].end():]
-    items: list[str] = []
-    for ln in tail.splitlines():
-        if ln.startswith("|"):
-            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
-            if len(cells) >= 2 and not set(cells[0]) <= set("-: "):
-                if cells[0].strip() in ("#", "") or cells[1].replace("⭐", "").replace("**", "").strip() == "القرار":
-                    continue  # ⭐ صف الرأس لا صف بيانات
-                name = cells[1].replace("⭐", "").replace("**", "").strip()
-                if name:
-                    items.append(name)
-        elif items and not ln.startswith("|"):
-            break
-    return (section, items)
+# ⭐⭐⭐ M85 — مصدر الرقم لازم يكون **الـcommit نفسه** ⇒ ⭐ ولا رقم من شجرة مختلفة.
+PARTITION_RE = re.compile(r"<!--\s*wasl:current-partition\s+(.+?)\s*-->")
+OPEN_DECISIONS = REPO / "docs/OPEN-DECISIONS.md"
+
+
+def commit_partition(sha: str) -> tuple[int, int, str] | None:
+    """⭐ القسم الموثّق **من الـcommit المُثبَّت** ⇒ (المجموع، عدد الملفات، التعبير).
+
+    ⭐ **لماذا**: ⭐ ملاحظة M85 — ⭐ الرسالة كانت تعلن أرقام **الشجرة الحالية** وتضع
+    الروابط على **commit أقدم** ⇒ ⇒ ⇒ القارئ يقارن رقمين مختلفين ⇒ ⇒ ⇒ تعارض حقيقي.
+    ⇒ ⭐ **الرقم المنشور لازم يكون رقم الـcommit نفسه.**
+    """
+    if not sha:
+        return None
+    raw = git("show", f"{sha}:docs/TEST-MATRIX.md")
+    if not raw:
+        raw = git("show", f"{sha}:CURRENT-STATE.md")
+    if not raw:
+        return None
+    m = PARTITION_RE.search(raw)
+    if not m:
+        return None
+    expr = m.group(1).strip()
+    nums = [int(x) for x in re.findall(r"\d+", expr)]
+    if len(nums) < 2:
+        return None
+    parts, declared = nums[:-1], nums[-1]
+    if sum(parts) != declared:
+        return None
+    return declared, len(parts), expr
+
+
+def pending_owner_items() -> tuple[list[str], list[str]]:
+    """\u2b50 \u00ab\u0645\u0627 \u064a\u0646\u062a\u0638\u0631 \u0642\u0631\u0627\u0631 \u0627\u0644\u0645\u0627\u0644\u0643\" \u064a\u064f\u0634\u062a\u0642 \u0645\u0646 \u00ab\u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0645\u0648\u062d\u0651\u062f\" \u21d2 \u2b50 \u0644\u0627 \u064a\u0633\u0642\u0637 \u0628\u0646\u062f \u0645\u0646 \u0627\u0644\u0645\u0644\u062e\u0635.
+
+    \u2b50\u2b50 \u00ab\u0644\u0645\u0627\u0630\u0627 (M86)\": \u2b50 \u0627\u0644\u0631\u062f\u0651 \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 \u0623\u0639\u0644\u0646 \u00a7 \u0628\u0646\u0648\u062f \u00b7 \u0648\u0631\u062f\u0651 \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 \u0623\u0639\u0644\u0646 \u00a5 \u21d2 \u21d2 \u21d2 \u062e\u0645\u0633\u0629 \u0628\u0646\u062f \u0627\u062e\u062a\u0641\u062a \u0645\u0646 \u0623\u062d\u062f\u062b \u0645\u0644\u062e\u0635 \u21d2 \u2b50 \u00ab\u0648\u0627\u0644\u0627\u062e\u062a\u0641\u0627\u0621 \u0644\u064a\u0633 \u0625\u063a\u0644\u0627\u0642\u0627\u064b\".
+    \u21d2 \u2b50 \u00ab\u0627\u0644\u0645\u0635\u062f\u0631 \u0627\u0644\u0648\u062d\u064a\u062f = `docs/OPEN-DECISIONS.md`\" \u21d2 \u21d2 \u21d2 \u0648\u0627\u0644\u0642\u0627\u0639\u062f\u0629: \u2b50 \u00ab\u0644\u0627 \u064a\u064f\u063a\u0644\u0642 \u0628\u0646\u062f \u0625\u0644\u0627 \u0628\u062a\u0635\u0631\u064a\u062d \u0645\u0627\u0644\u0643 \u0635\u0631\u064a\u062d\" \u21d2 \u21d2 \u21d2 \u0648\u0645\u0627 \u0639\u062f\u0627 \u0644\u0630\u0644\u0643 \u064a\u0628\u0642\u0649 \u0645\u0639\u0644\u0651\u0642\u0627\u064b \u062d\u062a\u0649 \u0644\u0648 \u0644\u0645 \u064a\u064f\u0630\u0643\u0631 \u0641\u064a \u0622\u062e\u0631 \u0631\u062f\u0651\u00bb.
+
+    \u2b50 \u0627\u0644\u0645\u0631\u062c\u0639 = (\u0645\u0637\u0644\u0648\u0628 \u0627\u0644\u0622\u0646 \u00b7 \u0645\u0639\u0644\u0651\u0642 \u0628\u0644\u0627 \u0642\u0631\u0627\u0631 \u0627\u0644\u0622\u0646).
+    """
+    if not OPEN_DECISIONS.exists():
+        return ([], [])
+    items_now: list[str] = []
+    items_later: list[str] = []
+
+    def clean(s: str) -> str:
+        return s.replace("\u2b50", "").replace("**", "").strip()
+
+    for ln in OPEN_DECISIONS.read_text(encoding="utf-8").splitlines():
+        if not ln.startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) < 6:
+            continue
+        name, state, need_now, closed = clean(cells[1]), clean(cells[3]), clean(cells[4]), clean(cells[5])
+        if not name or not state or "\u0645\u0641\u062a\u0648\u062d" not in state:
+            continue
+        if "\u0646\u0639\u0645" in closed:
+            continue
+        (items_now if "\u0646\u0639\u0645" in need_now else items_later).append(name)
+    return (items_now, items_later)
 
 
 def summary_block(sha: str) -> str:
@@ -178,10 +211,11 @@ def summary_block(sha: str) -> str:
     cs = (REPO / "CURRENT-STATE.md").read_text(encoding="utf-8") if (REPO / "CURRENT-STATE.md").exists() else ""
     tracked = git("ls-files").splitlines()
     # ⭐ **العدّادات تُقاس بالميزة ⇒ كل مجلّد على حدة** ⇒ ⭐ «كود الإنتاج» = النواة + الخادم (مش النواة وحدها).
-    n_core = len([f for f in tracked if f.startswith("src/")])
+    n_core = len([f for f in tracked if f.startswith("src/core/")])
+    n_local = len([f for f in tracked if f.startswith("src/local/")])
     n_server = len([f for f in tracked if f.startswith("server/")])
     n_tools = len([f for f in tracked if f.startswith("tools/")])
-    n_prod = n_core + n_server
+    n_prod = n_core + n_local + n_server
     n_tests = len([f for f in tracked if f.startswith("tests/")])
     rows = decision_rows(dec)
     n_ok = sum(1 for _, t in rows if "✅" in t)
@@ -237,7 +271,7 @@ def summary_block(sha: str) -> str:
     if ready:
         if n_prod:
             state = (
-                f"✔ كود الإنتاج ({ar_num(n_prod)} ملفاً = {ar_num(n_core)} نواة + {ar_num(n_server)} خادم) "
+                f"✔ كود الإنتاج ({ar_num(n_prod)} ملفاً = {ar_num(n_core)} نواة (src/core) + {ar_num(n_local)} محاكاة محلية (src/local) + {ar_num(n_server)} خادم) "
                 f"· ✔ اختبارات محلية ({ar_num(n_tests)} ملف اختبار)"
             )
         else:
@@ -254,20 +288,42 @@ def summary_block(sha: str) -> str:
     n_md = len([f for f in tracked if f.endswith(".md")])
     lines.append(
         f"- ⭐ **الريبو**: {ar_num(len(tracked))} ملف متتبَّع ({ar_num(n_md)} ملف `.md`) · "
-        f"{ar_num(n_core)} نواة + {ar_num(n_server)} خادم + {ar_num(n_tools)} أداة تشغيل "
+        f"{ar_num(n_core)} نواة (src/core) + {ar_num(n_local)} محاكاة محلية (src/local) + {ar_num(n_server)} خادم + {ar_num(n_tools)} أداة تشغيل "
         f"· {ar_num(n_tests)} ملف اختبار · العدّادات في `CURRENT-STATE.md` مصحَّحة."
     )
 
-    # ⑤ نتائج الاختبارات الحية (تشغيل فعلي)
+    # ① ⭐ M85 — الرقم المنشور = رقم ال-commit نفسه ⇒ ⭐ ولا رقم من شجرة مختلفة.
+    cp = commit_partition(sha)
     counts = test_counts()
-    if counts:
-        total, passed, failed = counts
-        verdict = "✅ كله ناجح" if failed == 0 else f"⛔ {ar_num(failed)} فاشل"
-        lines.append(
-            f"- ⭐ **الاختبارات (تشغيل حيّ)**: {ar_num(total)} اختبار · {ar_num(passed)} ناجح · {verdict} "
-            "· ⛔ **نتائج اختبارات محلية — ليست شهادة جاهزية**."
-        )
-
+    short = sha[:7]
+    if cp:
+        total_c, _n_files, expr = cp
+        if counts:
+            total_l, passed_l, failed_l = counts
+            if total_l != total_c:
+                PROBLEMS.append(
+                    f"تعارض أرقام (M85): ال-commit {short} يوثّق {ar_num(total_c)} اختبار · "
+                    f"والقياس الحيَّ {ar_num(total_l)} ⇒ لا يُنشر رقم غير مربوط بال-commit."
+                )
+                lines.append(
+                    f"- ⛔ **الاختبارات**: ⛔ تعارض أرقام (M85) — ال-commit {short} يوثّق {ar_num(total_c)} · "
+                    f"والقياس الحيَّ {ar_num(total_l)} ⇒ ⛔ لا يُنشر."
+                )
+            else:
+                verdict = "✅ كله ناجح" if failed_l == 0 else f"⛔ {ar_num(failed_l)} فاشل"
+                lines.append(
+                    f"- ⭐ **الاختبارات (رقم مربوط بال-commit {short})**: {ar_num(total_c)} اختبار · "
+                    f"{ar_num(passed_l)} ناجح · {verdict} · ⭐ التقسيم الموثّق: {expr} · "
+                    "⛔ **نتاج اختبارات محلية — ليست شهادة جاهزية**."
+                )
+        else:
+            lines.append(
+                f"- ⭐ **الاختبارات (رقم مربوط بال-commit {short})**: {ar_num(total_c)} اختبار · {expr} · "
+                "⏳ القياس الحيَّ لم يُنفّذ."
+            )
+    else:
+        PROBLEMS.append(f"مفقود marker التقسيم في ال-commit {short} ⇒ لا رقم مربوط (M85).")
+        lines.append(f"- ⛔ **الاختبارات**: ⛔ مفيش marker تقسيم في ال-commit {short} ⇒ ⛔ لا رقم مربوط.")
     # ⑥ الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)
     # ⭐ **أحدث تقريرَين بالترتيب الزمني** ⇒ ⭐ الترتيب من **git** (تاريخ آخر commit لمسّ الملف)
     # ⇒ ⭐ **ثابت بعد أي clone** ⇒ ⭐ **لا تتقادم باليد**.
@@ -297,11 +353,16 @@ def summary_block(sha: str) -> str:
         lines.append("- ⭐ **الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)**: " + " · ".join(links))
 
     # ⑦ ما ينتظر قرار المالك (مشتق من رقم القسم الفعلي في آخر ردّ)
-    section, pending = pending_owner_items()
-    if pending:
-        where = f"§{section}" if section else "§٣"
-        lines.append("- ⭐ **ما ينتظر قرار المالك الآن** (من " + where + " في السجل): " + " · ".join(pending))
-
+    need_now, pending = pending_owner_items()
+    if pending or need_now:
+        parts = []
+        if need_now:
+            parts.append("مطلوب الآن: " + " · ".join(need_now))
+        if pending:
+            parts.append("معلّق بلا قرار الآن: " + " · ".join(pending))
+        lines.append(
+            "- ⭐ **ما ينتظر قرار المالك** (المصدر الوحيد: `docs/OPEN-DECISIONS.md`): " + " · ".join(parts)
+        )
     # ⑧ ما لم يُنفَّذ
     if n_prod:
         lines.append(
@@ -336,7 +397,12 @@ def print_reply(check: bool, with_summary: bool = False) -> int:
     print(f"⏺️ commit: {sha}")
     print(f"⏺️ الختم في الملف المنشور: {seal() or '؟'}")
     print(f"⏺️ بديل (نسخة تتحدّث تلقائياً مع كل commit): {main_link}")
-    if not check:
+    if PROBLEMS:
+        print()
+        for pb in PROBLEMS:
+            print(f"⛔ {pb}")
+        if check:
+            return 1
         return 0
     status, body = fetch(link)
     if status != 200:

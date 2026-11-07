@@ -5,3 +5,4 @@ __pycache__/
 wrangler.toml
 node_modules/
 .local/
+docs/previews/tickets-ui-mobile-*.png
