@@ -1,5 +1,5 @@
 # ============================================================
-# WASL AI — the matrix of the tests (PHASE 02 of BUILD 03)
+# WASL AI — the matrix of the tests (PHASE 03 of BUILD 03)
 # ------------------------------------------------------------
 # ⭐ WHAT THIS DOCUMENT IS
 #   The evidence of a phase is not one number: it is four groups of
@@ -30,11 +30,14 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-> ⭐⭐ **PHASE 02 (BUILD 03)**: the partition is checked by a script and
-> the new files were added to the groups they belong to ⇒ now:
-> **559 + 137 + 100 + 16 = 812** = the number of `npm test` exactly
-> (136 of the 137 in `integration` pass and **1 is SKIPPED**: the
+> ⭐⭐ **PHASE 03 (BUILD 03)**: the partition is checked by a TOOL
+> (`tools/test_count_audit.py`) and the numbers are read from the LOG of
+> a real run, never written by hand ⇒ now:
+> **559 + 147 + 105 + 16 = 827** = the number of `npm test` exactly
+> (146 of the 147 in `integration` pass and **1 is SKIPPED**: the
 > dynamic Docker drill, see §6).
+> ⭐⭐ **The tool fails when a published number is not the measured one**
+> ⇒ ⇒ ⇒ a number can no longer drift silently.
 >
 > ⭐⭐⭐ **The partition is a partition AND the files are isolated (D-071).**
 > The files run in parallel over ONE database ⇒ a file that uses the
@@ -213,6 +216,41 @@ npm run db:restore -- <artifact file> --target <scratch database>
 > / 715 passed / 2 skipped. ⭐ The number **724** appears only with the
 > privileged connection ⇒ ⭐ **the comparison of the phases is only
 > valid with it.**
+
+### ⭐⭐ The measured results of PHASE 03 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline of the phase, before the first change | **812** · 811 pass · 0 fail · 1 skipped | the run of the session |
+| ⭐ 1 | `npm run test:unit` (round 1) | **559/559** | `g1-unit.log` |
+| ⭐ 2 | `npm run test:integration` (round 1) | **146/147** · 1 skipped (the Docker drill) | `g1-integration.log` |
+| ⭐ 3 | `npm run test:security` (round 1) | **105/105** | `g1-security.log` |
+| ⭐ 4 | `npm run test:recovery` (round 1) | **16/16** | `g1-recovery.log` |
+| ⭐ 5 | `npm run test:unit` (round 2) | **559/559** | `g2-unit.log` |
+| ⭐ 6 | `npm run test:integration` (round 2) | **146/147** · 1 skipped | `g2-integration.log` |
+| ⭐ 7 | `npm run test:security` (round 2) | **105/105** | `g2-security.log` |
+| ⭐ 8 | `npm run test:recovery` (round 2) | **16/16** | `g2-recovery.log` |
+
+> ⭐⭐ **The two rounds are the point of M-82**: ⭐ the four groups run
+> in PARALLEL, twice, with the SAME result ⇒ ⇒ ⇒ a file does not depend
+> on the order of the files nor on a leftover row.
+> ⭐⭐ **The isolation is by NAMESPACE, not by turning the parallelism
+> off**: ⭐ every test file owns its companies ⇒ ⭐ and the ONE resource
+> that cannot be namespaced (the platform login budget, D-070) is
+> measured under a PostgreSQL advisory lock ⇒ ⭐ **the parallelism is
+> never disabled**.
+
+> ⭐⭐ **The tool that keeps the numbers true**:
+
+```bash
+# the structure: the partition is exact (no file counted twice)
+python3 tools/test_count_audit.py
+
+# + the numbers of a real run and the published documents
+python3 tools/test_count_audit.py --log <run.log> --docs \
+  --group-log unit=<u.log> --group-log integration=<i.log> \
+  --group-log security=<s.log> --group-log recovery=<r.log>
+```
 
 ### The measured results of PHASE 02 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
 
