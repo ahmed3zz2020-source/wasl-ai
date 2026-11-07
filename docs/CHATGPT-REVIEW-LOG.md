@@ -99,6 +99,7 @@
 
 > ⭐ **طبيعة الردّ**: ⭐ **تصريح المالك (`D-071`) — FOUNDATION BUILD 03 / PHASE 02**: ⭐ **إغلاق M76–M80 محلياً بالكامل + بناء Customer CRM MVP** ⇒ ⭐ **مهمة تنفيذ فعلية لا مراجعة وثائق** ⇒ ⭐ **بلا نشر · بلا خدمات مدفوعة · بلا بيانات حقيقية · بلا WhatsApp · بلا AI خارجي · بلا مزوّد هوية**.
 > ⭐ **التقرير الكامل (ملف واحد)**: ⭐ [`docs/FOUNDATION-BUILD-03-PHASE-02-REPORT.md`](FOUNDATION-BUILD-03-PHASE-02-REPORT.md) — ⭐ **والقرار**: ⭐ `DECISIONS.md` §D-071 — ⭐ **ومصفوفة الاختبارات**: ⭐ `docs/TEST-MATRIX.md`.
+> ⭐ **ثابت على commit**: ⭐ [التقرير](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/FOUNDATION-BUILD-03-PHASE-02-REPORT.md) · ⭐ [هذا السجل](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/CHATGPT-REVIEW-LOG.md) · ⭐ [القرار D-071](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/DECISIONS.md) · ⭐ [مصفوفة الاختبارات](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/TEST-MATRIX.md)
 > ⭐⭐ **حدّ معلَن من أعلى**: ⭐⭐ **لا نشر · لا PHASE 03 · لا تغيير قرارات المالك · لا رفع الجاهزية · ⛔ M75 ما زالت BLOCKED** ⇒ ⭐⭐ **الجاهزية الرسمية 9/21 لم تتحرك**.
 
 ### ٣.١ ⭐⭐ البنود الخمسة (M76–M80) — الحالة قبل وبعد

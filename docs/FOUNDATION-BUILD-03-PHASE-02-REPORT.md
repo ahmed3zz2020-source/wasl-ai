@@ -352,7 +352,17 @@
 | ٣ | `1be4521` | ⭐ **M76 · M77 · M78 · M79 · M80**: نطاق الدور على كل مسار · الاستطلاع · الترقيم · إلغاء الطلبات · التحقق قبل الفشل · **وعزل بيانات الاختبارات** |
 | ٤ | `831c678` | ⭐ **الـCRM**: ترحيل + استعلامات + مسارات + واجهة + اختبارات (الخادم ١٢/١٢ · المتصفح ١٢/١٢) |
 | ٥ | ⭐ (الوثائق) | ⭐ **هذا التقرير + D-071 + الحالة + ردّ #٤٧ + مصفوفة الاختبارات** |
-| ٦ | ⭐ (تثبيت الروابط) | ⭐ **الروابط المثبّتة على content commit** |
+| ٦ | ⭐ (تثبيت الروابط) | ⭐ **الروابط المثبّتة على `2922303`** |
+
+⭐⭐ **الروابط المثبّتة (على content commit `2922303`)**:
+
+| الملف | الرابط المثبَّت |
+|---|---|
+| ⭐ **التقرير** | [https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/FOUNDATION-BUILD-03-PHASE-02-REPORT.md](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/FOUNDATION-BUILD-03-PHASE-02-REPORT.md) |
+| ⭐ **سجل الردود (§٣ = ردّ #٤٧)** | [https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/CHATGPT-REVIEW-LOG.md](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/CHATGPT-REVIEW-LOG.md) |
+| ⭐ **القرار D-071** | [https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/DECISIONS.md](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/DECISIONS.md) |
+| ⭐ **مصفوفة الاختبارات** | [https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/TEST-MATRIX.md](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/docs/TEST-MATRIX.md) |
+| ⭐ **الحالة** | [https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/CURRENT-STATE.md](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2922303/CURRENT-STATE.md) |
 
 ---
 
@@ -404,7 +414,7 @@
 
 1. ⭐ **تجاوز حقيقي في M76 مُثبَت بالمقاس (الموظف كان يقرأ ويكتب في محادثة موظف تاني) ⇒ مُغلق في طبقة الخادم بتطبيق نطاق النواة** ⇒ ⭐ **والاختبار يمسك العيب (كان يفشل)**.
 2. ⭐ **M77–M80 مُثبتة في متصفح حقيقي**: ⭐ تحديث بالمستجدّ فقط · ترقيم ١٢٠/٥ صفحات · لا سباق · **تحقق قبل إعلان الفشل** ⇒ **نسختان على قاعدة واحدة ⇒ [٢٠١، ٤٠٩]**.
-3. ⭐ **الـCRM يعمل**: ⭐ قائمة · ملف · تعديل بقفل الإصدار · تدقيق · ربط ثنائي مع صندوق الوارد ⇒ **١٢/١٢ خادم + ١٠/١٠ متصفح**.
+3. ⭐ **الـCRM يعمل**: ⭐ قائمة · ملف · تعديل بقفل الإصدار · تدقيق · ربط ثنائي مع صندوق الوارد ⇒ **١٢/١٢ خادم + ١٢/١٢ متصفح**.
 4. ⭐ **صفر سطر في `src/core/`** · ⭐ **ولا قدرة ولا صلاحية ولا حالة جديدة** (تعديل العميل = `customer.manage` من النواة).
 5. ⭐ **الجاهزية الرسمية 9/21 لم تتحرك** · ⭐ **وM75 ما زالت BLOCKED (درع Docker)** · ⭐ **لا نشر ولا بيانات حقيقية**.
 6. ⭐ **سبعة بنود تنتظر قرار المالك** (أهمها: معدّل التحديث · آليته · حقول تعديل العميل · إظهار التصنيف).
