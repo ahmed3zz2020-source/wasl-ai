@@ -29,6 +29,7 @@ import {
 import {
   hydrateConversation,
   hydrateEmployees,
+  lockConversation,
   persistBundle,
 } from '../db/repositories/persistence.ts';
 import {
@@ -38,6 +39,8 @@ import {
   type TenantIdentityMirror,
 } from '../auth/registry.ts';
 import { login, resolveSession, revokeSession, SessionError } from '../auth/sessions.ts';
+import { clearLoginFailures, readRateLimitState, recordLoginFailure } from '../auth/rate-limit.ts';
+import { createLogger, type Logger } from '../log.ts';
 import {
   assertCapability,
   authorizeLocalRequest,
@@ -180,6 +183,14 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+/** ⭐ The request id: the caller's one when it is safe, a new one otherwise. */
+function requestIdOf(req: http.IncomingMessage): string {
+  const header = req.headers['x-request-id'];
+  const value = Array.isArray(header) ? header[0] : header;
+  if (typeof value === 'string' && /^[A-Za-z0-9._-]{1,64}$/.test(value)) return value;
+  return `req_${crypto.randomBytes(8).toString('hex')}`;
+}
+
 export class WaslApiServer {
   readonly #config: ServerConfig;
   readonly #pool: PgPool;
@@ -187,11 +198,25 @@ export class WaslApiServer {
   readonly #mirrors = new Map<string, TenantIdentityMirror>();
   /** ⭐ One queue per company (the in-memory bundle is per company). */
   readonly #tenantLocks = new Map<string, Promise<void>>();
+  /** ⭐ The structured log (one JSON line per request). */
+  readonly #logger: Logger;
+  /** ⭐ When the process started (the health check reports the uptime). */
+  readonly #startedAt = Date.now();
   #server: http.Server | null = null;
 
   constructor(options: ApiServerOptions) {
     this.#config = options.config;
     this.#pool = options.pool;
+    this.#logger = createLogger({
+      level: options.config.logLevel,
+      service: 'wasl-local-api',
+    });
+    // ⭐ A dropped connection is an event, not a crash: without this
+    //   listener the pool would raise an unhandled error and could stop
+    //   the process. The log carries the event and nothing else.
+    options.pool.on('error', () => {
+      this.#logger.error('pool_error', { code: 'pool_error' });
+    });
   }
 
   // ------------------------------------------------------------ lifecycle
@@ -355,9 +380,18 @@ export class WaslApiServer {
   async #dispatch(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     const method = (req.method ?? 'GET').toUpperCase();
+    const startedAt = Date.now();
+    const requestId = requestIdOf(req);
     try {
       const response = await this.#route(method, url, req);
-      this.#send(res, response.status, response.body, response.contentType);
+      this.#send(res, response.status, response.body, response.contentType, requestId);
+      this.#logger.info('http_request', {
+        request_id: requestId,
+        method,
+        path: url.pathname,
+        status: response.status,
+        duration_ms: Date.now() - startedAt,
+      });
     } catch (error) {
       const database = databaseStatus(error);
       const policy = policyStatus(error);
@@ -370,25 +404,48 @@ export class WaslApiServer {
               ? 413
               : policy ?? database ?? 500;
       const code = errorCodeOf(error);
-      this.#send(res, status, { ok: false, error: { code, message: errorMessageOf(error) } });
+      this.#send(res, status, { ok: false, error: { code, message: errorMessageOf(error) } }, requestId);
+      // ⭐ The log carries the code and the status, never the message
+      //   body and never the request content.
+      // ⭐ A 4xx is an answer (the request was refused), a 5xx is a
+      //   failure of the service: the two are not logged the same way.
+      const fields = {
+        request_id: requestId,
+        method,
+        path: url.pathname,
+        status,
+        code,
+        duration_ms: Date.now() - startedAt,
+      };
+      if (status >= 500) this.#logger.error('http_request', fields);
+      else this.#logger.warn('http_request', fields);
     }
   }
 
-  #send(res: http.ServerResponse, status: number, body: unknown, contentType?: string): void {
+  #send(
+    res: http.ServerResponse,
+    status: number,
+    body: unknown,
+    contentType?: string,
+    requestId?: string,
+  ): void {
     const payload = typeof body === 'string' ? body : JSON.stringify(body);
-    res.writeHead(status, {
+    const headers: Record<string, string | number> = {
       'content-type': contentType ?? 'application/json; charset=utf-8',
       'content-length': Buffer.byteLength(payload),
       'cache-control': 'no-store',
-    });
+      // ⛔ No CORS header: the API is not a public browser API.
+    };
+    if (requestId) headers['x-request-id'] = requestId;
+    res.writeHead(status, headers);
     res.end(payload);
   }
 
   async #route(method: string, url: URL, req: http.IncomingMessage): Promise<JsonResponse> {
     const path = url.pathname.replace(/\/+$/, '') || '/';
 
-    if (method === 'GET' && (path === '/' || path === '/health')) {
-      return { status: 200, body: { ok: true, service: 'wasl-local-api', scope: 'local-test' } };
+    if (method === 'GET' && (path === '/' || path === '/health' || path === '/api/health')) {
+      return this.#health();
     }
     if (method === 'GET' && (path === '/ui' || path === '/ui/')) {
       return { status: 200, body: { ok: true, ui: '/ui/index.html', connected: true } };
@@ -497,6 +554,40 @@ export class WaslApiServer {
   }
 
   // ------------------------------------------------------------ handlers
+  /**
+   * ⭐ The health check: the profile, the database state and the schema
+   *   version. It needs no session (a probe has none) and it exposes
+   *   nothing sensitive: no host, no credential, no data.
+   */
+  async #health(): Promise<JsonResponse> {
+    let dbOk = false;
+    let schemaVersion: string | null = null;
+    try {
+      const result = await this.#pool.query<{ version: string }>(
+        `select version from wasl_schema_migrations order by applied_at desc limit 1`,
+      );
+      schemaVersion = result.rows[0]?.version ?? null;
+      dbOk = true;
+    } catch {
+      dbOk = false;
+    }
+    const body = {
+      ok: dbOk,
+      service: 'wasl-local-api',
+      scope: 'local-test',
+      profile: this.#config.profile,
+      db_ok: dbOk,
+      schema_version: schemaVersion,
+      uptime_ms: Date.now() - this.#startedAt,
+      rate_limit: {
+        max_account_attempts: this.#config.rateLimit.maxAccountAttempts,
+        max_tenant_attempts: this.#config.rateLimit.maxTenantAttempts,
+        window_seconds: this.#config.rateLimit.windowSeconds,
+      },
+    };
+    return { status: dbOk ? 200 : 503, body };
+  }
+
   async #login(req: http.IncomingMessage): Promise<JsonResponse> {
     const body = asRecord(parseJson(await readBody(req)));
     const tenantId = asString(body['tenant_id']);
@@ -508,21 +599,61 @@ export class WaslApiServer {
         body: { ok: false, error: { code: 'login_input_invalid', message: 'tenant_id, user_id and passcode are required' } },
       };
     }
-    const result = await login(this.#pool, { tenantId, userId, passcode }, this.#config.sessionTtlSeconds);
-    return {
-      status: 200,
-      body: {
-        ok: true,
-        token: result.token,
-        session: {
-          tenant_id: result.session.tenantId,
-          user_id: result.session.userId,
-          membership_id: result.session.membershipId,
-          role: result.session.role,
-          expires_at: result.session.expiresAt,
+    // ⭐⭐ The rate limit is checked BEFORE the passcode is verified, so
+    //   a guessing attempt costs one database round trip and not one
+    //   key derivation per guess. The counter lives in PostgreSQL, so
+    //   the limit is the same for every backend instance.
+    const limit = await readRateLimitState(this.#pool, tenantId, userId, this.#config.rateLimit);
+    if (limit.limited) {
+      this.#logger.warn('login_rate_limited', {
+        tenant_id: tenantId,
+        user_id: userId,
+        code: 'login_rate_limited',
+      });
+      return {
+        status: 429,
+        body: {
+          ok: false,
+          error: { code: 'login_rate_limited', message: 'too many failed login attempts' },
         },
-      },
-    };
+      };
+    }
+
+    try {
+      const result = await login(
+        this.#pool,
+        { tenantId, userId, passcode },
+        this.#config.sessionTtlSeconds,
+      );
+      // ⭐ A successful login clears the failures of that account.
+      await clearLoginFailures(this.#pool, tenantId, userId);
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          token: result.token,
+          session: {
+            tenant_id: result.session.tenantId,
+            user_id: result.session.userId,
+            membership_id: result.session.membershipId,
+            role: result.session.role,
+            expires_at: result.session.expiresAt,
+          },
+        },
+      };
+    } catch (error) {
+      // ⭐ Only a credential failure counts as a guess: a malformed
+      //   request or a disabled account is an answer, not an attempt.
+      if (error instanceof SessionError && error.code === 'credentials_invalid') {
+        await recordLoginFailure(this.#pool, tenantId, userId);
+        this.#logger.warn('login_failed', {
+          tenant_id: tenantId,
+          user_id: userId,
+          code: 'credentials_invalid',
+        });
+      }
+      throw error;
+    }
   }
 
   async #listConversations(context: RequestContext): Promise<JsonResponse> {
@@ -834,12 +965,15 @@ export class WaslApiServer {
         if (!exists) {
           throw new Error('conversation_not_found');
         }
+        // ⭐⭐ The database locks the conversation row and the state is
+        //   re-read after the lock: the write is serialized across the
+        //   backend instances, not only inside one process.
+        const locked = await lockConversation(uow, bundle, decision.context, ref);
+        if (!locked) {
+          throw new Error('conversation_not_found');
+        }
         if (expected !== null) {
-          const current = await uow.query<{ version: number }>(
-            `select version from conversations where tenant_id = $1 and ref = $2 for update`,
-            [context.session.tenantId, ref],
-          );
-          const version = current.rows[0]?.version ?? null;
+          const version = bundle.states.get(decision.context, ref)?.version ?? null;
           if (version === null) {
             throw new Error('conversation_not_found');
           }
@@ -907,6 +1041,12 @@ export class WaslApiServer {
         await hydrateEmployees(uow, bundle);
         const exists = await hydrateConversation(uow, bundle, decision.context, ref);
         if (!exists) {
+          throw new Error('conversation_not_found');
+        }
+        // ⭐⭐ The same database lock as the state update: the assignment
+        //   is serialized across the backend instances as well.
+        const locked = await lockConversation(uow, bundle, decision.context, ref);
+        if (!locked) {
           throw new Error('conversation_not_found');
         }
         const updated = assignConversation(

@@ -1,0 +1,89 @@
+# ============================================================
+# WASL AI — nginx reverse proxy (EXAMPLE ONLY)
+# ------------------------------------------------------------
+# ⛔ EXAMPLE ONLY — NEVER LOADED.
+# ⛔ This file was never included by nginx, never installed on a
+#   host and never started. It is inert documentation.
+# ⛔ EVERY TLS PATH BELOW IS A PLACEHOLDER. The real certificate
+#   and the real private key must live on the host, outside the
+#   working tree, and must never be committed to this repository.
+# ------------------------------------------------------------
+# The two server blocks below belong inside an http { } context of
+# a full nginx.conf. They are shown standalone so the intent is
+# readable; they are not a complete configuration.
+#
+# Intent: terminate TLS in front of the Node process. The backend
+# keeps speaking plain HTTP on 127.0.0.1:8787 and never sees a
+# certificate nor a public address.
+# See deploy/README.md section 4 (TLS — plan only).
+# ============================================================
+
+# ------------------------------------------------------------
+# Port 80 — every request is redirected to TLS, nothing is served.
+# ------------------------------------------------------------
+server {
+    listen 80;
+    listen [::]:80;
+
+    # Placeholder host name — the real value belongs in the host
+    # configuration, not in this repository.
+    server_name <paste-here>;
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ------------------------------------------------------------
+# Port 443 — TLS termination and the reverse proxy to the backend.
+# ------------------------------------------------------------
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+
+    # Placeholder host name — the real value belongs in the host
+    # configuration, not in this repository.
+    server_name <paste-here>;
+
+    # ⛔ Placeholder certificate paths. The files they point to do
+    #   not exist and must never be added to the repository.
+    ssl_certificate     /etc/ssl/wasl-staging/<paste-here>/fullchain.pem;
+    ssl_certificate_key /etc/ssl/wasl-staging/<paste-here>/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    # The limit matches the server limit: MAX_BODY_BYTES = 64 * 1024
+    # in server/api/server.ts.
+    client_max_body_size 64k;
+
+    # Standard security headers. The HSTS header is added only after
+    # the certificate and the redirect are proven stable.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "no-referrer" always;
+
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # The request identifier that ties the proxy access log to
+        # the application log lines of the same request.
+        proxy_set_header X-Request-Id $request_id;
+
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
+    }
+}

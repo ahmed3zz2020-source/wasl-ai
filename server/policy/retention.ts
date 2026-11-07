@@ -184,15 +184,21 @@ async function writeEvidence(
 /**
  * ⭐ Execute a previously previewed deletion.
  * ⭐ The order is fixed and every step is verified against the database:
- *   1) the content rows are removed,
- *   2) the request is marked executed (its row still exists),
- *   3) the tenant row is tombstoned (partial scope) or removed (full
- *      scope) - in the full scope the audit trail goes with it,
- *   4) the durable evidence is written last: it has no foreign key, so
- *      it is the record that survives the deletion itself.
+ *   1) the executor is checked against the membership of the tenant,
+ *   2) the content rows are removed,
+ *   3) the request is marked executed (its row still exists),
+ *   4) in the full scope the audit trail and the retention policies go
+ *      with the tenant,
+ *   5) the durable evidence is written WHILE the request row still
+ *      exists: the database guard trigger validates it against that row
+ *      (same tenant, same scope, already executed) and stamps the
+ *      requester from it, so no path can write a fake evidence,
+ *   6) the tenant row is tombstoned (partial scope) or removed (full
+ *      scope) - in the full scope the audit trail goes with it.
  * ⛔ `tenant_full` removes the tenant row and with it the audit trail.
  * ⛔ Nothing is reported as done unless the database says so: every
  *   step checks its row count and a mismatch aborts the unit of work.
+ * ⛔ The evidence has no foreign key, so it survives the deletion.
  */
 export async function executeDeletion(
   uow: UnitOfWork,
@@ -210,6 +216,20 @@ export async function executeDeletion(
     throw new PolicyError('deletion_already_executed', 'deletion request was already executed');
   }
   const scope = row.scope;
+
+  // ⭐⭐ The executor must be an active member of the tenant. The check
+  //   runs BEFORE anything is removed: the membership rows go with the
+  //   content, so afterwards the proof would be gone.
+  const membership = await uow.query<{ role: string }>(
+    `select role from memberships where tenant_id = $1 and user_id = $2 and status = 'active'`,
+    [tenantId, executedBy],
+  );
+  if (membership.rows.length !== 1) {
+    throw new PolicyError(
+      'deletion_actor_not_authorized',
+      'the executor is not an active member of the tenant',
+    );
+  }
 
   const removed: Record<string, number> = {};
   const steps: readonly (readonly [string, string])[] = [
@@ -246,16 +266,12 @@ export async function executeDeletion(
     const policies = await uow.query(`delete from retention_policies where tenant_id = $1`, [tenantId]);
     removed['retention_policies'] = policies.rowCount;
 
-    // ⭐ The tenant row is removed after the request is marked, so the
-    //   cascade does not race with the bookkeeping above.
-    const tenant = await uow.query(`delete from tenants where id = $1`, [tenantId]);
-    if (tenant.rowCount !== 1) {
-      throw new PolicyError('deletion_tenant_missing', 'the tenant row could not be removed');
-    }
-    removed['tenants'] = tenant.rowCount;
-
-    // ⭐ The evidence is written after the tenant row is gone: it has
-    //   no foreign key, so it survives and proves what was removed.
+    // ⭐ The evidence is written while the request row still exists: the
+    //   database guard trigger validates it against that row, so an
+    //   unauthorized path cannot write a fake evidence.
+    //   The tenant row is removed right after: a mismatch throws and the
+    //   whole unit of work (the evidence included) rolls back.
+    removed['tenants'] = 1;
     const evidenceId = await writeEvidence(
       uow,
       tenantId,
@@ -265,6 +281,13 @@ export async function executeDeletion(
       executedBy,
       removed,
     );
+
+    // ⭐ The tenant row is removed after the evidence is written, so the
+    //   cascade does not race with the bookkeeping above.
+    const tenant = await uow.query(`delete from tenants where id = $1`, [tenantId]);
+    if (tenant.rowCount !== 1) {
+      throw new PolicyError('deletion_tenant_missing', 'the tenant row could not be removed');
+    }
     return { removed, scope, evidenceId };
   }
 

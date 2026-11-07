@@ -10,7 +10,6 @@
 //   database listens on the local machine only.
 // ============================================================
 
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createPool, type PgPool } from './pool.ts';
@@ -198,7 +197,7 @@ export async function seedDatabase(ownerPool: PgPool, testPasscode: string): Pro
             member.user,
             member.display,
             `${member.user}@example.invalid`,
-            hashPasscode(testPasscode, crypto.createHash('sha256').update(member.user).digest('hex').slice(0, 32)),
+            hashPasscode(testPasscode),
           ],
         );
         await uow.query(

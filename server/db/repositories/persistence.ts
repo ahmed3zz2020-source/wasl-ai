@@ -126,6 +126,59 @@ export async function hydrateConversation(
 }
 
 /**
+ * ⭐⭐⭐ Lock the conversation row in PostgreSQL and refresh the state.
+ * ------------------------------------------------------------
+ * ⭐ WHY THIS EXISTS
+ *   The in-memory bundle is per PROCESS. With two backend instances
+ *   on the same database, the memory of one instance is stale as soon
+ *   as the other instance commits a change. The in-process queue (the
+ *   per tenant lock of the API server) cannot help here: it only
+ *   serializes the requests of ONE process.
+ * ⭐ WHAT THE DATABASE DOES
+ *   1) `for update` takes a row lock on the conversation: a second
+ *      writer (another instance, another process) waits until the
+ *      first transaction commits. The writes of one conversation are
+ *      therefore serialized across instances.
+ *   2) the state row is re-read AFTER the lock, so the core works on
+ *      the committed version and not on a stale memory value.
+ * ⛔ Nothing is written by this function: it only reads and locks.
+ * ⛔ The lock is released when the unit of work ends (commit or
+ *   rollback), so a failure never leaves a conversation locked.
+ */
+export async function lockConversation(
+  uow: UnitOfWork,
+  bundle: TenantBundle,
+  context: { tenantId: string; actorId: string; sessionId: string; capabilities: readonly string[]; role: string; issuedAt: string },
+  conversationRef: string,
+): Promise<boolean> {
+  const locked = await uow.query<{ version: number }>(
+    `select version from conversations where tenant_id = $1 and ref = $2 for update`,
+    [bundle.tenantId, conversationRef],
+  );
+  if (locked.rows.length === 0) return false;
+
+  // ⭐ The state is re-read after the lock: the row may have been
+  //   committed by another instance while we were waiting for it.
+  const state = await uow.query<ConversationRow>(
+    `select ref, state, assignee_actor_id, version, updated_at
+       from conversations
+      where tenant_id = $1 and ref = $2`,
+    [bundle.tenantId, conversationRef],
+  );
+  const row = state.rows[0];
+  if (!row) return false;
+  bundle.states.ensure(context as never, conversationRef);
+  bundle.states.restore(context as never, conversationRef, {
+    conversation_ref: conversationRef,
+    state: row.state as never,
+    assignee_actor_id: row.assignee_actor_id,
+    updated_at: toIso(row.updated_at),
+    version: row.version,
+  });
+  return true;
+}
+
+/**
  * ⭐ Persist everything the core produced in this operation.
  * ⛔ Throws PersistConflictError when the stored version moved on
  *   (optimistic lock enforced by PostgreSQL, not by memory).

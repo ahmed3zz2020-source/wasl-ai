@@ -1,0 +1,109 @@
+# ============================================================
+# WASL AI — staging compose file (EXAMPLE ONLY)
+# ------------------------------------------------------------
+# ⛔ EXAMPLE ONLY — NEVER STARTED.
+# ⛔ This file was never run: no container was created, no image
+#   was built, no volume was created and no database was
+#   initialised. It is inert documentation.
+# ⛔ NO CREDENTIAL VALUE APPEARS IN THIS FILE. Every secret is a
+#   variable substitution (${...}) that the operator's environment
+#   resolves at run time. Nothing real is ever written here, and
+#   nothing real may ever be committed here.
+# ⛔ Running this file is out of scope of the current owner
+#   directive. See deploy/README.md section 5 (Deployment — plan
+#   only).
+# ============================================================
+
+name: wasl-staging-example
+
+services:
+  # ------------------------------------------------------------
+  # backend — the local API server ("npm run server")
+  # ------------------------------------------------------------
+  backend:
+    build:
+      # The build context is the repository root.
+      # ⛔ NOTE: no Dockerfile exists in the repository yet. It has
+      #   to be written and reviewed under a future owner directive
+      #   before this build section can work.
+      context: ..
+      dockerfile: Dockerfile
+    image: wasl-backend:example
+    command: npm run server
+    working_dir: /app
+    restart: unless-stopped
+
+    # The template below holds placeholders only. A real run points
+    # at a real environment file that lives outside the repository.
+    env_file:
+      - ./env.example
+
+    environment:
+      # ⭐ The values below come from the operator environment. The
+      #   ${...} substitutions are resolved by compose from the
+      #   shell environment (or from a local, never-committed env
+      #   file). No value is stored in this repository.
+      WASL_PG_HOST: postgres
+      WASL_PG_PORT: "5432"
+      WASL_PG_DATABASE: ${WASL_PG_DATABASE}
+      WASL_PG_PASSWORD: ${WASL_PG_PASSWORD}
+      WASL_PG_OWNER_PASSWORD: ${WASL_PG_OWNER_PASSWORD}
+      WASL_SERVER_HOST: "0.0.0.0"
+      WASL_SERVER_PORT: "8787"
+      WASL_SESSION_TTL_SECONDS: ${WASL_SESSION_TTL_SECONDS}
+      WASL_TEST_PASSCODE: ${WASL_TEST_PASSCODE}
+      WASL_ENV: staging
+
+    ports:
+      # ⛔ Published on the loopback interface only. The reverse
+      #   proxy (see deploy/nginx.conf.example) is the single
+      #   public entry point; the backend is never exposed
+      #   directly to the internet.
+      - "127.0.0.1:8787:8787"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      # The liveness route is GET /health (not /api/health). The
+      # current answer is static and does not query the database.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+    # Long enough for the graceful shutdown (SIGTERM -> api.close()
+    # -> pool.end()) to drain the in-flight requests.
+    stop_grace_period: 30s
+
+  # ------------------------------------------------------------
+  # postgres — the application database
+  # ------------------------------------------------------------
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      # ⭐ The values come from the operator environment through the
+      #   substitutions below. The secret is never written in this
+      #   file and never committed.
+      POSTGRES_DB: ${WASL_PG_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # A named volume keeps the data across container restarts.
+      - wasl-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${WASL_PG_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # ⛔ NO published port: the database is reachable only from the
+    #   internal compose network. The host never exposes 5432.
+
+volumes:
+  wasl-pgdata:

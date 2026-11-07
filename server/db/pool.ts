@@ -30,6 +30,13 @@ export interface Queryable {
 export interface PgPool extends Queryable {
   connect(): Promise<PgClient>;
   end(): Promise<void>;
+  /**
+   * ⭐ The pool reports a broken connection as an `error` event.
+   * ⭐ A listener MUST be attached: an EventEmitter without a listener
+   *   turns a dropped connection into an unhandled error that can stop
+   *   the process. The server attaches one (it logs the event).
+   */
+  on(event: 'error', listener: (error: Error) => void): void;
 }
 
 export interface PgClient extends Queryable {

@@ -15,6 +15,13 @@
 import crypto from 'node:crypto';
 import type { PgPool } from '../db/pool.ts';
 import { UnitOfWork } from '../db/unit-of-work.ts';
+import { hashPasscode, verifyPasscode } from './password.ts';
+
+// ⭐ The key derivation lives in `server/auth/password.ts` (scrypt).
+// ⛔ It is re-exported here for the callers that already import the
+//   session helpers, but the identity of the algorithm belongs to the
+//   password module, not to the session module.
+export { hashPasscode, verifyPasscode };
 
 const TENANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{2,63}$/;
 /** ⭐ The membership statuses the server understands. */
@@ -57,31 +64,6 @@ export interface LoginResult {
   readonly session: SessionRecord;
 }
 
-/**
- * ⭐ EXPERIMENTAL HASH - NOT FIT FOR PRODUCTION.
- * ⛔ SHA-256 with a per user salt is a fast hash: it is only acceptable
- *   for the synthetic local passcodes of this experimental build.
- * ⛔ A production system needs a slow, memory hard key derivation
- *   (argon2id / scrypt / bcrypt) with a tuned work factor, a per
- *   tenant and per account rate limit, a lockout policy and a second
- *   factor. No production authentication exists in this build.
- */
-export function hashPasscode(passcode: string, salt?: string): string {
-  const useSalt = salt ?? crypto.randomBytes(16).toString('hex');
-  const digest = crypto.createHash('sha256').update(`${useSalt}:${passcode}`).digest('hex');
-  return `${useSalt}:${digest}`;
-}
-
-export function verifyPasscode(stored: string, passcode: string): boolean {
-  const parts = stored.split(':');
-  if (parts.length !== 2) return false;
-  const [salt, digest] = parts as [string, string];
-  const candidate = hashPasscode(passcode, salt);
-  const a = Buffer.from(candidate);
-  const b = Buffer.from(stored);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
 
 function hashToken(secret: string): string {
   return crypto.createHash('sha256').update(secret).digest('hex');
