@@ -134,6 +134,12 @@ export async function resetSyntheticData(
       await uow.query(`delete from read_audit_events where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from audit_events where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from conversations where tenant_id = $1`, [tenantId]);
+      // ⭐⭐ D-073: the tickets of the company (and their activity) are
+      //   part of the fixture ⇒ ⭐⭐ a leftover of a previous run must
+      //   NOT change the result of this one ⇒ ⭐⭐ the lesson of M-82
+      //   applies to EVERY table the company owns.
+      await uow.query(`delete from support_ticket_changes where tenant_id = $1`, [tenantId]);
+      await uow.query(`delete from support_tickets where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from sessions where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from deletion_requests where tenant_id = $1`, [tenantId]);
@@ -296,6 +302,8 @@ export async function resetCompany(ownerPool: PgPool, tenantId: string): Promise
     await uow.query(`delete from read_audit_events where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from audit_events where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from conversations where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from support_ticket_changes where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from support_tickets where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from sessions where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from login_attempts where tenant_id = $1`, [tenantId]);

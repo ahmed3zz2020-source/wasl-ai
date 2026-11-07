@@ -104,17 +104,86 @@ export async function ensureDatabase(options: SetupOptions): Promise<string[]> {
   }
 }
 
-/** ⭐ Apply every migration file (re-runnable). */
+/**
+ * ⭐⭐⭐ THE KEY OF THE LOCK OF THE MIGRATIONS.
+ * ⭐⭐ The schema of the database is ONE resource of the installation
+ *   ⇒ ⭐⭐ and the migrations take locks on it ⇒ ⭐⭐ so two processes
+ *   that apply the migrations at the same time DEADLOCK (the measured
+ *   failure: `deadlock detected` · the code `40P01`).
+ */
+export const MIGRATION_LOCK_KEY = 0x5741_4d47; // "WAMG"
+
+/**
+ * ⭐ Apply every migration file (re-runnable).
+ *
+ * ⭐⭐⭐ WHY A LOCK (M-82 — the measured interference)
+ *   ⭐⭐ The schema is a SHARED global resource: every process that
+ *   starts the server applies the migrations ⇒ ⭐⭐ and four groups
+ *   that run in parallel (the measurement of the phase) applied the
+ *   same file at the same time ⇒ ⭐⭐ PostgreSQL answered
+ *   `deadlock detected` (40P01) ⇒ ⭐⭐ and the drills that were
+ *   starting died with it ⇒ ⭐⭐ the failure was measured, not
+ *   guessed.
+ *   ⭐⭐⭐ THE FIX: the migrations take a PostgreSQL ADVISORY LOCK ⇒
+ *   ⭐⭐ the parallel starts are serialized ⇒ ⭐⭐ and the parallelism
+ *   ⭐⭐ of the groups is NOT disabled (the rule of the owner: the
+ *   ⭐⭐ interference is solved, not hidden).
+ *   ⭐⭐⭐ THE LOCK IS SESSION LEVEL ⇒ ⭐⭐ the migration statements
+ *   ⭐⭐ MUST run on the very connection that holds the lock ⇒ ⭐⭐
+ *   ⭐⭐ and the unlock is in a `finally` ⇒ ⭐⭐ a failure never
+ *   ⭐⭐ leaves the schema locked for the next process.
+ */
 export async function runMigrations(ownerPool: PgPool): Promise<string[]> {
   const steps: string[] = [];
   const files = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((name) => name.endsWith('.sql'))
     .sort();
-  for (const file of files) {
-    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
-    await ownerPool.query(sql);
-    steps.push(`migration applied: ${file}`);
+  // ⭐⭐ One connection for the lock AND the statements (the advisory
+  //   lock belongs to the session that takes it).
+  const client = await ownerPool.connect();
+  try {
+    await client.query(`select pg_advisory_lock($1)`, [MIGRATION_LOCK_KEY]);
+    try {
+      // ⭐⭐⭐ THE VERSIONS THAT ARE ALREADY APPLIED ⇐ ⭐⭐⭐ THE DDL RUNS
+      //   ONCE, NOT BY EVERY PROCESS:
+      //   ⭐⭐⭐ a file that is applied again takes an ACCESS EXCLUSIVE
+      //   lock on its tables ⇒ ⭐⭐⭐ and the drills of the other groups
+      //   are already running and hold locks on the same tables ⇒
+      //   ⭐⭐⭐ PostgreSQL answers `deadlock detected` (40P01) ⇒ ⭐⭐⭐
+      //   and the drill that was starting dies with it.
+      //   ⭐⭐⭐ The measurement that proved it: four groups in parallel
+      //   ⭐⭐⭐ ⇒ the `integration` group died four times and the
+      //   ⭐⭐⭐ `security` group twice, all with the same code.
+      //   ⭐⭐⭐ THE FIX: the applied versions are read UNDER the lock
+      //   ⭐⭐⭐ (⇒ no race) and an applied file is SKIPPED ⇒ ⭐⭐⭐ the
+      //   ⭐⭐⭐ schema is built once and the other processes only
+      //   ⭐⭐⭐ verify it ⇒ ⭐⭐⭐ no DDL while the drills are live.
+      const applied = new Set<string>();
+      try {
+        const rows = await client.query<{ version: string }>(
+          `select version from wasl_schema_migrations`,
+        );
+        for (const row of rows.rows) applied.add(String(row.version));
+      } catch {
+        // ⭐⭐ The table of the versions does not exist yet ⇒ ⭐⭐ this is
+        //   the first run ⇒ ⭐⭐ the files create it.
+      }
+      for (const file of files) {
+        const version = file.replace(/\.sql$/, '');
+        if (applied.has(version)) {
+          steps.push(`migration already applied: ${file}`);
+          continue;
+        }
+        const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
+        await client.query(sql);
+        steps.push(`migration applied: ${file}`);
+      }
+    } finally {
+      await client.query(`select pg_advisory_unlock($1)`, [MIGRATION_LOCK_KEY]);
+    }
+  } finally {
+    client.release();
   }
   return steps;
 }

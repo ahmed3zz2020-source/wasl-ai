@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>تذاكر الدعم — WASL</title>
+    <link rel="stylesheet" href="/ui/tickets.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">و</span>
+        <div>
+          <h1>تذاكر الدعم</h1>
+          <p class="tagline">تذاكر الدعم العملاء · بيانات تجريبية محلية فقط</p>
+        </div>
+      </div>
+
+      <div class="session" id="session-area">
+        <div class="login-row" id="login-row">
+          <label class="field">
+            <span>الشركة</span>
+            <select id="login-tenant">
+              <option value="tnt_alpha">شركة ألفا</option>
+              <option value="tnt_beta">شركة بيتا</option>
+              <option value="tnt_gamma">شركة جاما</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>الموظف</span>
+            <select id="login-user">
+              <option value="usr_alpha_owner">مالك ألفا</option>
+              <option value="usr_alpha_super">مشرف ألفا</option>
+              <option value="usr_alpha_agent">موظف ألفا</option>
+              <option value="usr_alpha_viewer">قارئ ألفا</option>
+              <option value="usr_beta_owner">مالك بيتا</option>
+              <option value="usr_gamma_owner">مالك جاما</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>كلمة المرور</span>
+            <input id="login-passcode" type="password" value="wasl-local-test" autocomplete="current-password" />
+          </label>
+          <button class="primary" id="btn-login" type="button">دخول</button>
+        </div>
+        <div class="who" id="who" hidden>
+          <span class="pill" id="who-name"></span>
+          <span class="pill muted" id="who-role"></span>
+          <a class="ghost link" href="/ui/inbox.html" id="link-inbox">صندوق الوارد</a>
+          <a class="ghost link" href="/ui/crm.html" id="link-crm">ملفات العملاء</a>
+          <button class="ghost" id="btn-logout" type="button">خروج</button>
+        </div>
+      </div>
+    </header>
+
+    <p class="notice" id="login-notice" hidden></p>
+
+    <main class="workspace" id="workspace" hidden>
+      <section class="toolbar" aria-label="أدوات البحث والتصفية">
+        <label class="field grow">
+          <span>بحث</span>
+          <input id="filter-query" type="search" placeholder="عنوان التذكرة أو رقمها أو اسم العميل" />
+        </label>
+        <label class="field">
+          <span>الحالة</span>
+          <select id="filter-state">
+            <option value="">الكل</option>
+            <option value="open">مفتوحة</option>
+            <option value="in_progress">قيد التنفيذ</option>
+            <option value="resolved">تم الحل</option>
+            <option value="closed">مغلقة</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>الأولوية</span>
+          <select id="filter-priority">
+            <option value="">الكل</option>
+            <option value="low">منخفضة</option>
+            <option value="normal">عادية</option>
+            <option value="high">عالية</option>
+            <option value="urgent">عاجلة</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>ترتيب</span>
+          <select id="filter-sort">
+            <option value="recent">الأحدث</option>
+            <option value="priority">الأولوية</option>
+            <option value="state">الحالة</option>
+          </select>
+        </label>
+        <button class="ghost" id="btn-refresh" type="button">تحديث</button>
+        <button class="primary" id="btn-new" type="button" hidden>تذكرة جديدة</button>
+      </section>
+
+      <div class="panes">
+        <section class="pane list" aria-label="قائمة التذاكر">
+          <header class="pane-head">
+            <h2>التذاكر</h2>
+            <span class="counter" id="list-counter"></span>
+          </header>
+          <div class="state-box" id="list-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span> جارٍ تحميل التذاكر…
+          </div>
+          <div class="state-box error" id="list-error" hidden></div>
+          <div class="state-box" id="list-empty" hidden>
+            <strong>لا توجد تذاكر.</strong>
+            <span>غيّر البحث أو الفلتر لترى المزيد.</span>
+          </div>
+          <ul class="tickets" id="ticket-list"></ul>
+          <nav class="pagination" id="pagination" aria-label="صفحات التذاكر" hidden>
+            <button class="ghost" id="btn-prev" type="button">السابق</button>
+            <span class="page-label" id="page-label"></span>
+            <button class="ghost" id="btn-next" type="button">التالي</button>
+          </nav>
+        </section>
+
+        <section class="pane detail" id="detail-pane" aria-label="تفاصيل التذكرة">
+          <div class="state-box placeholder" id="detail-placeholder">
+            <strong>اختر تذكرة</strong>
+            <span>اختر تذكرة من القائمة لترى تفاصيلها وسجل نشاطها.</span>
+          </div>
+
+          <div id="detail" hidden>
+            <header class="pane-head detail-head">
+              <button class="ghost back" id="btn-back" type="button" aria-label="رجوع إلى القائمة">رجوع</button>
+              <div class="detail-title">
+                <h2 id="detail-subject">—</h2>
+                <span class="muted" id="detail-ref"></span>
+              </div>
+            </header>
+
+            <div class="state-box error" id="detail-error" hidden></div>
+
+            <dl class="facts" id="detail-facts"></dl>
+
+            <section class="edit-block" id="edit-block" hidden>
+              <h3>تعديل التذكرة</h3>
+              <form id="edit-form">
+                <label class="field">
+                  <span>الحالة</span>
+                  <select id="edit-state">
+                    <option value="open">مفتوحة</option>
+                    <option value="in_progress">قيد التنفيذ</option>
+                    <option value="resolved">تم الحل</option>
+                    <option value="closed">مغلقة</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>الأولوية</span>
+                  <select id="edit-priority">
+                    <option value="low">منخفضة</option>
+                    <option value="normal">عادية</option>
+                    <option value="high">عالية</option>
+                    <option value="urgent">عاجلة</option>
+                  </select>
+                </label>
+                <label class="field" id="assignee-field" hidden>
+                  <span>المُسنَد إليه</span>
+                  <select id="edit-assignee"></select>
+                </label>
+                <label class="field">
+                  <span>العنوان</span>
+                  <input id="edit-subject" type="text" maxlength="200" />
+                </label>
+                <label class="field">
+                  <span>الوصف</span>
+                  <textarea id="edit-description" rows="4" maxlength="4000"></textarea>
+                </label>
+                <div class="edit-actions">
+                  <button class="primary" id="btn-save" type="submit">حفظ التعديل</button>
+                  <span class="muted" id="edit-note"></span>
+                </div>
+              </form>
+            </section>
+
+            <section class="activity-block">
+              <h3>سجل النشاط</h3>
+              <ul class="activity-list" id="change-list"></ul>
+              <p class="state-box" id="activity-empty" hidden>لا يوجد نشاط بعد.</p>
+            </section>
+          </div>
+        </section>
+      </div>
+
+      <section class="create-block" id="create-block" hidden>
+        <h3>تذكرة جديدة</h3>
+        <form id="create-form">
+          <label class="field">
+            <span>العميل</span>
+            <select id="create-customer"></select>
+          </label>
+          <label class="field">
+            <span>العنوان</span>
+            <input id="create-subject" type="text" maxlength="200" placeholder="ملخّص المشكلة" />
+          </label>
+          <label class="field">
+            <span>الأولوية</span>
+            <select id="create-priority">
+              <option value="low">منخفضة</option>
+              <option value="normal" selected>عادية</option>
+              <option value="high">عالية</option>
+              <option value="urgent">عاجلة</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>محادثة مرتبطة (اختياري)</span>
+            <input id="create-conversation" type="text" placeholder="conv_..." />
+          </label>
+          <label class="field grow">
+            <span>الوصف</span>
+            <textarea id="create-description" rows="3" maxlength="4000"></textarea>
+          </label>
+          <div class="edit-actions">
+            <button class="primary" id="btn-create" type="submit">إنشاء التذكرة</button>
+            <button class="ghost" id="btn-cancel-create" type="button">إلغاء</button>
+            <span class="muted" id="create-note"></span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+    <footer class="foot">
+      <p>هذا البناء محلي بالكامل: المتصفح يتحدث مع الخادم على 127.0.0.1، ولا يوجد أي إرسال خارجي.</p>
+    </footer>
+
+    <script src="/ui/tickets.js"></script>
+  </body>
+</html>

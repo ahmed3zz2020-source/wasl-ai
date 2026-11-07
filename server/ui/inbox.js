@@ -459,6 +459,24 @@ async function openConversation(ref, options = {}) {
     customerLink.href = '#';
   }
 
+  // ⭐⭐ D-073: the ticket of this conversation.
+  // ⭐ The link carries the conversation and the customer ⇒ ⭐⭐ the
+  //   page of the tickets opens with the form ready (the customer and
+  //   the conversation are already chosen) ⇒ ⭐⭐ and the SERVER is
+  //   the one that checks the right to create it.
+  const ticketLink = $('link-ticket');
+  if (typeof customerId === 'string' && customerId.length > 0) {
+    const params = new URLSearchParams({
+      customer: customerId,
+      conversation: String(conversation.ref ?? ''),
+    });
+    ticketLink.hidden = false;
+    ticketLink.href = `/ui/tickets.html?${params.toString()}`;
+  } else {
+    ticketLink.hidden = true;
+    ticketLink.href = '#';
+  }
+
   if (window.matchMedia('(max-width: 860px)').matches) {
     $('thread').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }

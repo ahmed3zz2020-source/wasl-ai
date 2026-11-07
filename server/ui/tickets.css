@@ -1,0 +1,975 @@
+/* ============================================================
+   WASL AI — FOUNDATION BUILD 03 / PHASE 02 (D-071)
+   the customer CRM — the styles
+   ------------------------------------------------------------
+   ⭐ The layout is RTL: the list of the conversations is on the
+     RIGHT (the start of the line) and the thread on the left.
+   ⭐ On a small screen the two panes take turns: the list, then the
+     thread with a back button.
+   ⭐ No external font and no external asset: the page works with no
+     network at all.
+   ============================================================ */
+
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #fbfcfe;
+  --line: #e2e7ef;
+  --line-strong: #cbd5e1;
+  --text: #16202e;
+  --text-muted: #66748a;
+  --accent: #0f766e;
+  --accent-soft: #d6f2ee;
+  --accent-ink: #0b544e;
+  --warn: #b45309;
+  --warn-soft: #fdf0d5;
+  --danger: #b42318;
+  --danger-soft: #fde4e2;
+  --ok: #15803d;
+  --ok-soft: #dcfce7;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.06);
+  --font: "Segoe UI", "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/**
+ * ⭐⭐ D-070: the attribute `hidden` must win over the rules of the
+ *   page. ⭐ Without this rule the browser hides nothing: the rules
+ *   that declare `display: flex` are stronger than the rule of the
+ *   browser, so the form of the login and the empty state stayed on
+ *   the screen next to the inbox.
+ */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ top bar */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.brand h1 {
+  font-size: 18px;
+}
+
+.tagline {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.session {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.login-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.field.grow {
+  flex: 1 1 220px;
+}
+
+.field > span {
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  min-width: 120px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 62px;
+  line-height: 1.6;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+button {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-ink);
+}
+
+button.ghost {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+button.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+/* ------------------------------------------------------------ notices */
+.notice {
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid #f3c4c0;
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------ workspace */
+.workspace {
+  padding: 16px 20px 8px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+}
+
+.panes {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.pane {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.pane-head h2 {
+  font-size: 15px;
+}
+
+.counter {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------ list */
+.conversations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.conversation {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  border-right: 3px solid transparent;
+  transition: background 0.12s ease;
+}
+
+.conversation:hover {
+  background: var(--surface-2);
+}
+
+.conversation.active {
+  background: var(--accent-soft);
+  border-right-color: var(--accent);
+}
+
+.conversation .row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.conversation .name {
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.conversation .preview {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.conversation .meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.state-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  white-space: nowrap;
+}
+
+.state-badge[data-state="new"] {
+  background: #e8edf5;
+  color: #334155;
+}
+.state-badge[data-state="open"] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.state-badge[data-state="assigned"] {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.state-badge[data-state="pending"] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.state-badge[data-state="resolved"] {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.state-badge[data-state="closed"] {
+  background: #eceff3;
+  color: #475569;
+}
+
+/* ------------------------------------------------------------ thread */
+.thread {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.thread-head {
+  gap: 12px;
+}
+
+.thread-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-title h2 {
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.messages {
+  list-style: none;
+  margin: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100vh - 420px);
+  overflow-y: auto;
+  background: var(--surface-2);
+}
+
+.message {
+  max-width: 78%;
+  padding: 9px 13px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.message.outbound {
+  align-self: flex-start;
+  background: var(--accent-soft);
+  border-color: #b9e5df;
+}
+
+.message.inbound {
+  align-self: flex-end;
+  background: var(--surface);
+}
+
+.message .who-line {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  display: flex;
+  gap: 8px;
+}
+
+.message .text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.composer {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.composer .grow {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------ states */
+.state-box {
+  padding: 26px 18px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.state-box strong {
+  color: var(--text);
+}
+
+.state-box.error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-radius: 12px;
+  margin: 12px 16px;
+  padding: 12px 14px;
+  text-align: start;
+  align-items: flex-start;
+  font-size: 13.5px;
+}
+
+.state-box.placeholder {
+  padding: 60px 18px;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------ toast */
+.toast {
+  position: fixed;
+  inset-inline-start: 20px;
+  bottom: 20px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  border: 1px solid #a7e3bd;
+  box-shadow: var(--shadow);
+  font-weight: 600;
+  z-index: 40;
+  max-width: min(420px, calc(100vw - 40px));
+}
+
+.toast.error {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: #f3c4c0;
+}
+
+/* ------------------------------------------------------------ foot */
+.foot {
+  padding: 14px 20px 22px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------ mobile */
+@media (max-width: 860px) {
+  .panes {
+    grid-template-columns: 1fr;
+  }
+
+  .conversations {
+    max-height: none;
+  }
+
+  .messages {
+    max-height: none;
+  }
+
+  .message {
+    max-width: 92%;
+  }
+
+  button.back {
+    display: inline-flex;
+  }
+
+  .session {
+    width: 100%;
+  }
+
+  .login-row {
+    width: 100%;
+  }
+}
+
+@media (min-width: 861px) {
+  button.back {
+    display: none;
+  }
+}
+
+/* ============================================================
+   D-071 — the pagination, the refresh and the link to the CRM
+   ============================================================ */
+
+/* ⭐⭐ M-78: the pages of the list. */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.pagination .page-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ⭐⭐ M-77: the state of the refresh. */
+.refresh-note {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ⭐⭐ the actions of the head of the thread. */
+.thread-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ⭐⭐ a link that looks like the ghost button. */
+a.ghost.link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .thread-head {
+    flex-wrap: wrap;
+  }
+
+  .thread-head-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* ============================================================
+   D-071 — the parts of the CRM
+   ============================================================ */
+
+/* ⭐⭐ the list of the customers. */
+.customers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.customers .customer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.customers .customer:hover {
+  background: var(--surface-2);
+}
+
+.customers .customer.active {
+  background: var(--accent-soft);
+}
+
+.customers .row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.customers .name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customers .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ⭐⭐ the facts of the profile. */
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.facts dt {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.facts dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+/* ⭐⭐ the block of the edit. */
+.edit-block {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.edit-block h3,
+.conversations-block h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.edit-block form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.edit-actions .muted {
+  font-size: 12px;
+  color: var(--warn);
+}
+
+/* ⭐⭐ the conversations of the customer. */
+.conversations-block {
+  padding: 16px 18px 24px;
+}
+
+.conversation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conversation-list .conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.conversation-list .row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.conversation-list .name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.conversation-list .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.conversation-list .preview {
+  font-size: 13px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.ghost.link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+a.ghost.link.small {
+  align-self: flex-start;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  .facts {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .facts dd {
+    margin-bottom: 8px;
+  }
+}
+
+/* ============================================================
+   D-073 — the support tickets
+   ============================================================ */
+
+/* ⭐⭐ The list of the tickets (the card of a ticket). */
+ul.tickets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+li.ticket {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+li.ticket:hover {
+  border-color: var(--accent);
+}
+
+li.ticket.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+li.ticket .row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+li.ticket .name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+li.ticket .meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ⭐⭐ The badge of the priority (the state badge has its own colors). */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.priority-badge[data-priority="high"] {
+  border-color: #e0a44a;
+  color: #a06a12;
+}
+
+.priority-badge[data-priority="urgent"] {
+  border-color: #d64545;
+  color: #b32b2b;
+  background: #fdecec;
+}
+
+/* ⭐⭐ The detail pane (the ticket of the right). */
+.pane.detail {
+  overflow-y: auto;
+}
+
+.detail-head {
+  align-items: flex-start;
+}
+
+.detail-title h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+/* ⭐⭐ The activity of the ticket. */
+ul.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+li.activity {
+  border-right: 3px solid var(--line);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+li.activity .row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+li.activity .meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ⭐⭐ The form of the creation (below the panes). */
+.create-block {
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+}
+
+.create-block h3 {
+  margin: 0 0 12px;
+}
+
+.create-block form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.create-block textarea {
+  min-width: 240px;
+}
+
+@media (max-width: 860px) {
+  .create-block form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -80,6 +80,26 @@ import {
   listRetentionPolicies,
   type DataClass,
 } from '../policy/retention.ts';
+import {
+  listTickets,
+  readTicket,
+  readTicketChanges,
+  readCustomerTickets,
+  readTicketForUpdate,
+  readTicketByRef,
+  type TicketFilters,
+  type TicketScope,
+} from '../tickets/queries.ts';
+import {
+  assertTicketTransition,
+  isTicketPriority,
+  isTicketState,
+  TicketStateError,
+} from '../tickets/states.ts';
+import {
+  coreOperationOf,
+  TicketPolicyError,
+} from '../tickets/policy.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
 
@@ -109,6 +129,11 @@ const UI_FILES: Readonly<Record<string, { file: string; type: string }>> = Objec
   '/ui/crm.html': { file: 'crm.html', type: 'text/html; charset=utf-8' },
   '/ui/crm.js': { file: 'crm.js', type: 'text/javascript; charset=utf-8' },
   '/ui/crm.css': { file: 'crm.css', type: 'text/css; charset=utf-8' },
+
+  // ⭐⭐ D-073: the support tickets.
+  '/ui/tickets.html': { file: 'tickets.html', type: 'text/html; charset=utf-8' },
+  '/ui/tickets.js': { file: 'tickets.js', type: 'text/javascript; charset=utf-8' },
+  '/ui/tickets.css': { file: 'tickets.css', type: 'text/css; charset=utf-8' },
 });
 
 const UI_DIR = nodePath.join(nodePath.resolve(import.meta.dirname, '..'), 'ui');
@@ -690,6 +715,29 @@ export class WaslApiServer {
         }
         if (method === 'PATCH' && segments.length === 4) {
           return locked(() => this.#updateCrmCustomer(context, customerId, req));
+        }
+      }
+    }
+
+    // ⭐⭐ D-073: the Customer Support Tickets.
+    // ⭐ The decisions are taken by the core: the operation of the
+    //   ticket is translated into a core operation (`tickets/policy.ts`)
+    //   ⇒ ⭐⭐ the core decides the capability and the interface never
+    //   does.
+    if (segments[1] === 'tickets') {
+      if (method === 'GET' && segments.length === 2) {
+        return this.#listTickets(context, url);
+      }
+      if (method === 'POST' && segments.length === 2) {
+        return locked(() => this.#createTicket(context, req));
+      }
+      if (segments[2]) {
+        const ref = decodeURIComponent(segments[2]);
+        if (method === 'GET' && segments.length === 3) {
+          return this.#readTicketHandler(context, ref);
+        }
+        if (method === 'PATCH' && segments.length === 3) {
+          return locked(() => this.#updateTicket(context, ref, req));
         }
       }
     }
@@ -1465,6 +1513,534 @@ export class WaslApiServer {
     }
   }
 
+
+  // ------------------------------------------------------------ the tickets
+  /**
+   * ⭐⭐ D-073: the scope of the ROLE on the tickets.
+   * ⭐ The rule is the one of the core work queue: an AGENT reaches the
+   *   tickets that are assigned to them ⇒ ⭐⭐ and the derived data
+   *   (the count of the open tickets) follows the SAME scope (the
+   *   lesson of M-83).
+   */
+  #ticketScope(context: RequestContext): TicketScope {
+    return { role: context.session.role, actorId: context.session.actorId };
+  }
+
+  /**
+   * ⭐⭐ M-86: MAY THIS ROLE WRITE A TICKET? ⭐⭐ The answer is the
+   *   decision of the CORE (the authorization of the core) ⇒ ⭐⭐ and
+   *   the interface only shows what the server allows.
+   */
+  #mayWriteTickets(context: RequestContext): boolean {
+    return this.#authorizeTicket(context, 'ticket.update', SCOPE_REF).allowed;
+  }
+
+  /**
+   * ⭐⭐ M-86: MAY THIS ROLE ASSIGN A TICKET? ⭐⭐ The assignment is
+   *   the owner's alone (the fact M-84 corrected) ⇒ ⭐⭐ the answer is
+   *   the decision of the core and nothing else.
+   */
+  #mayAssignTickets(context: RequestContext): boolean {
+    return this.#authorizeTicket(context, 'ticket.assign', SCOPE_REF).allowed;
+  }
+
+  /**
+   * ⭐⭐ D-073: authorize a ticket operation.
+   * ⭐ The operation of the ticket is translated into a CORE operation
+   *   ⇒ ⭐⭐ the core decides the capability ⇒ ⭐⭐ an operation that is
+   *   not declared is refused (the default is the refusal).
+   */
+  #authorizeTicket(
+    context: RequestContext,
+    ticketOperation: string,
+    conversationRef: string,
+  ): { allowed: true; context: TenantContext } | { allowed: false; code: string; reason: string } {
+    let coreOperation;
+    try {
+      coreOperation = coreOperationOf(ticketOperation);
+    } catch (error) {
+      if (error instanceof TicketPolicyError) {
+        return { allowed: false, code: error.code, reason: error.message };
+      }
+      throw error;
+    }
+    return this.#authorize(context, coreOperation, conversationRef);
+  }
+
+  /**
+   * ⭐⭐ D-073: the list of the tickets of a company.
+   * ⭐ The pagination is real (the total comes with the page) ⇒ ⭐ a
+   *   company with more than a hundred tickets sees all of them.
+   */
+  async #listTickets(context: RequestContext, url: URL): Promise<JsonResponse> {
+    const decision = this.#authorizeTicket(context, 'ticket.list', SCOPE_REF);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'ticket.list',
+        'denied',
+        decision.code,
+        {},
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const state = url.searchParams.get('state');
+    const priority = url.searchParams.get('priority');
+    const filters: TicketFilters = {
+      ...(url.searchParams.get('q') !== null ? { query: url.searchParams.get('q') as string } : {}),
+      ...(state !== null ? { state } : {}),
+      ...(priority !== null ? { priority } : {}),
+      ...(url.searchParams.get('assignee') !== null
+        ? { assignee: url.searchParams.get('assignee') as string }
+        : {}),
+      ...(url.searchParams.get('customer_id') !== null
+        ? { customerId: url.searchParams.get('customer_id') as string }
+        : {}),
+      ...(url.searchParams.get('conversation_ref') !== null
+        ? { conversationRef: url.searchParams.get('conversation_ref') as string }
+        : {}),
+      // ⭐ The order is a closed list: an unknown value falls back to
+      //   the recent one, and nothing of the client reaches SQL.
+      sort: ['recent', 'priority', 'state'].includes(url.searchParams.get('sort') ?? '')
+        ? (url.searchParams.get('sort') as 'recent' | 'priority' | 'state')
+        : 'recent',
+      limit: Number(url.searchParams.get('limit') ?? '25'),
+      offset: Number(url.searchParams.get('offset') ?? '0'),
+    };
+    const page = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+      listTickets(uow, context.session.tenantId, this.#ticketScope(context), filters),
+    );
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'ticket.list',
+      'allowed',
+      null,
+      { count: page.rows.length },
+    );
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        tickets: page.rows,
+        total: page.total,
+        limit: filters.limit,
+        offset: filters.offset,
+        // ⭐⭐ M-86: the rights come from the AUTHORIZATION of the core
+        //   ⇒ ⭐⭐ and not from a table of permissions beside it.
+        may_write: this.#mayWriteTickets(context),
+        may_assign: this.#mayAssignTickets(context),
+      },
+    };
+  }
+
+  /** ⭐⭐ D-073: the detail of one ticket and its activity. */
+  async #readTicketHandler(context: RequestContext, ref: string): Promise<JsonResponse> {
+    const decision = this.#authorizeTicket(context, 'ticket.read', ref);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'ticket.read',
+        'denied',
+        decision.code,
+        { target: ref },
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const detail = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+      const ticket = await readTicket(uow, context.session.tenantId, ref, this.#ticketScope(context));
+      if (!ticket) return null;
+      const changes = await readTicketChanges(uow, context.session.tenantId, ref);
+      return { ticket, changes };
+    });
+    if (!detail) {
+      return {
+        status: 404,
+        body: { ok: false, error: { code: 'ticket_not_found', message: ref } },
+      };
+    }
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'ticket.read',
+      'allowed',
+      null,
+      { target: ref },
+    );
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        ticket: detail.ticket,
+        changes: detail.changes,
+        // ⭐⭐ M-86: the rights come from the AUTHORIZATION of the core.
+        may_write: this.#mayWriteTickets(context),
+        may_assign: this.#mayAssignTickets(context),
+      },
+    };
+  }
+
+  /**
+   * ⭐⭐ D-073: create a ticket.
+   * ⭐⭐ THE CREATION IS IDEMPOTENT: the same reference inside the same
+   *   company returns the first ticket instead of a second one ⇒ ⭐⭐ a
+   *   retried request (a lost answer) never duplicates the work.
+   */
+  async #createTicket(context: RequestContext, req: http.IncomingMessage): Promise<JsonResponse> {
+    const decision = this.#authorizeTicket(context, 'ticket.create', SCOPE_REF);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'ticket.create',
+        'denied',
+        decision.code,
+        {},
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const body = asRecord(parseJson(await readBody(req)));
+    const subject = asString(body['subject']);
+    if (!subject || subject.length > 200) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'subject_invalid', message: 'the subject is required' } },
+      };
+    }
+    const customerId = asString(body['customer_id']);
+    if (!customerId) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'customer_required', message: 'customer_id is required' } },
+      };
+    }
+    const state = asString(body['state']) ?? 'open';
+    if (!isTicketState(state)) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'state_invalid', message: 'the state is not declared' } },
+      };
+    }
+    const priority = asString(body['priority']) ?? 'normal';
+    if (!isTicketPriority(priority)) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'priority_invalid', message: 'the priority is not declared' } },
+      };
+    }
+    const description = asString(body['description']) ?? '';
+    const conversationRef = asString(body['conversation_ref']);
+    const assignee = asString(body['assignee_actor_id']);
+    const ref = asString(body['ref']) ?? `tkt_${crypto.randomBytes(6).toString('hex')}`;
+
+    try {
+      const created = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+        // ⭐⭐ The customer must exist in THIS company ⇒ ⭐ a ticket
+        //   cannot point at a customer of another company.
+        const customer = await uow.query<{ id: string }>(
+          `select id from customers where tenant_id = $1 and id = $2`,
+          [context.session.tenantId, customerId],
+        );
+        if (customer.rowCount === 0) {
+          throw new Error('customer_not_found');
+        }
+        // ⭐⭐ The conversation (when there is one) must exist in THIS
+        //   company ⇒ ⭐⭐ and it must be one the employee may SEE.
+        if (conversationRef) {
+          const conversation = await uow.query<{ ref: string }>(
+            `select ref from conversations where tenant_id = $1 and ref = $2`,
+            [context.session.tenantId, conversationRef],
+          );
+          if (conversation.rowCount === 0) {
+            throw new Error('conversation_not_found');
+          }
+        }
+        // ⭐⭐ The idempotency: the same reference ⇒ the first ticket.
+        const existing = await readTicketByRef(uow, context.session.tenantId, ref);
+        if (existing) {
+          const row = await readTicket(uow, context.session.tenantId, ref, this.#ticketScope(context));
+          return { row, created: false };
+        }
+        const inserted = await uow.query(
+          `insert into support_tickets
+             (tenant_id, ref, customer_id, conversation_ref, subject, description, state, priority,
+              assignee_actor_id, version, created_at, updated_at)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,1, now(), now())
+           on conflict (tenant_id, ref) do nothing
+           returning ref`,
+          [
+            context.session.tenantId,
+            ref,
+            customerId,
+            conversationRef ?? null,
+            subject,
+            description,
+            state,
+            priority,
+            assignee ?? null,
+          ],
+        );
+        if (inserted.rowCount === 0) {
+          const row = await readTicket(uow, context.session.tenantId, ref, this.#ticketScope(context));
+          return { row, created: false };
+        }
+        await uow.query(
+          `insert into support_ticket_changes
+             (tenant_id, ticket_ref, version, actor_id, operation, before_state, after_state, reason, changed_at)
+           values ($1,$2,1,$3,'ticket.create',null,$4,$5, now())`,
+          [
+            context.session.tenantId,
+            ref,
+            context.session.actorId,
+            state,
+            asString(body['reason']) ?? 'the ticket was created',
+          ],
+        );
+        const row = await readTicket(uow, context.session.tenantId, ref, this.#ticketScope(context));
+        return { row, created: true };
+      });
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'ticket.create',
+        'allowed',
+        null,
+        { ref },
+      );
+      return {
+        status: created.created ? 201 : 200,
+        body: { ok: true, ticket: created.row, created: created.created },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message === 'customer_not_found') {
+        return {
+          status: 404,
+          body: { ok: false, error: { code: 'customer_not_found', message: customerId } },
+        };
+      }
+      if (message === 'conversation_not_found') {
+        return {
+          status: 404,
+          body: { ok: false, error: { code: 'conversation_not_found', message: conversationRef } },
+        };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * ⭐⭐ D-073: change a ticket (the state, the priority, the subject,
+   *   the description or the assignee).
+   * ⭐⭐ THE LOCK: the update carries the version it read ⇒ ⭐⭐ two
+   *   employees get a conflict (409) instead of overwriting each other.
+   */
+  async #updateTicket(
+    context: RequestContext,
+    ref: string,
+    req: http.IncomingMessage,
+  ): Promise<JsonResponse> {
+    // ⭐⭐⭐ M-86: THE RIGHT IS CHECKED BEFORE THE BODY IS READ.
+    // ⭐⭐ A role without the right must NOT learn anything from the
+    //   shape of the request ⇒ ⭐⭐ the answer of a refused right is
+    //   403 and NOT 400 ("the version is missing") ⇒ ⭐⭐ the check
+    //   comes FIRST, the validation after it.
+    const base = this.#authorizeTicket(context, 'ticket.update', ref);
+    if (!base.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'ticket.update',
+        'denied',
+        base.code,
+        { target: ref },
+      );
+      return { status: 403, body: { ok: false, error: { code: base.code, message: base.reason } } };
+    }
+    const body = asRecord(parseJson(await readBody(req)));
+    const expectedVersion = Number(body['version']);
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'version_required', message: 'the version is required' } },
+      };
+    }
+    const wantsAssignee = body['assignee_actor_id'] !== undefined;
+    // ⭐⭐ The assignment has its OWN operation (the core grants it to
+    //   the owner alone) ⇒ ⭐⭐ the two rights are checked apart.
+    const operation = wantsAssignee ? 'ticket.assign' : 'ticket.update';
+    if (wantsAssignee) {
+      const assign = this.#authorizeTicket(context, 'ticket.assign', ref);
+      if (!assign.allowed) {
+        await this.#audit(
+          context.session.tenantId,
+          context.session.actorId,
+          context.session.sessionId,
+          'ticket.assign',
+          'denied',
+          assign.code,
+          { target: ref },
+        );
+        return {
+          status: 403,
+          body: { ok: false, error: { code: assign.code, message: assign.reason } },
+        };
+      }
+    }
+    const decision = base;
+
+    const nextState = body['state'] === undefined ? undefined : asString(body['state']);
+    if (nextState !== undefined && !isTicketState(nextState)) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'state_invalid', message: 'the state is not declared' } },
+      };
+    }
+    const nextPriority = body['priority'] === undefined ? undefined : asString(body['priority']);
+    if (nextPriority !== undefined && !isTicketPriority(nextPriority)) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'priority_invalid', message: 'the priority is not declared' } },
+      };
+    }
+    const nextAssignee =
+      body['assignee_actor_id'] === undefined ? undefined : asString(body['assignee_actor_id']);
+
+    try {
+      const outcome = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+        const current = await readTicketForUpdate(uow, context.session.tenantId, ref);
+        if (!current) {
+          return { kind: 'missing' as const };
+        }
+        // ⭐⭐ The version: the write lands only when it did not move.
+        if (current.version !== expectedVersion) {
+          return { kind: 'conflict' as const, version: current.version };
+        }
+        // ⭐⭐ The state machine of the tickets (local to the module).
+        if (nextState !== undefined && nextState !== current.state) {
+          assertTicketTransition(current.state, nextState);
+        }
+        if (nextAssignee !== undefined && nextAssignee !== null) {
+          // ⭐⭐ The assignee must be an employee of THIS company.
+          const member = await uow.query<{ id: string }>(
+            `select u.id from users u
+               join memberships m on m.user_id = u.id
+              where m.tenant_id = $1 and u.id = $2 and m.status = 'active'`,
+            [context.session.tenantId, nextAssignee],
+          );
+          if (member.rowCount === 0) {
+            return { kind: 'assignee_not_in_tenant' as const };
+          }
+        }
+        const subject = body['subject'] === undefined ? undefined : asString(body['subject']);
+        if (subject !== undefined && (!subject || subject.length > 200)) {
+          return { kind: 'subject_invalid' as const };
+        }
+        const description = body['description'] === undefined ? undefined : asString(body['description']);
+
+        const updated = await uow.query(
+          `update support_tickets
+              set state = coalesce($3, state),
+                  priority = coalesce($4, priority),
+                  subject = coalesce($5, subject),
+                  description = coalesce($6, description),
+                  assignee_actor_id = case when $7::text is null then assignee_actor_id else $7 end,
+                  version = version + 1,
+                  updated_at = now()
+            where tenant_id = $1 and ref = $2 and version = $8
+            returning ref, version`,
+          [
+            context.session.tenantId,
+            ref,
+            nextState ?? null,
+            nextPriority ?? null,
+            subject ?? null,
+            description ?? null,
+            nextAssignee ?? null,
+            expectedVersion,
+          ],
+        );
+        if (updated.rowCount === 0) {
+          return { kind: 'conflict' as const, version: current.version };
+        }
+        await uow.query(
+          `insert into support_ticket_changes
+             (tenant_id, ticket_ref, version, actor_id, operation, before_state, after_state, reason, changed_at)
+           values ($1,$2,$3,$4,$5,$6,$7,$8, now())`,
+          [
+            context.session.tenantId,
+            ref,
+            current.version + 1,
+            context.session.actorId,
+            wantsAssignee ? 'ticket.assign' : 'ticket.update',
+            current.state,
+            nextState ?? current.state,
+            asString(body['reason']) ?? 'the ticket was changed',
+          ],
+        );
+        const row = await readTicket(uow, context.session.tenantId, ref, this.#ticketScope(context));
+        return { kind: 'ok' as const, row };
+      });
+
+      if (outcome.kind === 'missing') {
+        return {
+          status: 404,
+          body: { ok: false, error: { code: 'ticket_not_found', message: ref } },
+        };
+      }
+      if (outcome.kind === 'conflict') {
+        return {
+          status: 409,
+          body: {
+            ok: false,
+            error: { code: 'ticket_conflict', message: 'the ticket changed in the meantime' },
+            version: outcome.version,
+          },
+        };
+      }
+      if (outcome.kind === 'assignee_not_in_tenant') {
+        return {
+          status: 409,
+          body: {
+            ok: false,
+            error: { code: 'assignee_not_in_tenant', message: 'the assignee is not in this company' },
+          },
+        };
+      }
+      if (outcome.kind === 'subject_invalid') {
+        return {
+          status: 400,
+          body: { ok: false, error: { code: 'subject_invalid', message: 'the subject is not valid' } },
+        };
+      }
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        operation,
+        'allowed',
+        null,
+        { ref },
+      );
+      return { status: 200, body: { ok: true, ticket: outcome.row } };
+    } catch (error) {
+      if (error instanceof TicketStateError) {
+        const status = error.code === 'transition_not_allowed' ? 409 : 400;
+        return { status, body: { ok: false, error: { code: error.code, message: error.message } } };
+      }
+      throw error;
+    }
+  }
+
   // ------------------------------------------------------------ the CRM
   /**
    * ⭐⭐ D-071: does this employee carry the capability that manages a
@@ -1556,12 +2132,27 @@ export class WaslApiServer {
       );
       return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
     }
-    const detail = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
-      readCustomer(uow, context.session.tenantId, customerId, {
+    const detail = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+      const customer = await readCustomer(uow, context.session.tenantId, customerId, {
         role: context.session.role,
         actorId: context.session.actorId,
-      }),
-    );
+      });
+      // ⭐⭐ D-073: the tickets of the customer, with the SAME scope
+      //   ⇒ ⭐⭐ the count of the open tickets can never include a
+      //   ticket of another employee (the lesson of M-83).
+      const tickets = await readCustomerTickets(
+        uow,
+        context.session.tenantId,
+        customerId,
+        this.#ticketScope(context),
+      );
+      return {
+        customer: customer.customer,
+        conversations: customer.conversations,
+        tickets: tickets.tickets,
+        open_ticket_count: tickets.open_count,
+      };
+    });
     if (!detail.customer) {
       return {
         status: 404,
@@ -1583,6 +2174,9 @@ export class WaslApiServer {
         ok: true,
         customer: detail.customer,
         conversations: detail.conversations,
+        // ⭐⭐ D-073: the tickets of the customer (the same scope).
+        tickets: detail.tickets,
+        open_ticket_count: detail.open_ticket_count,
         may_manage: this.#mayManageCustomers(context),
       },
     };

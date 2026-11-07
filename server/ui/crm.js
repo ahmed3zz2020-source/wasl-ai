@@ -33,6 +33,21 @@ const STATE_LABELS = {
   viewer: 'قارئ',
 };
 
+// ⭐⭐ D-073: the labels of the tickets (the states of the module).
+const TICKET_STATE_LABELS = {
+  open: 'مفتوحة',
+  in_progress: 'قيد التنفيذ',
+  resolved: 'تم الحل',
+  closed: 'مغلقة',
+};
+
+const TICKET_PRIORITY_LABELS = {
+  low: 'منخفضة',
+  normal: 'عادية',
+  high: 'عالية',
+  urgent: 'عاجلة',
+};
+
 const ERROR_LABELS = {
   capability_missing: 'لا تملك صلاحية تنفيذ هذا الإجراء.',
   customer_not_found: 'العميل غير موجود أو خارج نطاق صلاحياتك.',
@@ -297,6 +312,9 @@ async function openCustomer(customerId) {
 
   renderFacts(customer);
   renderConversations(rowsOf(answer.body, 'conversations'));
+  // ⭐⭐ D-073: the tickets of the customer (the server sends them
+  //   with the same scope as the count).
+  renderTickets(rowsOf(answer.body, 'tickets'), answer.body.open_ticket_count);
   renderEdit(customer);
   renderCustomers();
 
@@ -368,6 +386,70 @@ function renderConversations(conversations) {
     item.appendChild(open);
     list.appendChild(item);
   }
+}
+
+/**
+ * ⭐⭐ D-073: the tickets of the customer.
+ * ⭐⭐ THE COUNT FOLLOWS THE SAME SCOPE as the list (the server sends
+ *   both) ⇒ ⭐⭐ the number can never include a ticket of another
+ *   employee (the lesson of M-83).
+ */
+function renderTickets(tickets, openCount) {
+  const block = $('tickets-block');
+  const list = $('ticket-list');
+  list.textContent = '';
+  const rows = Array.isArray(tickets) ? tickets : [];
+  $('tickets-empty').hidden = rows.length > 0;
+  $('tickets-counter').textContent = `${Number(openCount ?? 0)} مفتوحة من ${rows.length}`;
+  const link = $('link-new-ticket');
+  const customerId = state.selected?.id ?? '';
+  if (customerId) {
+    link.hidden = false;
+    link.href = `/ui/tickets.html?customer=${encodeURIComponent(customerId)}`;
+  } else {
+    link.hidden = true;
+    link.href = '#';
+  }
+  for (const ticket of rows) {
+    const item = document.createElement('li');
+    item.className = 'ticket-item';
+
+    const top = document.createElement('div');
+    top.className = 'row-top';
+    const subject = document.createElement('span');
+    subject.className = 'name';
+    subject.textContent = ticket.subject ?? '';
+    top.appendChild(subject);
+    const badge = document.createElement('span');
+    badge.className = 'state-badge';
+    badge.dataset.state = ticket.state;
+    badge.textContent = TICKET_STATE_LABELS[ticket.state] ?? ticket.state;
+    top.appendChild(badge);
+    item.appendChild(top);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const ref = document.createElement('span');
+    ref.textContent = ticket.ref ?? '';
+    meta.appendChild(ref);
+    const priority = document.createElement('span');
+    priority.textContent = `الأولوية: ${TICKET_PRIORITY_LABELS[ticket.priority] ?? ticket.priority ?? '—'}`;
+    meta.appendChild(priority);
+    if (ticket.assignee_actor_id) {
+      const assignee = document.createElement('span');
+      assignee.textContent = `مُسنَد إلى ${ticket.assignee_actor_id}`;
+      meta.appendChild(assignee);
+    }
+    item.appendChild(meta);
+
+    const open = document.createElement('a');
+    open.className = 'ghost link small';
+    open.href = `/ui/tickets.html?ticket=${encodeURIComponent(ticket.ref ?? '')}`;
+    open.textContent = 'افتح التذكرة';
+    item.appendChild(open);
+    list.appendChild(item);
+  }
+  block.hidden = false;
 }
 
 function renderEdit(customer) {
