@@ -3,3 +3,5 @@ _fix.py
 *.pyc
 __pycache__/
 wrangler.toml
+node_modules/
+.local/
