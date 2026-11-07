@@ -316,12 +316,12 @@ JOURNEY OK
 | ٢ | `d1b17ae` | `feat(core)`: توسيع **إضافة فقط** للصلاحيات (إنشاء/كتابة/تصدير/حذف) — لازم للبنية الحقيقية |
 | ٣ | `f79b305` | `test(core)`: إعادة ضبط خطّ الأساس إلى `d1b17ae` بقرار D-066 (حارس M13 + E-1..E-7 ما زالت فعّالة) |
 | ٤ | `37d0d45` | `feat(server)`: Backend + PostgreSQL + RLS + جلسات + سياسة خصوصية + أدوات + أول suite عزل |
-| ٥ | `__COMMIT_TESTS__` | `test(server)`: suites الـAPI والهوية والخصوصية والحدود + الواجهة المحلية + فحص المتصفّح الحقيقي |
-| ٦ | `__COMMIT_REPORT__` | `docs`: هذا التقرير + تحديث `CURRENT-STATE.md` و`DECISIONS.md` وسجل الردود |
-| ٧ | `__COMMIT_FINAL__` | `docs`: تثبيت روابط المراجعة النهائية (رقمcommit) |
+| ٥ | `adec986dc7622fb56c58daddee6dede69d57b6bb` | `test(server)`: suites الـAPI والهوية والخصوصية والحدود + الواجهة المحلية + فحص المتصفّح الحقيقي |
+| ٦ | `af6daa743785e20284e818ae70e1b2f82e7c4bfb` | `docs`: هذا التقرير + تحديث `CURRENT-STATE.md` و`DECISIONS.md` وسجل الردود |
+| ٧ | `(هذا الـcommit)` | `docs`: تثبيت روابط المراجعة النهائية (رقمcommit) |
 
 ⭐ **الرابط المثبَّت (لا يتغيّر مع الـcommits اللاحقة)**:
-`https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/__COMMIT_REPORT__/docs/FOUNDATION-BUILD-01-REPORT.md`
+`https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/af6daa743785e20284e818ae70e1b2f82e7c4bfb/docs/FOUNDATION-BUILD-01-REPORT.md`
 
 ### الخلاصة الجاهزة لـChatGPT (انسخ والصق)
 
@@ -329,7 +329,7 @@ JOURNEY OK
 يا ChatGPT — راجع تقرير FOUNDATION BUILD 01 (Wasl Customer AI) مراجعة مستقلة نقدية.
 
 الرابط المثبَّت (لا يتغير):
-https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/__COMMIT_REPORT__/docs/FOUNDATION-BUILD-01-REPORT.md
+https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/af6daa743785e20284e818ae70e1b2f82e7c4bfb/docs/FOUNDATION-BUILD-01-REPORT.md
 
 ما الذي تمّ فعلاً (مقيس في نفس الجلسة):
 - تصريح المالك D-066 نُفِّذ: DR-2=B · DR-4=B · DR-7=C · DR-9=C · AUTH=C.
