@@ -5,6 +5,7 @@
 > ⛔ **ما لم يُنفَّذ**: ⭐ **بلا نشر** · ⭐ **بلا حساب** · ⭐ **بلا بيانات حقيقية** · ⭐ **بلا WhatsApp ولا AI خارجي** · ⭐ **بلا مورد مدفوع** · ⭐ **بلا تعديل `src/core/`** (صفر سطر) · ⭐ **والجاهزية 9/21 لم تتحرك** · ⛔ **ولم يبدأ PHASE 05**.
 > ⭐ **كل رقم في هذا التقرير مقيس في نفس الجلسة** — ⭐ **ولا رقم مكتوب باليد**.
 
+> ⭐ **ثابت على commit**: ⭐ [هذا التقرير](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/docs/FOUNDATION-BUILD-03-PHASE-04-REPORT.md) · ⭐ [سجل الردود](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/docs/CHATGPT-REVIEW-LOG.md) · ⭐ [الردّ على المراجعة](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/docs/GPT-REVIEW-048-RESPONSE.md) · ⭐ [السجل الموحّد](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/docs/OPEN-DECISIONS.md) · ⭐ [القرار D-073](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/DECISIONS.md) · ⭐ [الحالة](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/CURRENT-STATE.md) · ⭐ [مصفوفة الاختبارات](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/docs/TEST-MATRIX.md) · ⭐ [أداة عدّ الأرقام](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/2ba510c/tools/test_count_audit.py)
 ---
 
 ## ١. ⭐⭐ ملخص تنفيذي
