@@ -28,14 +28,21 @@ ENV NODE_ENV=production \
 # ⭐⭐ The dependencies first: the layer is cached and the source is
 #   copied after it. \u26d4 The PostgreSQL client is the only runtime
 #   dependency of the server.
-COPY package.json ./
-RUN npm install --no-audit --no-fund --omit=optional
+# ⭐ The lock file travels with the manifest: the build is repeatable.
+COPY package.json package-lock.json ./
+# ⭐⭐ D-070 / M-75: the PostgreSQL client is a RUNTIME dependency (the
+#   server connects to the database with it), so it is installed here
+#   and not only for the tests.
+RUN npm install --no-audit --no-fund --omit=dev && npm cache clean --force
 
 # ⭐ The source of the service. \u26d4 `src/core` is the frozen core:
 #   it is copied as it is, never built and never patched here.
 COPY src ./src
 COPY server ./server
 COPY tools ./tools
+# ⭐ The private directory of the runtime (the backup key lives there
+#   and it is never committed).
+RUN mkdir -p /app/.local
 
 # ⭐⭐ A non root user: the process never runs as root.
 RUN addgroup -S wasl && adduser -S wasl -G wasl && chown -R wasl:wasl /app
