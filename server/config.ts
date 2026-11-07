@@ -186,6 +186,39 @@ export function loadConfig(
   const maxPeerAttempts = Number(
     env['WASL_LOGIN_MAX_PEER_ATTEMPTS'] ?? String(defaults.rateLimit.maxPeerAttempts),
   );
+  // ⭐⭐ D-070 / M-73: the admission control (the real ceiling of the
+  //   CPU). The number of key derivations that may start every second.
+  const globalRatePerSecond = Number(
+    env['WASL_LOGIN_GLOBAL_RATE_PER_SECOND'] ?? String(defaults.rateLimit.globalRatePerSecond),
+  );
+  const globalBurst = Number(
+    env['WASL_LOGIN_GLOBAL_BURST'] ?? String(defaults.rateLimit.globalBurst),
+  );
+  const tenantRatePerSecond = Number(
+    env['WASL_LOGIN_TENANT_RATE_PER_SECOND'] ?? String(defaults.rateLimit.tenantRatePerSecond),
+  );
+  const tenantBurst = Number(
+    env['WASL_LOGIN_TENANT_BURST'] ?? String(defaults.rateLimit.tenantBurst),
+  );
+  const degradedWaitMs = Number(
+    env['WASL_LOGIN_DEGRADED_WAIT_MS'] ?? String(defaults.rateLimit.degradedWaitMs),
+  );
+  const maxWaitMs = Number(
+    env['WASL_LOGIN_MAX_WAIT_MS'] ?? String(defaults.rateLimit.maxWaitMs),
+  );
+  if (
+    !Number.isInteger(globalRatePerSecond) || globalRatePerSecond < 1 ||
+    !Number.isInteger(globalBurst) || globalBurst < 1 ||
+    !Number.isInteger(tenantRatePerSecond) || tenantRatePerSecond < 1 ||
+    !Number.isInteger(tenantBurst) || tenantBurst < 1 ||
+    !Number.isInteger(degradedWaitMs) || degradedWaitMs < 0 ||
+    !Number.isInteger(maxWaitMs) || maxWaitMs < 0
+  ) {
+    throw new ConfigError(
+      'login_limit_invalid',
+      'the admission control values are not valid numbers',
+    );
+  }
   const trustPeerAddressRaw = env['WASL_LOGIN_TRUST_PEER_ADDRESS'] ?? '0';
   if (trustPeerAddressRaw !== '0' && trustPeerAddressRaw !== '1') {
     throw new ConfigError(
@@ -244,6 +277,12 @@ export function loadConfig(
       maxPeerAttempts,
       windowSeconds: rateWindow,
       trustPeerAddress: trustPeerAddressRaw === '1',
+      globalRatePerSecond,
+      globalBurst,
+      tenantRatePerSecond,
+      tenantBurst,
+      degradedWaitMs,
+      maxWaitMs,
     },
     logLevel: logLevelName,
     testPasscode: requireString(

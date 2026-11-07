@@ -1,5 +1,5 @@
 // ============================================================
-// WASL AI — FOUNDATION BUILD 02 — PHASE 02 (D-069)
+// WASL AI — FOUNDATION BUILD 03 / PHASE 01 (D-070)
 // M-67: the protection of the login and of the server
 // ------------------------------------------------------------
 // ⭐ WHY THIS FILE EXISTS
@@ -12,7 +12,8 @@
 //   until the session expired.
 // ⭐ THE PROPERTIES UNDER TEST
 //   - the derivation does not block the event loop,
-//   - the platform budget stops a distributed attack,
+//   - the platform budget SLOWS a distributed attack down (it does not
+//     switch the users off any more: that is M-73),
 //   - a spoofed X-Forwarded-For changes nothing,
 //   - the live role of the membership is the authority,
 //   - an expired / revoked / disabled session stops working,
@@ -84,7 +85,7 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
     );
   });
 
-  await t.test('⭐⭐⭐ M-67b: the platform budget stops a distributed attack', async () => {
+  await t.test('⭐⭐⭐ M-67b: the platform budget slows a distributed attack down', async () => {
     await clearGlobalCounter();
     // ⭐ The tenant scoped counters of the other test files are
     //   emptied too: the measurement must depend on this test only.
@@ -105,10 +106,18 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
       rateLimit: {
         maxAccountAttempts: 5,
         maxTenantAttempts: 20,
+        // ⭐⭐ D-070 / M-73: the platform budget is the trigger of the
+        //   degraded mode, not a refusal.
         maxGlobalAttempts: 3,
         maxPeerAttempts: 0,
         windowSeconds: 300,
         trustPeerAddress: false,
+        globalRatePerSecond: 20,
+        globalBurst: 40,
+        tenantRatePerSecond: 10,
+        tenantBurst: 20,
+        degradedWaitMs: 300,
+        maxWaitMs: 30_000,
       },
     };
     const api = new WaslApiServer({ config, pool });
@@ -125,16 +134,33 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
         assert.equal(failed.status, 401, `the guess was not refused: ${failed.status}`);
       }
 
-      // ⭐ The platform budget is exhausted: the request is refused
-      //   BEFORE the key derivation.
-      const refused = await client.request({
+      // ⭐⭐ D-070 / M-73: the platform budget is exhausted, so the
+      //   platform is in the DEGRADED MODE. ⭐ The legitimate user with
+      //   the CORRECT passcode is NOT switched off any more: the
+      //   attempt waits (the flood is slowed down) and it succeeds.
+      //   ⛔ The old behaviour of D-069 (a blanket 429 for everybody)
+      //     is exactly the defect that M-73 closes.
+      const started = Date.now();
+      const allowed = await client.request({
         method: 'POST',
         path: '/api/session',
         payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_owner', passcode: PASSCODE },
       });
-      assert.equal(refused.status, 429, `the platform budget did not answer: ${refused.status}`);
-      const code = String((refused.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
-      assert.equal(code, 'login_platform_limited', `the refusal carries an unexpected code: ${code}`);
+      const waited = Date.now() - started;
+      assert.equal(
+        allowed.status,
+        200,
+        `the legitimate user was switched off by the platform budget: ${allowed.status}`,
+      );
+      assert.ok(
+        typeof allowed.body['token'] === 'string' && allowed.body['token'] !== '',
+        'the legitimate login returned no token',
+      );
+      // ⭐ The degraded mode really slowed the attempt down.
+      assert.ok(
+        waited >= 300,
+        `the degraded mode did not slow the attempt down: ${waited} ms`,
+      );
     } finally {
       await api.close();
       await pool.end();
