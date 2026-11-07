@@ -3,6 +3,7 @@
 > ⭐ **التصريح**: D-070 — تصريح المالك (٧ نوفمبر ٢٠٢٦) — FOUNDATION BUILD 03 / PHASE 01.
 > ⭐ **النطاق**: معالجة الملاحظات **M72 · M73 · M74 · M75** + **بناء Customer Inbox MVP** + **اختبارات تشغيل حقيقية**.
 > ⛔ **ما لم يحدث**: لا نشر · لا خدمات مدفوعة · لا بيانات عملاء حقيقية · لا WhatsApp · لا ذكاء اصطناعي خارجي · لا مزوّد هوية · لا تعديل في `src/core/` · لا تغيير في قرارات المالك السابقة · **الجاهزية الرسمية 9/21 لم تتحرك** · لا بدء أي مرحلة تالية.
+> ⭐ **ثابت على commit**: ⭐ [هذا التقرير](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/docs/FOUNDATION-BUILD-03-PHASE-01-REPORT.md) · ⭐ [سجل الردود (ردّ #٤٦)](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/docs/CHATGPT-REVIEW-LOG.md) · ⭐ [القرار D-070](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/DECISIONS.md) · ⭐ [مصفوفة الاختبارات](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/docs/TEST-MATRIX.md) · ⭐ [الحالة](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/CURRENT-STATE.md)
 
 ---
 

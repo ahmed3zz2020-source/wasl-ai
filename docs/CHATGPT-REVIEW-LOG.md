@@ -97,6 +97,7 @@
 
 > ⭐ **طبيعة الردّ**: ⭐ **تصريح المالك (`D-070`) — FOUNDATION BUILD 03 / PHASE 01**: ⭐ **إغلاق الملاحظات M72–M75 محلياً بالكامل + بناء Customer Inbox MVP** ⇒ ⭐ **إصلاحات تقنية حقيقية مدعومة باختبارات** (لا توثيق فقط) ⇒ ⭐ **بلا نشر · بلا خدمات مدفوعة · بلا بيانات حقيقية · بلا WhatsApp · بلا AI خارجي · بلا مزوّد هوية إنتاجي**.
 > ⭐ **التقرير الكامل (ملف واحد)**: ⭐ [`docs/FOUNDATION-BUILD-03-PHASE-01-REPORT.md`](FOUNDATION-BUILD-03-PHASE-01-REPORT.md) — ⭐ **والقرار**: ⭐ `DECISIONS.md` §D-070 — ⭐ **ومصفوفة الاختبارات**: ⭐ `docs/TEST-MATRIX.md`.
+> ⭐ **ثابت على commit**: ⭐ [التقرير](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/docs/FOUNDATION-BUILD-03-PHASE-01-REPORT.md) · ⭐ [هذا السجل](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/docs/CHATGPT-REVIEW-LOG.md) · ⭐ [القرار D-070](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/a1dd26e/DECISIONS.md)
 > ⭐⭐ **حدّ معلَن من أعلى**: ⭐⭐ **لا نشر على أي استضافة · لا بدء Phase 03 · لا تغيير قرارات المالك السابقة · لا رفع الجاهزية الرسمية** ⇒ ⭐⭐ **الجاهزية الرسمية 9/21 لم تتحرك**.
 
 ### ٣.١ ⭐⭐ البنود الأربعة (M72–M75) — الحالة قبل وبعد
