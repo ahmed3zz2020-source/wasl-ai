@@ -1,11 +1,11 @@
 # ============================================================
-# WASL AI — the matrix of the tests (PHASE 02)
+# WASL AI — the matrix of the tests (PHASE 01 of BUILD 03)
 # ------------------------------------------------------------
 # ⭐ WHAT THIS DOCUMENT IS
-#   The evidence of PHASE 02 is not one number: it is four groups of
-#   tests, one end to end journey and a rebuild of the environment
-#   from scratch. This file says WHAT each group proves, HOW it is
-#   run and WHAT it does NOT prove.
+#   The evidence of a phase is not one number: it is four groups of
+#   tests, one end to end journey, a real browser and a rebuild of the
+#   environment from scratch. This file says WHAT each group proves,
+#   HOW it is run and WHAT it does NOT prove.
 # ⛔ It does not claim any guarantee that the tests did not prove.
 #   ⭐ The number of tests is NOT a quality measure: a group is only
 #   as good as the property it checks.
@@ -15,10 +15,10 @@
 
 | Group | Command | Files | What it proves | What it does NOT prove |
 |:-:|---|:-:|---|---|
-| ⭐ **unit** | `npm run test:unit` | 20 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
-| ⭐ **integration** | `npm run test:integration` | 9 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host | nothing about a load that a machine of the production size would see |
-| ⭐ **security** | `npm run test:security` | 6 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, the protection of the deletion evidence | nothing about a penetration test of a third party |
-| ⭐ **recovery** | `npm run test:recovery` | 2 | the backup really restores, encrypted, verified and measured | nothing about a restore on the hardware of the production |
+| ⭐ **unit** | `npm run test:unit` | 21 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
+| ⭐ **integration** | `npm run test:integration` | 12 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image | nothing about a load that a machine of the production size would see |
+| ⭐ **security** | `npm run test:security` | 7 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)** | nothing about a penetration test of a third party |
+| ⭐ **recovery** | `npm run test:recovery` | 3 | the backup really restores, encrypted, verified and measured, **and never writes a clear text dump on the disk (M-72)** | nothing about a restore on the hardware of the production |
 | ⭐ **e2e** | `npm run e2e` | 1 | the journey of a customer service works from the login to the conversation and the privacy | nothing about a channel other than the local web one |
 | ⭐ **all** | `npm run test:all` | — | every group above plus the journey | — |
 
@@ -29,8 +29,12 @@
 > `tests/security-trust-boundary.test.ts` belongs to the group
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
-> was 724 — a misleading number). Now: 559 + 79 + 77 + 9 = **724** =
-> the number of `npm test` exactly.
+> was 724 — a misleading number).
+> ⭐⭐ **PHASE 01 (BUILD 03)**: the partition is checked by a script and
+> the three new files were added to the groups they belong to ⇒ now:
+> **559 + 108 + 91 + 16 = 774** = the number of `npm test` exactly
+> (107 of the 108 in `integration` pass and **1 is SKIPPED**: the
+> dynamic Docker drill, see §6).
 
 ## 2. The environment of the measurement
 
@@ -44,7 +48,8 @@
 | ⭐ OpenSSL | 3.0.20 (the local TLS test of M-70) |
 | ⭐ git | 2.39.5 |
 | ⭐ CPU / memory | 2 cores / 3072 MB |
-| ⭐ **Docker** | ⛔ **NOT INSTALLED** ⇒ the image was NOT built (M-70) |
+| ⭐ **Docker** | ⭐ **20.10.24** (Debian `docker.io`) — ⭐ the daemon RUNS and the images are pulled and unpacked ⇒ ⛔ **but no container starts** (the sandbox masks parts of `/proc` and the kernel refuses a new `procfs` inside a user namespace) ⇒ **the image was NOT built** |
+| ⭐ **Chromium** | ⭐ **1254** (Playwright, headless shell) — the browser drill of the inbox |
 | ⭐ database | `wasl_local`, roles `wasl_app` (request) and `wasl_owner` (migration) |
 | ⭐ data | ⭐ **synthetic only**: three seeded companies, no real data, no real credential |
 
@@ -113,11 +118,33 @@ npm run db:restore -- <artifact file> --target <scratch database>
 | ⭐ a backup with open permissions | M-69d |
 | ⭐ a broken sensitive configuration | M-70f |
 | ⭐ a connection dropped during the deletion | M-03e |
+| ⭐⭐ a clear text dump on the disk during the backup | M-72a (a witness that reads the directory every 5 ms) |
+| ⭐⭐ a failure before / during / after the copy | M-72b, M-72c, M-72d |
+| ⭐⭐ a big database that must not be loaded in memory | M-72e (a 51 MB table ⇒ a dump above 20 MB ⇒ the memory grows by less than half of it) |
+| ⭐⭐ a truncated or a replaced backup | M-72f |
+| ⭐⭐ an attacker that spends the platform budget before a legitimate login | M-73a (the legitimate login succeeds) |
+| ⭐⭐ a company that floods while another one logs in | M-73c (the second company is not slowed down) |
+| ⭐⭐ the ceiling of the key derivations per second | M-73d (five attempts at two per second) |
+| ⭐⭐ a spoofed header that buys a fresh budget | M-73f |
+| ⭐⭐ a privileged manipulation of the deletion evidence | M-74d, M-74e (the limit is measured, not claimed) |
+| ⭐⭐ a double send of the same reply | IN-04 (the same reference twice is refused) |
+| ⭐⭐ a company that reads the conversations of another one | IN-08 |
+| ⭐⭐ an employee without the capability | IN-09 |
+| ⭐⭐ a revoked session | IN-11 |
+| ⭐⭐ two backends on one database | IN-13 |
+| ⭐⭐ the page that must not show what it hides | UI-02b |
 
 ## 6. What is still NOT proven
 
-- ⛔ The image was **not built**: there is no Docker daemon in the
-  measurement environment.
+- ⛔ The image was **not built** and no compose was **not** run: the
+  Docker daemon answers and the images are unpacked, but **no container
+  starts** in this sandbox (the `/proc` masks of the sandbox and the
+  rule of the kernel that refuses a new `procfs` inside a user
+  namespace). ⭐ The drill is **SKIPPED with the measured reason** and
+  it is never counted as a pass. ⭐ The static checks of the image and
+  of the compose file **do** run (and they found a real defect: the
+  PostgreSQL driver was a development dependency, so the image would
+  have started without it).
 - ⛔ The restore was **not** measured on the hardware of the
   production: the RTO of the drill is a local measurement.
 - ⛔ The off-host copy of the backup is a **design**, not a transfer:
@@ -146,6 +173,31 @@ npm run db:restore -- <artifact file> --target <scratch database>
 | ⭐ 9 | `npm run test:security` | **77/77** | `/tmp/p02-grp-security.log` |
 | ⭐ 10 | `npm run test:recovery` | **9/9** | `/tmp/p02-grp-recovery.log` |
 | ⭐ 11 | `npm run test:server` | **126/126** | `/tmp/p02-server.log` |
+
+### The measured results of PHASE 01 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline, before the first change | **724/724** · 0 fail · 0 skipped | `/tmp/baseline-full.log` |
+| ⭐ 1 | `npm test` (after the phase) | **774** · **773 pass** · **0 fail** · **1 skipped** | `/tmp/full2.log` |
+| ⭐ 2 | `npm run test:unit` | **559/559** | `/tmp/groups.log` |
+| ⭐ 3 | `npm run test:integration` | **107/108** · 1 skipped (the Docker drill) | `/tmp/groups.log` |
+| ⭐ 4 | `npm run test:security` | **91/91** | `/tmp/groups.log` |
+| ⭐ 5 | `npm run test:recovery` | **16/16** | `/tmp/groups.log` |
+| ⭐ 6 | `npm run e2e` | **JOURNEY OK** (15/15) | `/tmp/e2e2.log` |
+| ⭐ 7 | `npm run test:server` | see §7 of the report | — |
+
+> ⭐ **The one skipped test of the whole suite is the dynamic Docker
+> drill**, and the skip carries the measured reason. It is an
+> environmental limit (the kernel of the sandbox), not a defect of the
+> code, and it is not hidden behind a success.
+
+> ⭐⭐ **A note on the privileged connection.** Without
+> `WASL_PG_SUPERUSER_URL` the group `recovery` is **SKIPPED** and the
+> backup drill cannot run at all: the baseline without it was 717 tests
+> / 715 passed / 2 skipped. ⭐ The number **724** appears only with the
+> privileged connection ⇒ ⭐ **the comparison of the phases is only
+> valid with it.**
 
 > ⭐ Every number above was measured in the same session and comes from
 > the log of the run that produced it. The full report is
