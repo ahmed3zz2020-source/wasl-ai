@@ -94,7 +94,6 @@ interface RequestContext {
     actorId: string;
     expiresAt: string;
   };
-  readonly bundle: TenantBundle;
   readonly mirror: TenantIdentityMirror;
   readonly memberships: MembershipRow[];
 }
@@ -186,6 +185,8 @@ export class WaslApiServer {
   readonly #pool: PgPool;
   readonly #bundles = new Map<string, TenantBundle>();
   readonly #mirrors = new Map<string, TenantIdentityMirror>();
+  /** ⭐ One queue per company (the in-memory bundle is per company). */
+  readonly #tenantLocks = new Map<string, Promise<void>>();
   #server: http.Server | null = null;
 
   constructor(options: ApiServerOptions) {
@@ -234,6 +235,32 @@ export class WaslApiServer {
     this.#mirrors.delete(tenantId);
   }
 
+  /**
+   * ⭐⭐ Serialize the operations of ONE company.
+   * ⭐ The in-memory bundle is a per tenant structure: its state rows
+   *   and its capture buffers are mutated in place. Two requests of the
+   *   same company running at the same time would read and clear each
+   *   other's captures, so a valid update could be refused with a
+   *   conflict that never existed (measured: both requests answered
+   *   `state_conflict` and nothing was written).
+   * ⭐ The lock is per tenant: two companies still run in parallel.
+   */
+  async #withTenantLock<T>(tenantId: string, fn: () => Promise<T>): Promise<T> {
+    const previous = this.#tenantLocks.get(tenantId) ?? Promise.resolve();
+    let release: () => void = () => {};
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.#tenantLocks.set(tenantId, current);
+    await previous;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (this.#tenantLocks.get(tenantId) === current) this.#tenantLocks.delete(tenantId);
+    }
+  }
+
   async #loadMemberships(tenantId: string): Promise<MembershipRow[]> {
     return UnitOfWork.run(this.#pool, tenantId, async (uow) => {
       const result = await uow.query<{
@@ -276,8 +303,7 @@ export class WaslApiServer {
     const session = await resolveSession(this.#pool, token);
     const memberships = await this.#loadMemberships(session.tenantId);
     const mirror = this.#mirrorFor(session.tenantId, memberships);
-    const bundle = this.#bundleFor(session.tenantId);
-    return { session, bundle, mirror, memberships };
+    return { session, mirror, memberships };
   }
 
   /**
@@ -383,6 +409,13 @@ export class WaslApiServer {
 
     const context = await this.#requestContext(req);
 
+    // ⭐ The routes that mutate the in-memory bundle of a company run
+    //   one after the other: the bundle is a per company structure and
+    //   two concurrent requests of the same company would read and
+    //   clear each other's captures.
+    const locked = (fn: () => Promise<JsonResponse>): Promise<JsonResponse> =>
+      this.#withTenantLock(context.session.tenantId, fn);
+
     if (method === 'GET' && path === '/api/session') {
       return {
         status: 200,
@@ -411,13 +444,13 @@ export class WaslApiServer {
       return this.#listConversations(context);
     }
     if (method === 'POST' && path === '/api/conversations') {
-      return this.#createConversation(context, req);
+      return locked(() => this.#createConversation(context, req));
     }
     if (method === 'GET' && path === '/api/customers') {
       return this.#listCustomers(context);
     }
     if (method === 'POST' && path === '/api/customers') {
-      return this.#createCustomer(context, req);
+      return locked(() => this.#createCustomer(context, req));
     }
     if (method === 'GET' && path === '/api/audit') {
       return this.#readAudit(context);
@@ -426,16 +459,16 @@ export class WaslApiServer {
       return this.#readRetention(context);
     }
     if (method === 'POST' && path === '/api/retention') {
-      return this.#writeRetention(context, req);
+      return locked(() => this.#writeRetention(context, req));
     }
     if (method === 'POST' && path === '/api/privacy/export') {
       return this.#exportData(context);
     }
     if (method === 'POST' && path === '/api/privacy/deletion/preview') {
-      return this.#previewDeletion(context, req);
+      return locked(() => this.#previewDeletion(context, req));
     }
     if (method === 'POST' && path === '/api/privacy/deletion/execute') {
-      return this.#executeDeletion(context, req);
+      return locked(() => this.#executeDeletion(context, req));
     }
 
     if (segments[1] === 'conversations' && segments[2]) {
@@ -447,16 +480,16 @@ export class WaslApiServer {
         return this.#readMessages(context, ref);
       }
       if (method === 'POST' && segments[3] === 'messages') {
-        return this.#appendMessage(context, ref, req);
+        return locked(() => this.#appendMessage(context, ref, req));
       }
       if (method === 'GET' && segments[3] === 'changes') {
         return this.#readChanges(context, ref);
       }
       if (method === 'POST' && segments[3] === 'state') {
-        return this.#updateState(context, ref, req);
+        return locked(() => this.#updateState(context, ref, req));
       }
       if (method === 'POST' && segments[3] === 'assign') {
-        return this.#assign(context, ref, req);
+        return locked(() => this.#assign(context, ref, req));
       }
     }
 
@@ -629,7 +662,7 @@ export class WaslApiServer {
     const customerId = asString(body['customer_id']);
     const message = asRecord(body['message']);
 
-    const bundle = context.bundle;
+    const bundle = this.#bundleFor(context.session.tenantId);
     resetCaptures(bundle);
     try {
       const created = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
@@ -698,7 +731,7 @@ export class WaslApiServer {
     if (!text) {
       return { status: 400, body: { ok: false, error: { code: 'body_required', message: 'body is required' } } };
     }
-    const bundle = context.bundle;
+    const bundle = this.#bundleFor(context.session.tenantId);
     resetCaptures(bundle);
 
     const classification = classifyJourneyMessage(text);
@@ -791,7 +824,7 @@ export class WaslApiServer {
       return { status: 400, body: { ok: false, error: { code: 'target_state_required', message: 'to is required' } } };
     }
     const expected = typeof body['expected_version'] === 'number' ? body['expected_version'] : null;
-    const bundle = context.bundle;
+    const bundle = this.#bundleFor(context.session.tenantId);
     resetCaptures(bundle);
 
     try {
@@ -866,7 +899,7 @@ export class WaslApiServer {
     if (!assignee) {
       return { status: 400, body: { ok: false, error: { code: 'actor_id_required', message: 'actor_id is required' } } };
     }
-    const bundle = context.bundle;
+    const bundle = this.#bundleFor(context.session.tenantId);
     resetCaptures(bundle);
 
     try {

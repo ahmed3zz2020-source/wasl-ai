@@ -57,6 +57,15 @@ export interface LoginResult {
   readonly session: SessionRecord;
 }
 
+/**
+ * ⭐ EXPERIMENTAL HASH - NOT FIT FOR PRODUCTION.
+ * ⛔ SHA-256 with a per user salt is a fast hash: it is only acceptable
+ *   for the synthetic local passcodes of this experimental build.
+ * ⛔ A production system needs a slow, memory hard key derivation
+ *   (argon2id / scrypt / bcrypt) with a tuned work factor, a per
+ *   tenant and per account rate limit, a lockout policy and a second
+ *   factor. No production authentication exists in this build.
+ */
 export function hashPasscode(passcode: string, salt?: string): string {
   const useSalt = salt ?? crypto.randomBytes(16).toString('hex');
   const digest = crypto.createHash('sha256').update(`${useSalt}:${passcode}`).digest('hex');
