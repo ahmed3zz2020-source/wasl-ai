@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WASL — Foundation Build 01 · Local Journey Console</title>
+    <link rel="stylesheet" href="/ui/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>WASL — Foundation Build 01</h1>
+      <p class="scope" id="scope-banner">
+        ⭐ Local console · talks to the REAL local API and PostgreSQL · synthetic data only ·
+        nothing is sent anywhere
+      </p>
+    </header>
+
+    <section class="panel">
+      <h2>1 · Session (local test login)</h2>
+      <div class="row">
+        <label>Company <select id="tenant">
+          <option value="tnt_alpha">tnt_alpha</option>
+          <option value="tnt_beta">tnt_beta</option>
+          <option value="tnt_gamma">tnt_gamma</option>
+        </select></label>
+        <label>User <select id="user">
+          <option value="usr_alpha_owner">usr_alpha_owner (owner)</option>
+          <option value="usr_alpha_super">usr_alpha_super (supervisor)</option>
+          <option value="usr_alpha_agent">usr_alpha_agent (agent)</option>
+          <option value="usr_alpha_viewer">usr_alpha_viewer (viewer)</option>
+          <option value="usr_beta_owner">usr_beta_owner (owner)</option>
+          <option value="usr_gamma_owner">usr_gamma_owner (owner)</option>
+        </select></label>
+        <label>Passcode <input id="passcode" type="password" value="wasl-local-test" /></label>
+        <button id="btn-login">Login</button>
+        <button id="btn-logout" disabled>Logout</button>
+      </div>
+      <pre id="out-session" class="out"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>2 · Conversation journey</h2>
+      <div class="row">
+        <button id="btn-customer" disabled>Create customer</button>
+        <button id="btn-conversation" disabled>Create conversation + message</button>
+        <button id="btn-message" disabled>Send message (local rules)</button>
+        <button id="btn-open" disabled>State → open</button>
+        <button id="btn-assign" disabled>Assign to agent</button>
+        <button id="btn-resolved" disabled>State → resolved</button>
+        <button id="btn-closed" disabled>State → closed</button>
+        <button id="btn-illegal" disabled>Try an illegal transition</button>
+      </div>
+      <pre id="out-journey" class="out"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>3 · Evidence and privacy</h2>
+      <div class="row">
+        <button id="btn-changes" disabled>Change log</button>
+        <button id="btn-audit" disabled>Audit trail</button>
+        <button id="btn-export" disabled>Export</button>
+        <button id="btn-retention" disabled>Retention policies</button>
+        <button id="btn-preview" disabled>Deletion preview</button>
+        <button id="btn-cross" disabled>Cross company attempt</button>
+      </div>
+      <pre id="out-evidence" class="out"></pre>
+    </section>
+
+    <footer>
+      <p>
+        ⛔ No external call exists in this build: the browser talks to 127.0.0.1 and the server
+        talks to the local PostgreSQL only.
+      </p>
+    </footer>
+
+    <script src="/ui/app.js"></script>
+  </body>
+</html>

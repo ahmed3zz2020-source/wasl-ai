@@ -16,6 +16,8 @@
 
 import http from 'node:http';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import nodePath from 'node:path';
 import type { ServerConfig } from '../config.ts';
 import type { PgPool } from '../db/pool.ts';
 import { UnitOfWork } from '../db/unit-of-work.ts';
@@ -58,6 +60,19 @@ import {
 const MAX_BODY_BYTES = 64 * 1024;
 const SCOPE_REF = 'tenant-scope';
 
+/**
+ * ⭐ The local console is served by the same process that serves the
+ * API, so the page is connected to the real backend and not a static
+ * preview. The file list is an allow list: no path traversal.
+ */
+const UI_FILES: Readonly<Record<string, { file: string; type: string }>> = Object.freeze({
+  '/ui/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  '/ui/app.js': { file: 'app.js', type: 'text/javascript; charset=utf-8' },
+  '/ui/style.css': { file: 'style.css', type: 'text/css; charset=utf-8' },
+});
+
+const UI_DIR = nodePath.join(nodePath.resolve(import.meta.dirname, '..'), 'ui');
+
 export interface ApiServerOptions {
   readonly config: ServerConfig;
   readonly pool: PgPool;
@@ -66,6 +81,7 @@ export interface ApiServerOptions {
 interface JsonResponse {
   readonly status: number;
   readonly body: unknown;
+  readonly contentType?: string;
 }
 
 interface RequestContext {
@@ -108,6 +124,17 @@ function parseJson(raw: string): unknown {
   } catch {
     throw new Error('json_invalid');
   }
+}
+
+/** ⭐ Map a policy error to a declared status. */
+function policyStatus(error: unknown): number | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const name = (error as { name?: unknown }).name;
+  if (name !== 'PolicyError') return null;
+  const code = (error as { code?: unknown }).code;
+  if (code === 'deletion_request_unknown') return 404;
+  if (code === 'deletion_already_executed') return 409;
+  return 400;
 }
 
 /** ⭐ Map a database error to a safe, declared answer (no SQL text leaks). */
@@ -304,9 +331,10 @@ export class WaslApiServer {
     const method = (req.method ?? 'GET').toUpperCase();
     try {
       const response = await this.#route(method, url, req);
-      this.#send(res, response.status, response.body);
+      this.#send(res, response.status, response.body, response.contentType);
     } catch (error) {
       const database = databaseStatus(error);
+      const policy = policyStatus(error);
       const status =
         error instanceof SessionError
           ? error.status
@@ -314,16 +342,16 @@ export class WaslApiServer {
             ? 400
             : error instanceof Error && error.message === 'body_too_large'
               ? 413
-              : database ?? 500;
+              : policy ?? database ?? 500;
       const code = errorCodeOf(error);
       this.#send(res, status, { ok: false, error: { code, message: errorMessageOf(error) } });
     }
   }
 
-  #send(res: http.ServerResponse, status: number, body: unknown): void {
-    const payload = JSON.stringify(body);
+  #send(res: http.ServerResponse, status: number, body: unknown, contentType?: string): void {
+    const payload = typeof body === 'string' ? body : JSON.stringify(body);
     res.writeHead(status, {
-      'content-type': 'application/json; charset=utf-8',
+      'content-type': contentType ?? 'application/json; charset=utf-8',
       'content-length': Buffer.byteLength(payload),
       'cache-control': 'no-store',
     });
@@ -336,8 +364,13 @@ export class WaslApiServer {
     if (method === 'GET' && (path === '/' || path === '/health')) {
       return { status: 200, body: { ok: true, service: 'wasl-local-api', scope: 'local-test' } };
     }
-    if (method === 'GET' && path === '/ui' || path === '/ui/') {
-      return { status: 200, body: { ok: true, ui: '/ui/index.html' } };
+    if (method === 'GET' && (path === '/ui' || path === '/ui/')) {
+      return { status: 200, body: { ok: true, ui: '/ui/index.html', connected: true } };
+    }
+    if (method === 'GET' && UI_FILES[path]) {
+      const entry = UI_FILES[path]!;
+      const content = fs.readFileSync(nodePath.join(UI_DIR, entry.file));
+      return { status: 200, body: content.toString('utf8'), contentType: entry.type };
     }
     if (method === 'POST' && path === '/api/session') {
       return this.#login(req);
@@ -944,11 +977,11 @@ export class WaslApiServer {
     if (!requestId) {
       return { status: 400, body: { ok: false, error: { code: 'request_id_required', message: 'request_id is required' } } };
     }
-    const removed = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+    const result = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
       executeDeletion(uow, context.session.tenantId, requestId, context.session.actorId),
     );
     this.#invalidate(context.session.tenantId);
     await this.#audit(context.session.tenantId, context.session.actorId, context.session.sessionId, 'privacy.delete.execute', 'allowed', null, { request_id: requestId });
-    return { status: 200, body: { ok: true, removed } };
+    return { status: 200, body: { ok: true, removed: result.removed } };
   }
 }

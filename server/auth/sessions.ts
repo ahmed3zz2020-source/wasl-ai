@@ -17,6 +17,12 @@ import type { PgPool } from '../db/pool.ts';
 import { UnitOfWork } from '../db/unit-of-work.ts';
 
 const TENANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{2,63}$/;
+/** ⭐ The membership statuses the server understands. */
+export const KNOWN_MEMBERSHIP_STATUSES: readonly string[] = Object.freeze([
+  'active',
+  'revoked',
+  'disabled',
+]);
 const TOKEN_PREFIX = 'wsl';
 
 export class SessionError extends Error {
@@ -131,6 +137,12 @@ export async function login(
     if (row.status !== 'active') {
       throw new SessionError('user_disabled', 403, 'user is disabled');
     }
+    if (!KNOWN_MEMBERSHIP_STATUSES.includes(row.membership_status)) {
+      // M63: the declared rejection code of the identity contract is
+      // reachable here: an unknown membership status is not a revoked
+      // membership, it is an invalid identity status.
+      throw new SessionError('identity_status_invalid', 403, 'membership status is not a declared one');
+    }
     if (row.membership_status !== 'active') {
       throw new SessionError('membership_revoked', 403, 'membership is not active');
     }
@@ -210,6 +222,12 @@ export async function resolveSession(
     }
     if (row.user_status !== 'active') {
       throw new SessionError('user_disabled', 403, 'user is disabled');
+    }
+    if (!KNOWN_MEMBERSHIP_STATUSES.includes(row.membership_status)) {
+      // M63: the declared rejection code of the identity contract is
+      // reachable here: an unknown membership status is not a revoked
+      // membership, it is an invalid identity status.
+      throw new SessionError('identity_status_invalid', 403, 'membership status is not a declared one');
     }
     if (row.membership_status !== 'active') {
       throw new SessionError('membership_revoked', 403, 'membership is not active');
