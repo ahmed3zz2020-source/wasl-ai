@@ -29,7 +29,6 @@ interface TenantFixture {
 async function createTenant(harness: Awaited<ReturnType<typeof startHarness>>, tenantId: string): Promise<TenantFixture> {
   const userId = `usr_${tenantId}_owner`;
   const customerId = `cus_${tenantId}_1`;
-  const salt = crypto.createHash('sha256').update(userId).digest('hex').slice(0, 32);
   await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
     await uow.query(
       `insert into tenants (id, name, status) values ($1,$2,'active')
@@ -39,7 +38,7 @@ async function createTenant(harness: Awaited<ReturnType<typeof startHarness>>, t
     await uow.query(
       `insert into users (id, display_name, email, status, passcode_hash) values ($1,$2,$3,'active',$4)
        on conflict (id) do update set passcode_hash = excluded.passcode_hash, status = 'active'`,
-      [userId, `Owner ${tenantId}`, `${userId}@example.invalid`, hashPasscode(PASSCODE, salt)],
+      [userId, `Owner ${tenantId}`, `${userId}@example.invalid`, hashPasscode(PASSCODE)],
     );
     await uow.query(
       `insert into memberships (id, tenant_id, user_id, role, status) values ($1,$2,$3,'owner','active')

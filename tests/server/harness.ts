@@ -56,7 +56,9 @@ function readCredentials(): { owner_password: string; app_password: string } {
 
 /** ⭐ Prepare the database (migrations + seed) and start the API. */
 export async function startHarness(): Promise<Harness> {
-  const config = loadConfig(process.env, ROOT);
+  // ⭐ The test profile: the structured log is silent and the rate
+  //   limit policy is the one of the test profile.
+  const config = loadConfig(process.env, ROOT, { profile: 'test' });
   const credentials = readCredentials();
   const port = Number(process.env['WASL_TEST_PORT'] ?? '8791');
   const testConfig: ServerConfig = { ...config, port, host: '127.0.0.1' };
@@ -71,6 +73,10 @@ export async function startHarness(): Promise<Harness> {
   await seedDatabase(ownerPool, config.testPasscode);
 
   const appPool = createPool(config.appDatabaseUrl, 6);
+  // ⭐ A listener on the pool error: a broken connection must not raise
+  //   an unhandled error inside the test runner.
+  appPool.on('error', () => undefined);
+  ownerPool.on('error', () => undefined);
   const api = new WaslApiServer({ config: testConfig, pool: appPool });
   const address = await api.listen();
 

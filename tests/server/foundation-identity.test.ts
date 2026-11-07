@@ -335,16 +335,30 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
     assert.ok(noToken.status === 401 || noToken.status === 403, `a request without a token was accepted: ${noToken.status}`);
   });
 
-  await t.test('⭐ R-03d: the experimental passcode is salted and never stored in clear', async () => {
-    // ⭐ Two users with the same passcode must not share a hash: the
-    //   salt is what makes the stored value useless to an attacker.
-    const first = hashPasscode(PASSCODE, 'salt-one');
-    const second = hashPasscode(PASSCODE, 'salt-two');
-    assert.notEqual(first, second, 'the hash does not depend on the salt');
+  await t.test('⭐⭐ R-03d: the local passcode uses a dedicated KDF (scrypt), salted and never stored in clear', async () => {
+    // ⭐ Two derivations of the same passcode must not share a value:
+    //   the salt is random for every call.
+    const first = hashPasscode(PASSCODE);
+    const second = hashPasscode(PASSCODE);
+    assert.notEqual(first, second, 'the hash does not depend on a random salt');
     assert.ok(!first.includes(PASSCODE), 'the passcode is stored in clear');
-    assert.ok(verifyPasscode(first, PASSCODE), 'the salted hash does not verify');
+    assert.ok(verifyPasscode(first, PASSCODE), 'the derived hash does not verify');
     assert.ok(!verifyPasscode(first, `${PASSCODE}x`), 'a wrong passcode verifies');
     assert.ok(!verifyPasscode('not-a-hash', PASSCODE), 'a malformed hash verifies');
+
+    // ⭐⭐ The stored value is the scrypt form, NOT the legacy fast hash.
+    assert.ok(first.startsWith('scrypt$'), `the stored value is not a scrypt hash: ${first.slice(0, 20)}`);
+    assert.equal(first.split('$').length, 6, 'the scrypt value is not self describing');
+    assert.ok(!first.includes(':'), 'the stored value is still the legacy salt:digest form');
+
+    // ⛔ The legacy SHA-256 value is refused (fail closed): a row that
+    //   was not rebuilt cannot be logged into.
+    assert.ok(!verifyPasscode('deadbeef:0123456789abcdef', PASSCODE), 'the legacy hash form is still accepted');
+    // ⛔ The cost parameters are never read back from the row: a
+    //   tampered cost cannot ask the server for another computation.
+    const tampered = first.replace(/^scrypt\$16384\$8\$1\$/, 'scrypt$999999$8$1$');
+    assert.notEqual(tampered, first, 'the tamper did not change the value');
+    assert.ok(!verifyPasscode(tampered, PASSCODE), 'a tampered cost is accepted');
 
     // ⭐ The database holds the hash, never the passcode.
     const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
@@ -356,6 +370,7 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
     });
     assert.equal(rows.length, 1);
     assert.ok(!rows[0]!.includes(PASSCODE), 'the database stores the passcode in clear');
-    assert.ok(rows[0]!.includes(':'), 'the stored hash is not salted');
+    assert.ok(rows[0]!.startsWith('scrypt$'), `the database still stores the legacy hash: ${rows[0]!.slice(0, 20)}`);
+    assert.ok(!rows[0]!.includes(':'), 'the database still stores the legacy salt:digest form');
   });
 });
