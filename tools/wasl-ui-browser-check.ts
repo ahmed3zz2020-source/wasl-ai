@@ -81,7 +81,25 @@ export interface UiCheckResult {
   readonly journeyOutput: string;
 }
 
-export async function runUiBrowserCheck(port: number): Promise<UiCheckResult> {
+/**
+ * ⭐⭐ D-072 / M-82: the company the browser drives.
+ * ⭐⭐ The console takes it from the URL ⇒ ⭐⭐ a test file that owns a
+ *   namespaced company drives ITS company through the REAL browser ⇒
+ *   ⭐⭐ the browser drill never touches the default companies.
+ * ⛔ Without the options the behaviour is exactly as before.
+ */
+export interface UiCheckOptions {
+  readonly tenantId?: string;
+  readonly userId?: string;
+  readonly agentId?: string;
+  readonly otherTenantId?: string;
+  readonly otherUserId?: string;
+}
+
+export async function runUiBrowserCheck(
+  port: number,
+  options: UiCheckOptions = {},
+): Promise<UiCheckResult> {
   const steps: string[] = [];
   const failures: string[] = [];
   const playwright = await resolvePlaywright();
@@ -93,7 +111,18 @@ export async function runUiBrowserCheck(port: number): Promise<UiCheckResult> {
   });
   try {
     const page = await browser.newPage();
-    await page.goto(`http://127.0.0.1:${port}/ui/index.html`);
+    // ⭐⭐ The company of the file reaches the console through the URL.
+    const query = new URLSearchParams();
+    const put = (name: string, value: string | undefined): void => {
+      if (value) query.set(name, value);
+    };
+    put('tenant', options.tenantId);
+    put('user', options.userId);
+    put('agent', options.agentId);
+    put('otherTenant', options.otherTenantId);
+    put('otherUser', options.otherUserId);
+    const suffix = query.toString();
+    await page.goto(`http://127.0.0.1:${port}/ui/index.html${suffix ? `?${suffix}` : ''}`);
     steps.push('the console page opened');
 
     await page.fill('#passcode', 'wasl-local-test');

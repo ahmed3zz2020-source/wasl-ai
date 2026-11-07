@@ -177,10 +177,43 @@ const SEED_TENANTS: readonly SeedTenant[] = [
   },
 ];
 
-/** ⭐ Insert the synthetic fixtures (re-runnable, no real data). */
-export async function seedDatabase(ownerPool: PgPool, testPasscode: string): Promise<string[]> {
+/**
+ * ⭐ Insert the synthetic fixtures (re-runnable, no real data).
+ * ⭐⭐ D-072 / M-82: the optional NAMESPACE of the companies.
+ *   ⭐⭐ The rows of a company are keyed by the tenant ⇒ ⭐⭐ a company
+ *     with another NAME (the namespace) is another set of rows ⇒ ⭐⭐
+ *     two test files that use two namespaces can NEVER touch each
+ *     other's data ⇒ ⭐⭐ the files run in parallel and stay apart.
+ *   ⭐⭐ The users, the customers and the conversations keep their ids
+ *     (they are tenant scoped) ⇒ ⭐⭐ a file does not change its
+ *     expectations when it takes a namespace.
+ *   ⛔ Without a namespace the behaviour is exactly as before ⇒ ⭐ the
+ *     production setup (the default seed) is untouched.
+ */
+export async function seedDatabase(
+  ownerPool: PgPool,
+  testPasscode: string,
+  namespace = '',
+): Promise<string[]> {
   const steps: string[] = [];
-  for (const tenant of SEED_TENANTS) {
+  // ⭐⭐ The namespace reaches the ids that are GLOBAL keys:
+  //   ⭐ the tenants · ⭐ the users · ⭐ the memberships · ⭐ the customers.
+  //   ⭐ (the conversations and the messages are keyed by the tenant ⇒
+  //   ⭐ they keep their ids.)
+  const scoped = (id: string): string => (namespace === '' ? id : `${namespace}_${id}`);
+  for (const seeded of SEED_TENANTS) {
+    const tenant = {
+      ...seeded,
+      id: scoped(seeded.id),
+      members: seeded.members.map((member) => ({
+        ...member,
+        user: scoped(member.user),
+      })),
+      customers: seeded.customers.map((customer) => ({
+        ...customer,
+        id: scoped(customer.id),
+      })),
+    };
     await UnitOfWork.run(ownerPool, tenant.id, async (uow) => {
       await uow.query(
         `insert into tenants (id, name, status, retention_profile) values ($1,$2,'active','synthetic-default')
@@ -204,6 +237,8 @@ export async function seedDatabase(ownerPool: PgPool, testPasscode: string): Pro
           `insert into memberships (id, tenant_id, user_id, role, status)
            values ($1,$2,$3,$4,'active')
            on conflict (tenant_id, user_id) do update set role = excluded.role, status = 'active'`,
+          // ⭐ The membership id is built from the SCOPED user id ⇒ it is
+          //   unique per namespace without a second prefix.
           [`mem_${member.user}`, tenant.id, member.user, member.role],
         );
       }
@@ -223,7 +258,7 @@ export async function seedDatabase(ownerPool: PgPool, testPasscode: string): Pro
           await uow.query(
             `insert into conversations (tenant_id, ref, customer_id, state, version, updated_at)
              values ($1,$2,$3,'new',1, now())`,
-            [tenant.id, conversation.ref, conversation.customer],
+            [tenant.id, conversation.ref, scoped(conversation.customer)],
           );
           const messageRef = `msg_${conversation.ref}_seed`;
           await uow.query(

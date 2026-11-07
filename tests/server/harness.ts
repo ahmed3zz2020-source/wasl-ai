@@ -55,8 +55,19 @@ function readCredentials(): { owner_password: string; app_password: string } {
   return { owner_password: owner, app_password: app };
 }
 
+/**
+ * ⭐⭐ D-072 / M-82: the companies of the file.
+ * ⭐⭐ The tenants are the ones the file OWNS ⇒ ⭐⭐ no other file can
+ *   touch their rows ⇒ ⭐⭐ the result of a file never depends on the
+ *   order of the files or on the cleanup of another one.
+ */
+export interface HarnessOptions {
+  /** ⭐⭐ The namespace of the companies of this file (empty = the default). */
+  readonly namespace?: string;
+}
+
 /** ⭐ Prepare the database (migrations + seed) and start the API. */
-export async function startHarness(): Promise<Harness> {
+export async function startHarness(options: HarnessOptions = {}): Promise<Harness> {
   // ⭐ The test profile: the structured log is silent and the rate
   //   limit policy is the one of the test profile.
   const config = loadConfig(process.env, ROOT, { profile: 'test' });
@@ -77,7 +88,8 @@ export async function startHarness(): Promise<Harness> {
     4,
   );
   await runMigrations(ownerPool);
-  await seedDatabase(ownerPool, config.testPasscode);
+  // ⭐⭐ M-82: the companies of THIS file (the namespace).
+  await seedDatabase(ownerPool, config.testPasscode, options.namespace ?? '');
 
   const appPool = createPool(config.appDatabaseUrl, 6);
   // ⭐ A listener on the pool error: a broken connection must not raise
@@ -102,9 +114,20 @@ export async function startHarness(): Promise<Harness> {
   };
 }
 
-/** ⭐ Wipe the synthetic rows of the three seeded tenants and re-seed them. */
-export async function resetSyntheticData(ownerPool: PgPool, passcode: string): Promise<void> {
-  for (const tenantId of ['tnt_alpha', 'tnt_beta', 'tnt_gamma']) {
+/**
+ * ⭐ Wipe the synthetic rows of the seeded companies and re-seed them.
+ * ⭐⭐ D-072 / M-82: the companies are a PARAMETER ⇒ ⭐⭐ a file wipes
+ *   only the companies it owns ⇒ ⭐⭐ it can never erase the data of
+ *   another file.
+ */
+export async function resetSyntheticData(
+  ownerPool: PgPool,
+  passcode: string,
+  tenants: readonly string[] = ['tnt_alpha', 'tnt_beta', 'tnt_gamma'],
+  namespace = '',
+): Promise<void> {
+  for (const seeded of tenants) {
+    const tenantId = namespace === '' ? seeded : `${namespace}_${seeded}`;
     await UnitOfWork.run(ownerPool, tenantId, async (uow) => {
       await uow.query(`delete from messages where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from conversation_changes where tenant_id = $1`, [tenantId]);
@@ -116,7 +139,8 @@ export async function resetSyntheticData(ownerPool: PgPool, passcode: string): P
       await uow.query(`delete from deletion_requests where tenant_id = $1`, [tenantId]);
     });
   }
-  await seedDatabase(ownerPool, passcode);
+  // ⭐⭐ M-82: the re-seed is the one of the OWN companies (the namespace).
+  await seedDatabase(ownerPool, passcode, namespace);
 }
 
 export interface SyntheticTenant {
@@ -182,6 +206,9 @@ export async function createSyntheticCompany(
   const userIds: Record<string, string> = {};
   for (const member of members) {
     userIds[member.role] = member.id;
+    // ⭐⭐ The file may have TWO people with the SAME role (two agents)
+    //   ⇒ the id is a key as well ⇒ ⭐ no one of them is lost.
+    userIds[member.id] = member.id;
   }
   await UnitOfWork.run(ownerPool, tenantId, async (uow) => {
     await uow.query(
@@ -205,6 +232,76 @@ export async function createSyntheticCompany(
     }
   });
   return { tenantId, userIds };
+}
+
+/**
+ * ⭐⭐ D-072 / M-82: the lock of the PLATFORM login budget.
+ * ⭐⭐ WHY A LOCK AND NOT A NAMESPACE
+ *   ⭐ The platform budget is ONE resource of the installation by design
+ *     (D-070): the counter of the failures (`login_attempts_global`),
+ *     the admission bucket of the whole installation
+ *     (`login_admission_global`) and the peer address budget are NOT
+ *     tenant scoped ⇒ ⭐⭐ a namespace cannot separate them, and that
+ *     is the PRODUCT, not a defect of the test.
+ *   ⭐⭐ The drills that MEASURE the platform budget need it to
+ *     themselves ⇒ ⭐⭐ they take a PostgreSQL advisory lock ⇒ ⭐⭐ they
+ *     measure it one after another, while EVERY OTHER file keeps
+ *     running in parallel.
+ *   ⭐⭐ The alternative (running the suite with the parallelism off)
+ *     would HIDE the interference instead of solving it ⇒ ⛔ it is not
+ *     what this helper does.
+ * ⛔ The lock is never taken by the product path: only a test drill
+ *   that measures the platform budget takes it.
+ */
+export const PLATFORM_BUDGET_LOCK_KEY = 0x5741_534c; // "WASL"
+
+/**
+ * ⭐⭐ Run a drill that measures the platform login budget, alone.
+ * ⭐ The lock is held on ONE connection for the whole drill ⇒ ⭐ the
+ *   budget of the installation is not shared with another measurement.
+ */
+export async function withPlatformBudgetLock<T>(
+  pool: PgPool,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query(`select pg_advisory_lock($1)`, [PLATFORM_BUDGET_LOCK_KEY]);
+    try {
+      return await fn();
+    } finally {
+      await client.query(`select pg_advisory_unlock($1)`, [PLATFORM_BUDGET_LOCK_KEY]);
+    }
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * ⭐⭐ D-072 / M-82: the reset of ONE company of the file that owns it.
+ * ⭐⭐ WHY
+ *   ⭐⭐ The rows of a company are keyed by the tenant ⇒ a company of
+ *     its own is ISOLATED from every other company of the database.
+ *   ⭐⭐ The reset therefore CANNOT touch the rows of another file ⇒
+ *     ⭐⭐ no test can erase the data of another test.
+ *   ⭐⭐ And the leftovers of an OLD run of the same file are gone
+ *     before the fixture is built ⇒ ⭐⭐ the result of a file never
+ *     depends on what a previous run left behind.
+ * ⛔ It never touches a company that the file does not own.
+ */
+export async function resetCompany(ownerPool: PgPool, tenantId: string): Promise<void> {
+  await UnitOfWork.run(ownerPool, tenantId, async (uow) => {
+    await uow.query(`delete from messages where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from conversation_changes where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from read_audit_events where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from audit_events where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from conversations where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from sessions where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from login_attempts where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from memberships where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from tenants where id = $1`, [tenantId]);
+  });
 }
 
 /**

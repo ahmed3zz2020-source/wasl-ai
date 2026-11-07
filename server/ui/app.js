@@ -3,10 +3,23 @@
 // every button performs a request that reaches PostgreSQL.
 'use strict';
 
+// ⭐⭐ D-072 / M-82: the console may drive ANY company ⇐ ⭐⭐ a test
+//   file that owns a namespaced company drives ITS company through the
+//   real browser ⇐ ⭐⭐ the browser drill never touches the default one.
+//   ⛔ Without a parameter the console behaves exactly as before.
+const query = new URLSearchParams(window.location.search);
+const param = (name, fallback) => {
+  const value = query.get(name);
+  return typeof value === 'string' && value.length > 0 ? value : fallback;
+};
+
 const state = {
   token: null,
-  tenantId: 'tnt_alpha',
-  userId: 'usr_alpha_owner',
+  tenantId: param('tenant', 'tnt_alpha'),
+  userId: param('user', 'usr_alpha_owner'),
+  agentId: param('agent', 'usr_alpha_agent'),
+  otherTenantId: param('otherTenant', 'tnt_beta'),
+  otherUserId: param('otherUser', 'usr_beta_owner'),
   passcode: 'wasl-local-test',
   customerId: null,
   conversationRef: null,
@@ -61,6 +74,24 @@ function setLoggedIn(on) {
   }
   $('btn-login').disabled = on;
 }
+
+// ⭐⭐ The selects carry the fixed list of the default companies ⇐ ⭐⭐ the
+//   option of the company under test is added ⇐ ⭐⭐ the page shows the
+//   company it really drives.
+function selectValue(selectId, value) {
+  const select = $(selectId);
+  if (!select) return;
+  const known = Array.from(select.options).some((option) => option.value === value);
+  if (!known) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  }
+  select.value = value;
+}
+selectValue('tenant', state.tenantId);
+selectValue('user', state.userId);
 
 $('tenant').addEventListener('change', (event) => {
   state.tenantId = event.target.value;
@@ -158,7 +189,7 @@ $('btn-assign').addEventListener('click', async () => {
   const result = await api(
     'POST',
     `/api/conversations/${encodeURIComponent(state.conversationRef ?? '')}/assign`,
-    { actor_id: 'usr_alpha_agent', reason: 'assigned in the console' },
+    { actor_id: state.agentId, reason: 'assigned in the console' },
     state.token,
   );
   log('out-journey', result);
@@ -196,8 +227,8 @@ $('btn-preview').addEventListener('click', async () => {
 
 $('btn-cross').addEventListener('click', async () => {
   const login = await api('POST', '/api/session', {
-    tenant_id: state.tenantId === 'tnt_beta' ? 'tnt_alpha' : 'tnt_beta',
-    user_id: state.tenantId === 'tnt_beta' ? 'usr_alpha_owner' : 'usr_beta_owner',
+    tenant_id: state.otherTenantId,
+    user_id: state.otherUserId,
     passcode: state.passcode,
   });
   if (login.status !== 200) {

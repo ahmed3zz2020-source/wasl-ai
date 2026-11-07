@@ -32,6 +32,15 @@ export interface JourneyOptions {
   readonly userId?: string;
   readonly passcode: string;
   readonly conversationRef?: string;
+  // ⭐⭐ D-072 / M-82: the journey reaches three ids that used to be
+  //   written in the code. ⭐ A test file that owns a NAMESPACED company
+  //   needs ITS employee and ITS other company ⇒ ⭐⭐ the options below
+  //   make the journey a fixture that follows the caller.
+  //   ⛔ Without them the behaviour is exactly as before.
+  readonly assigneeActorId?: string;
+  readonly otherTenantId?: string;
+  readonly otherUserId?: string;
+  readonly customerIdPrefix?: string;
 }
 
 function errorCode(body: Record<string, unknown>): string {
@@ -49,6 +58,11 @@ export async function runJourney(options: JourneyOptions): Promise<JourneyReport
   const userId = options.userId ?? 'usr_alpha_owner';
   const passcode = options.passcode;
   const conversationRef = options.conversationRef ?? `conv_e2e_${Date.now().toString(36)}`;
+  // ⭐⭐ The three ids the journey used to hardcode ⇒ they follow the caller.
+  const assigneeActorId = options.assigneeActorId ?? 'usr_alpha_agent';
+  const otherTenantId = options.otherTenantId ?? 'tnt_beta';
+  const otherUserId = options.otherUserId ?? 'usr_beta_owner';
+  const customerIdPrefix = options.customerIdPrefix ?? 'cus_e2e';
   const steps: JourneyStep[] = [];
   const failures: string[] = [];
 
@@ -78,7 +92,7 @@ export async function runJourney(options: JourneyOptions): Promise<JourneyReport
     session ? `role=${String(session['role'])}` : errorCode(who.body));
 
   // 3) create the customer
-  const customerId = `cus_e2e_${Date.now().toString(36)}`;
+  const customerId = `${customerIdPrefix}_${Date.now().toString(36)}`;
   const customer = await client.request({
     method: 'POST',
     path: '/api/customers',
@@ -130,7 +144,7 @@ export async function runJourney(options: JourneyOptions): Promise<JourneyReport
     method: 'POST',
     path: `/api/conversations/${encodeURIComponent(conversationRef)}/assign`,
     token,
-    payload: { actor_id: 'usr_alpha_agent', reason: 'billing case' },
+    payload: { actor_id: assigneeActorId, reason: 'billing case' },
   });
   record(7, 'assign the conversation to an employee', '200', assigned.status, assigned.status === 200, errorCode(assigned.body));
 
@@ -190,7 +204,7 @@ export async function runJourney(options: JourneyOptions): Promise<JourneyReport
   const otherLogin = await client.request({
     method: 'POST',
     path: '/api/session',
-    payload: { tenant_id: 'tnt_beta', user_id: 'usr_beta_owner', passcode },
+    payload: { tenant_id: otherTenantId, user_id: otherUserId, passcode },
   });
   const otherToken = typeof otherLogin.body['token'] === 'string' ? (otherLogin.body['token'] as string) : null;
   let crossTenantDenied = false;
