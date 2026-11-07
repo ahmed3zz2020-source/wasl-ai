@@ -127,7 +127,10 @@ export async function previewDeletion(
   tenantId: string,
   requestedBy: string,
   scope = 'tenant_data',
-  requestId = `del_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`,
+  // ⭐⭐ D-069 / M68: the request id is 128 random bits. It is the
+  //   capability that lets the client ask for the receipt of a deletion
+  //   whose answer was lost, so it must not be guessable.
+  requestId = `del_${tenantId}_${crypto.randomBytes(16).toString('hex')}`,
 ): Promise<DeletionPreview> {
   const counts = await classifyTenantData(uow);
   const policies = await listRetentionPolicies(uow);
@@ -148,6 +151,86 @@ export interface DeletionOutcome {
   readonly removed: Record<string, number>;
   readonly scope: string;
   readonly evidenceId: string;
+  /**
+   * ⭐ D-069 / M68: the request was already executed, so nothing was
+   *   deleted again: the CONFIRMED outcome of the first execution is
+   *   returned (the answer of a re-sent request).
+   */
+  readonly alreadyExecuted: boolean;
+}
+
+/**
+ * ⭐⭐ D-069 / M68: the receipt of a deletion.
+ * ⭐ `status` is the CONFIRMED answer:
+ *   - `executed`  : the deletion happened and the proof exists,
+ *   - `previewed` : the request exists and was not executed,
+ *   - `unknown`   : there is no trace of the request.
+ * ⛔ `verified` is the result of the tamper detection: the content
+ *   hash of the evidence is recomputed and compared.
+ */
+export interface DeletionReceipt {
+  readonly requestId: string;
+  readonly status: 'executed' | 'previewed' | 'unknown';
+  readonly tenantId: string | null;
+  readonly evidenceId: string | null;
+  readonly scope: string | null;
+  readonly occurredAt: string | null;
+  readonly contentHash: string | null;
+  readonly verified: boolean;
+  readonly removed: Record<string, number>;
+}
+
+/**
+ * ⭐ Read the receipt of a deletion request.
+ * ⭐ The function is the only way in: the request role may not read
+ *   the evidence table.
+ */
+export async function readDeletionReceipt(
+  uow: UnitOfWork,
+  requestId: string,
+): Promise<DeletionReceipt> {
+  const result = await uow.query<{
+    request_id: string;
+    request_status: string;
+    tenant_id: string | null;
+    evidence_id: string | null;
+    scope: string | null;
+    occurred_at: Date | string | null;
+    content_hash: string | null;
+    verified: boolean | null;
+    removed: Record<string, number> | null;
+  }>(
+    `select request_id, request_status, tenant_id, evidence_id, scope, occurred_at,
+            content_hash, verified, removed
+       from wasl_deletion_receipt_v1($1)`,
+    [requestId],
+  );
+  const row = result.rows[0];
+  if (!row) {
+    return {
+      requestId,
+      status: 'unknown',
+      tenantId: null,
+      evidenceId: null,
+      scope: null,
+      occurredAt: null,
+      contentHash: null,
+      verified: false,
+      removed: {},
+    };
+  }
+  const status = row.request_status === 'executed' ? 'executed' : row.request_status === 'previewed' ? 'previewed' : 'unknown';
+  return {
+    requestId: row.request_id,
+    status,
+    tenantId: row.tenant_id,
+    evidenceId: row.evidence_id,
+    scope: row.scope,
+    occurredAt: row.occurred_at ? new Date(row.occurred_at).toISOString() : null,
+    contentHash: row.content_hash,
+    verified: row.verified === true,
+    removed: row.removed ?? {},
+  };
 }
 
 /** ⭐ Write the durable evidence of a deletion (it has no foreign key). */
@@ -213,6 +296,18 @@ export async function executeDeletion(
   const row = request.rows[0];
   if (!row) throw new PolicyError('deletion_request_unknown', 'deletion request is unknown');
   if (row.status === 'executed') {
+    // ⭐⭐ D-069 / M68: the request was already executed. NOTHING is
+    //   deleted again: the confirmed outcome of the first execution is
+    //   returned, so a re-sent request can never delete twice.
+    const receipt = await readDeletionReceipt(uow, requestId);
+    if (receipt.status === 'executed' && receipt.evidenceId) {
+      return {
+        removed: receipt.removed,
+        scope: receipt.scope ?? row.scope,
+        evidenceId: receipt.evidenceId,
+        alreadyExecuted: true,
+      };
+    }
     throw new PolicyError('deletion_already_executed', 'deletion request was already executed');
   }
   const scope = row.scope;
@@ -288,7 +383,7 @@ export async function executeDeletion(
     if (tenant.rowCount !== 1) {
       throw new PolicyError('deletion_tenant_missing', 'the tenant row could not be removed');
     }
-    return { removed, scope, evidenceId };
+    return { removed, scope, evidenceId, alreadyExecuted: false };
   }
 
   // ⭐ The partial scope keeps the tenant row (tombstoned) and the audit
@@ -314,7 +409,7 @@ export async function executeDeletion(
     executedBy,
     removed,
   );
-  return { removed, scope, evidenceId };
+  return { removed, scope, evidenceId, alreadyExecuted: false };
 }
 
 /** ⭐ Export everything the tenant owns (synthetic data). */

@@ -27,7 +27,7 @@ import test from 'node:test';
 
 import { hashPasscode } from '../../server/auth/sessions.ts';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
-import { loginAs, startHarness } from './harness.ts';
+import { loginAs, startHarness, purgeEvidence} from './harness.ts';
 
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
@@ -72,7 +72,12 @@ async function cleanTenant(
   harness: Awaited<ReturnType<typeof startHarness>>,
   tenantId: string,
 ): Promise<void> {
-  await harness.ownerPool.query(`delete from tenant_deletion_evidence where tenant_id = $1`, [tenantId]);
+  // ⭐⭐ D-069 / M68: the evidence is IMMUTABLE, so the cleanup of
+  //   the synthetic rows uses the test helper (it disables the guard on
+  //   purpose and restores it right after). ⛔ This is the only way an
+  //   evidence can ever be removed, and it is a test tool: the request
+  //   path can never reach it.
+  await purgeEvidence(harness.ownerPool, tenantId);
   await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
     await uow.query(`delete from tenants where id = $1`, [tenantId]);
   });
@@ -293,17 +298,19 @@ test('FOUNDATION 10) the protection of the deletion evidence (M-03)', async (t) 
     );
     assert.equal(Number(evidence.rows[0]?.count ?? '0'), 1, 'the evidence was written more than once');
 
-    // ⭐ A third execution is refused: the request was already executed.
-    //   The session of the tenant is gone with the tenant, so the
-    //   refusal is a session error and not a conflict: the point is
-    //   that the deletion is NOT executed twice.
+    // ⭐⭐ D-069 / M68: a third execution is NOT executed again: the
+    //   answer is the CONFIRMED receipt of the first execution. The
+    //   session of the tenant is gone with the tenant, so the request id
+    //   alone answers. The point is unchanged: the deletion does not run
+    //   twice and the evidence stays unique.
     const again = await harness.client.request({
       method: 'POST',
       path: '/api/privacy/deletion/execute',
       token,
       payload: { request_id: requestId },
     });
-    assert.notEqual(again.status, 200, `the second execution was accepted: ${again.status}`);
+    assert.equal(again.status, 200, `the re-sent request was refused: ${again.status}`);
+    assert.equal(again.body['already_executed'], true, 'the re-sent request is not marked as executed');
     const stillOne = await harness.ownerPool.query<{ count: string }>(
       `select count(*)::text as count from tenant_deletion_evidence where tenant_id = $1`,
       [fixture.tenantId],

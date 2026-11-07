@@ -243,6 +243,16 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
       token: owner,
       payload: { request_id: requestId },
     });
-    assert.ok(second.status >= 400, 'the same deletion request ran twice');
+    // ⭐⭐ D-069 / M68: the re-sent request is NOT executed again.
+    //   The answer is the CONFIRMED receipt of the first execution (the
+    //   session of the tenant is gone with the deletion, so the request
+    //   id alone answers). ⭐ The evidence is written exactly once.
+    assert.equal(second.status, 200, `the re-sent request was refused: ${second.status}`);
+    assert.equal(second.body['already_executed'], true, 'the re-sent request is not marked as executed');
+    const evidence = await harness.ownerPool.query<{ count: string }>(
+      `select count(*)::text as count from tenant_deletion_evidence where request_id = $1`,
+      [requestId],
+    );
+    assert.equal(Number(evidence.rows[0]?.count ?? '0'), 1, 'the evidence was written more than once');
   });
 });

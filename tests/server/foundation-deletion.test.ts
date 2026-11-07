@@ -15,7 +15,7 @@ import test from 'node:test';
 
 import { hashPasscode } from '../../server/auth/sessions.ts';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
-import { loginAs, startHarness } from './harness.ts';
+import { loginAs, startHarness, purgeEvidence} from './harness.ts';
 
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
@@ -56,7 +56,10 @@ async function createTenant(harness: Awaited<ReturnType<typeof startHarness>>, t
 
 /** ⭐ Remove a dedicated tenant and its evidence (the file is re-runnable). */
 async function cleanTenant(harness: Awaited<ReturnType<typeof startHarness>>, tenantId: string): Promise<void> {
-  await harness.ownerPool.query(`delete from tenant_deletion_evidence where tenant_id = $1`, [tenantId]);
+  // ⭐ D-069 / M68: the evidence is immutable, so the cleanup of the
+  //   synthetic rows uses the test helper (it disables the guard on
+  //   purpose and restores it right after).
+  await purgeEvidence(harness.ownerPool, tenantId);
   await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
     await uow.query(`delete from tenants where id = $1`, [tenantId]);
   });

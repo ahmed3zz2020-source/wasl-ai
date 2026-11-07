@@ -55,6 +55,7 @@ import {
   exportTenantData,
   executeDeletion,
   previewDeletion,
+  readDeletionReceipt,
   upsertRetentionPolicy,
   listRetentionPolicies,
   type DataClass,
@@ -487,10 +488,43 @@ export class WaslApiServer {
     if (method === 'POST' && path === '/api/session') {
       return this.#login(req);
     }
+    // ⭐⭐ D-069 / M68: the receipt of a deletion.
+    // ⭐ It is answered BEFORE the session is resolved, because the
+    //   full deletion removes the tenant with its session: the client
+    //   that lost the answer has no session any more.
+    // ⭐ The request id IS the capability: 128 random bits, never
+    //   guessable, so the answer exposes nothing to anybody else.
+    // ⛔ The answer holds no data of the tenant: only the state of
+    //   the request and the proof of the deletion.
+    if (method === 'POST' && path === '/api/privacy/deletion/status') {
+      return this.#deletionStatus(req);
+    }
 
     const segments = path.split('/').filter((part) => part.length > 0);
     if (segments[0] !== 'api') {
       return { status: 404, body: { ok: false, error: { code: 'route_not_found', message: path } } };
+    }
+
+    // ⭐⭐ D-069 / M68: the execution of a deletion accepts a
+    //   session OR the request id alone.
+    //   ⭐ With a valid session the deletion is executed (the owner).
+    //   ⭐ Without one the answer is the RECEIPT of the request and
+    //     NOTHING is deleted: the request id is the capability of the
+    //     receipt, never of the execution. ⭐ A re-sent request after a
+    //     deletion (the session is gone with the deletion) therefore
+    //     gets the CONFIRMED answer of the first execution.
+    if (method === 'POST' && path === '/api/privacy/deletion/execute') {
+      try {
+        const owner = await this.#requestContext(req);
+        return await this.#withTenantLock(owner.session.tenantId, () =>
+          this.#executeDeletion(owner, req),
+        );
+      } catch (error) {
+        if (error instanceof SessionError && (error.status === 401 || error.status === 403)) {
+          return this.#deletionReceiptOnly(req);
+        }
+        throw error;
+      }
     }
 
     const context = await this.#requestContext(req);
@@ -552,9 +586,6 @@ export class WaslApiServer {
     }
     if (method === 'POST' && path === '/api/privacy/deletion/preview') {
       return locked(() => this.#previewDeletion(context, req));
-    }
-    if (method === 'POST' && path === '/api/privacy/deletion/execute') {
-      return locked(() => this.#executeDeletion(context, req));
     }
 
     if (segments[1] === 'conversations' && segments[2]) {
@@ -709,6 +740,87 @@ export class WaslApiServer {
       }
       throw error;
     }
+  }
+
+  /**
+   * ⭐⭐ D-069 / M68: the receipt of a deletion request.
+   * ⭐ The answer tells the client whether the deletion happened:
+   *   `executed` (the proof exists), `previewed` (the request is known
+   *   and was not executed) or `unknown` (there is no trace).
+   * ⭐ The `verified` flag is the tamper detection: the content hash
+   *   of the evidence is recomputed inside the database and compared.
+   */
+  async #deletionStatus(req: http.IncomingMessage): Promise<JsonResponse> {
+    const body = asRecord(parseJson(await readBody(req)));
+    const requestId = asString(body['request_id']);
+    if (!requestId) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'request_id_required', message: 'request_id is required' } },
+      };
+    }
+    // ⛔ The tenant context is a placeholder: the receipt function
+    //   reads the evidence (which has no forced RLS) and restores the
+    //   context before it returns.
+    const receipt = await UnitOfWork.run(this.#pool, 'wasl_platform', (uow) =>
+      readDeletionReceipt(uow, requestId),
+    );
+    this.#logger.info('deletion_receipt', {
+      request_id: requestId.slice(0, 12),
+      status: receipt.status,
+      code: 'deletion_receipt',
+    });
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        request_id: receipt.requestId,
+        status: receipt.status,
+        evidence_id: receipt.evidenceId,
+        scope: receipt.scope,
+        occurred_at: receipt.occurredAt,
+        content_hash: receipt.contentHash,
+        verified: receipt.verified,
+      },
+    };
+  }
+
+  /**
+   * ⭐⭐ D-069 / M68: the receipt of a deletion request, without a
+   * session. ⭐ It NEVER deletes anything: it only reports what
+   *   happened to the request.
+   */
+  async #deletionReceiptOnly(req: http.IncomingMessage): Promise<JsonResponse> {
+    const body = asRecord(parseJson(await readBody(req)));
+    const requestId = asString(body['request_id']);
+    if (!requestId) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'request_id_required', message: 'request_id is required' } },
+      };
+    }
+    const receipt = await UnitOfWork.run(this.#pool, 'wasl_platform', (uow) =>
+      readDeletionReceipt(uow, requestId),
+    );
+    this.#logger.info('deletion_receipt', {
+      request_id: requestId.slice(0, 12),
+      status: receipt.status,
+      code: 'deletion_receipt',
+    });
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        request_id: receipt.requestId,
+        status: receipt.status,
+        evidence_id: receipt.evidenceId,
+        scope: receipt.scope,
+        occurred_at: receipt.occurredAt,
+        content_hash: receipt.contentHash,
+        verified: receipt.verified,
+        already_executed: receipt.status === 'executed',
+      },
+    };
   }
 
   async #listConversations(context: RequestContext): Promise<JsonResponse> {
@@ -1240,6 +1352,9 @@ export class WaslApiServer {
         removed: result.removed,
         scope: result.scope,
         evidence_id: result.evidenceId,
+        // ⭐ D-069 / M68: the request was already executed: nothing was
+        //   deleted again, the confirmed outcome is repeated.
+        already_executed: result.alreadyExecuted,
       },
     };
   }

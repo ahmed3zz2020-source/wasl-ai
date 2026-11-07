@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig, type ServerConfig } from '../../server/config.ts';
 import { createPool, type PgPool } from '../../server/db/pool.ts';
+import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { runMigrations, seedDatabase } from '../../server/db/setup.ts';
 import { WaslApiServer } from '../../server/api/server.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
@@ -97,7 +98,6 @@ export async function startHarness(): Promise<Harness> {
 
 /** ⭐ Wipe the synthetic rows of the three seeded tenants and re-seed them. */
 export async function resetSyntheticData(ownerPool: PgPool, passcode: string): Promise<void> {
-  const { UnitOfWork } = await import('../../server/db/unit-of-work.ts');
   for (const tenantId of ['tnt_alpha', 'tnt_beta', 'tnt_gamma']) {
     await UnitOfWork.run(ownerPool, tenantId, async (uow) => {
       await uow.query(`delete from messages where tenant_id = $1`, [tenantId]);
@@ -111,6 +111,73 @@ export async function resetSyntheticData(ownerPool: PgPool, passcode: string): P
     });
   }
   await seedDatabase(ownerPool, passcode);
+}
+
+export interface SyntheticTenant {
+  readonly tenantId: string;
+  readonly userId: string;
+  readonly customerId: string;
+}
+
+/**
+ * ⭐ Create a synthetic company with an owner and a customer.
+ * ⛔ The passcode is the fixture one: nothing real is ever written.
+ */
+export async function createSyntheticTenant(
+  ownerPool: PgPool,
+  tenantId: string,
+  passcode: string,
+): Promise<SyntheticTenant> {
+  const userId = `usr_${tenantId}_owner`;
+  const customerId = `cus_${tenantId}_1`;
+  const { hashPasscode } = await import('../../server/auth/sessions.ts');
+  await UnitOfWork.run(ownerPool, tenantId, async (uow) => {
+    await uow.query(
+      `insert into tenants (id, name, status) values ($1,$2,'active')
+       on conflict (id) do update set name = excluded.name, status = 'active'`,
+      [tenantId, `Synthetic ${tenantId}`],
+    );
+    await uow.query(
+      `insert into users (id, display_name, email, status, passcode_hash) values ($1,$2,$3,'active',$4)
+       on conflict (id) do update set passcode_hash = excluded.passcode_hash, status = 'active'`,
+      [userId, `Owner ${tenantId}`, `${userId}@example.invalid`, hashPasscode(passcode)],
+    );
+    await uow.query(
+      `insert into memberships (id, tenant_id, user_id, role, status) values ($1,$2,$3,'owner','active')
+       on conflict (tenant_id, user_id) do update set role = excluded.role, status = 'active'`,
+      [`mem_${userId}`, tenantId, userId],
+    );
+    await uow.query(
+      `insert into customers (id, tenant_id, display_name, data_class) values ($1,$2,$3,'standard')
+       on conflict (id) do update set display_name = excluded.display_name`,
+      [customerId, tenantId, `Customer ${tenantId}`],
+    );
+  });
+  return { tenantId, userId, customerId };
+}
+
+/**
+ * ⭐⭐ D-069 / M68: purge the synthetic evidence of a tenant.
+ * ⭐ The evidence is IMMUTABLE (the guard refuses every UPDATE and
+ *   every DELETE, even for the owner role), so the cleanup of the
+ *   synthetic rows has to disable the guard ON PURPOSE. ⛔ This is
+ *   the only path that may remove an evidence, and it is a test tool:
+ *   the request path can never reach it.
+ */
+export async function purgeEvidence(
+  ownerPool: PgPool,
+  tenantId: string,
+): Promise<void> {
+  await ownerPool.query(
+    `alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable`,
+  );
+  try {
+    await ownerPool.query(`delete from tenant_deletion_evidence where tenant_id = $1`, [tenantId]);
+  } finally {
+    await ownerPool.query(
+      `alter table tenant_deletion_evidence enable trigger tenant_deletion_evidence_immutable`,
+    );
+  }
 }
 
 export async function loginAs(

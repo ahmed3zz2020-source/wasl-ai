@@ -35,17 +35,12 @@ async function main(): Promise<void> {
     testPasscode: config.testPasscode,
   });
 
-  const ownerUrl = `postgresql://wasl_owner:${encodeURIComponent(ownerPassword)}@127.0.0.1:${
-    process.env['WASL_PG_PORT'] ?? '5432'
-  }/${config.databaseName}`;
-  const ownerPool = createPool(ownerUrl, 2);
-  try {
-    steps.push(...(await runMigrations(ownerPool)));
-    steps.push(...(await seedDatabase(ownerPool, config.testPasscode)));
-  } finally {
-    await ownerPool.end();
-  }
-
+  // ⭐⭐ D-069 (the M-71 lesson): the credentials file is written
+  //   RIGHT AFTER the roles are prepared, not at the end of the command.
+  //   ⛔ A migration that fails used to leave the database with a new
+  //     password and the file with the old one: every later command
+  //     failed with "password authentication failed" and the
+  //     environment was broken until the file was written by hand.
   const localDir = path.join(ROOT, '.local');
   fs.mkdirSync(localDir, { recursive: true });
   fs.writeFileSync(
@@ -63,6 +58,17 @@ async function main(): Promise<void> {
     )}\n`,
     { mode: 0o600 },
   );
+
+  const ownerUrl = `postgresql://wasl_owner:${encodeURIComponent(ownerPassword)}@127.0.0.1:${
+    process.env['WASL_PG_PORT'] ?? '5432'
+  }/${config.databaseName}`;
+  const ownerPool = createPool(ownerUrl, 2);
+  try {
+    steps.push(...(await runMigrations(ownerPool)));
+    steps.push(...(await seedDatabase(ownerPool, config.testPasscode)));
+  } finally {
+    await ownerPool.end();
+  }
 
   for (const step of steps) process.stdout.write(`- ${step}\n`);
   process.stdout.write(`\ncredentials written to .local/pg-credentials.json (git ignored)\n`);
