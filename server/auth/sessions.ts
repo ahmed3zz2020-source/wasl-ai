@@ -15,13 +15,16 @@
 import crypto from 'node:crypto';
 import type { PgPool } from '../db/pool.ts';
 import { UnitOfWork } from '../db/unit-of-work.ts';
-import { hashPasscode, verifyPasscode } from './password.ts';
+import { hashPasscode, verifyPasscode, verifyPasscodeAsync } from './password.ts';
 
 // ⭐ The key derivation lives in `server/auth/password.ts` (scrypt).
 // ⛔ It is re-exported here for the callers that already import the
 //   session helpers, but the identity of the algorithm belongs to the
 //   password module, not to the session module.
-export { hashPasscode, verifyPasscode };
+// ⭐⭐ D-069 / M67: the ASYNCHRONOUS derivation is the one the
+//   request path uses: it runs on the thread pool, so the event loop
+//   keeps serving the other requests while the key is derived.
+export { hashPasscode, verifyPasscode, verifyPasscodeAsync };
 
 const TENANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{2,63}$/;
 /** ⭐ The membership statuses the server understands. */
@@ -122,7 +125,9 @@ export async function login(
     if (!row) {
       throw new SessionError('credentials_invalid', 401, 'unknown user for this tenant');
     }
-    if (!verifyPasscode(row.passcode_hash, input.passcode)) {
+    // ⭐⭐ D-069 / M67: the derivation is asynchronous, so a burst
+    //   of login attempts never blocks the event loop of the server.
+    if (!(await verifyPasscodeAsync(row.passcode_hash, input.passcode))) {
       throw new SessionError('credentials_invalid', 401, 'passcode does not match');
     }
     if (row.status !== 'active') {
@@ -187,13 +192,20 @@ export async function resolveSession(
       tenant_id: string;
       user_id: string;
       membership_id: string;
-      role: string;
+      session_role: string;
+      live_role: string;
       expires_at: string;
       revoked_at: string | null;
       user_status: string;
       membership_status: string;
     }>(
-      `select s.id, s.tenant_id, s.user_id, s.membership_id, s.role, s.expires_at, s.revoked_at,
+      // ⭐⭐ D-069 / M67: the role of the session row is a SNAPSHOT
+      //   taken at the login. The authority is the LIVE membership row, so
+      //   a role that is changed (promoted or demoted) takes effect on the
+      //   next request instead of waiting for the session to expire.
+      `select s.id, s.tenant_id, s.user_id, s.membership_id,
+              s.role as session_role, m.role as live_role,
+              s.expires_at, s.revoked_at,
               u.status as user_status, m.status as membership_status
          from sessions s
          join users u on u.id = s.user_id
@@ -228,7 +240,8 @@ export async function resolveSession(
       tenantId: row.tenant_id,
       userId: row.user_id,
       membershipId: row.membership_id,
-      role: row.role,
+      // ⭐ The live role of the membership (not the snapshot).
+      role: row.live_role,
       actorId: row.user_id,
       expiresAt: row.expires_at,
     };

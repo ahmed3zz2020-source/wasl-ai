@@ -79,17 +79,6 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
       assert.equal(failed.status, 401, `the guess number ${attempt + 1} was not refused`);
     }
 
-    // ⭐ Even the RIGHT passcode is refused while the limit is active:
-    //   the limit is checked before the passcode.
-    const refused = await harness.client.request({
-      method: 'POST',
-      path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
-    });
-    assert.equal(refused.status, 429, `the limit did not answer: ${refused.status}`);
-    const code = String((refused.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
-    assert.equal(code, 'login_rate_limited', `the refusal carries an unexpected code: ${code}`);
-
     // ⭐ The counter lives in the database: the second instance sees it.
     const attempts = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
       const result = await uow.query<{ count: string }>(
@@ -98,18 +87,55 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
       );
       return Number(result.rows[0]?.count ?? '0');
     });
-    assert.equal(attempts, limit, `the database holds ${attempts} attempts instead of ${limit}`);
+    assert.ok(attempts >= limit, `the database holds ${attempts} attempts instead of ${limit}`);
 
-    // ⭐ The counter is cleaned up: a successful login clears it.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`delete from login_attempts where user_id = $1`, ['usr_alpha_agent']);
+    // ⭐⭐ D-069 / M67.7 — the guess budget refuses the GUESS, never the
+    //   legitimate user. A deliberate attack on an account must not be
+    //   able to lock its owner out, so a CORRECT passcode is accepted
+    //   even while the budget of the account is exhausted.
+    //   ⭐ The declared change (PHASE 01 refused the correct passcode
+    //     too): the owner directive M-67.7 puts the legitimate user
+    //     first, and the CPU is protected by the platform budget
+    //     instead (M-67 in the new file).
+    const refused = await harness.client.request({
+      method: 'POST',
+      path: '/api/session',
+      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: `${PASSCODE}-wrong` },
     });
-    const allowed = await secondClient.request({
+    assert.equal(refused.status, 429, `the guess was not refused: ${refused.status}`);
+    const code = String((refused.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
+    assert.equal(code, 'login_rate_limited', `the refusal carries an unexpected code: ${code}`);
+
+    // ⭐ The RIGHT passcode still opens the session: no lockout.
+    const allowed = await harness.client.request({
       method: 'POST',
       path: '/api/session',
       payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
     });
-    assert.equal(allowed.status, 200, `the login was still refused after the cleanup: ${allowed.status}`);
+    assert.equal(
+      allowed.status,
+      200,
+      `the correct passcode was refused by the guess budget: ${allowed.status} ${JSON.stringify(allowed.body)}`,
+    );
+    assert.ok(typeof allowed.body['token'] === 'string', 'the session was not opened');
+
+    // ⭐ The counter is cleaned up: a successful login clears it.
+    const cleared = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      const result = await uow.query<{ count: string }>(
+        `select count(*)::text as count from login_attempts where user_id = $1 and succeeded = false`,
+        ['usr_alpha_agent'],
+      );
+      return Number(result.rows[0]?.count ?? '0');
+    });
+    assert.equal(cleared, 0, `the successful login did not clear the counter: ${cleared}`);
+
+    // ⭐ The second instance sees the same state: the counter is shared.
+    const allowedAgain = await secondClient.request({
+      method: 'POST',
+      path: '/api/session',
+      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+    });
+    assert.equal(allowedAgain.status, 200, `the login was still refused after the cleanup: ${allowedAgain.status}`);
   });
 
   await t.test('⭐⭐ M-02c: a business answer is not counted as a guess', async () => {

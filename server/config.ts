@@ -179,6 +179,20 @@ export function loadConfig(
   const maxAccountAttempts = Number(
     env['WASL_LOGIN_MAX_ATTEMPTS'] ?? String(defaults.rateLimit.maxAccountAttempts),
   );
+  // ⭐ D-069 / M67: the platform wide budget and the peer budget.
+  const maxGlobalAttempts = Number(
+    env['WASL_LOGIN_MAX_GLOBAL_ATTEMPTS'] ?? String(defaults.rateLimit.maxGlobalAttempts),
+  );
+  const maxPeerAttempts = Number(
+    env['WASL_LOGIN_MAX_PEER_ATTEMPTS'] ?? String(defaults.rateLimit.maxPeerAttempts),
+  );
+  const trustPeerAddressRaw = env['WASL_LOGIN_TRUST_PEER_ADDRESS'] ?? '0';
+  if (trustPeerAddressRaw !== '0' && trustPeerAddressRaw !== '1') {
+    throw new ConfigError(
+      'login_limit_invalid',
+      'WASL_LOGIN_TRUST_PEER_ADDRESS must be 0 or 1',
+    );
+  }
   const maxTenantAttempts = Number(
     env['WASL_LOGIN_MAX_TENANT_ATTEMPTS'] ?? String(defaults.rateLimit.maxTenantAttempts),
   );
@@ -197,6 +211,18 @@ export function loadConfig(
   if (!Number.isInteger(rateWindow) || rateWindow < 1) {
     throw new ConfigError('login_limit_invalid', 'WASL_LOGIN_WINDOW_SECONDS must be a positive integer');
   }
+  if (!Number.isInteger(maxGlobalAttempts) || maxGlobalAttempts < 1) {
+    throw new ConfigError(
+      'login_limit_invalid',
+      'WASL_LOGIN_MAX_GLOBAL_ATTEMPTS must be a positive integer',
+    );
+  }
+  if (!Number.isInteger(maxPeerAttempts) || maxPeerAttempts < 0) {
+    throw new ConfigError(
+      'login_limit_invalid',
+      'WASL_LOGIN_MAX_PEER_ATTEMPTS must be zero or a positive integer',
+    );
+  }
   // ⭐ The log level may be lowered by the environment (the profile
   //   default stays the starting point).
   const logLevelName = (env['WASL_LOG_LEVEL'] ?? defaults.logLevel) as LogLevel;
@@ -214,7 +240,10 @@ export function loadConfig(
     rateLimit: {
       maxAccountAttempts,
       maxTenantAttempts,
+      maxGlobalAttempts,
+      maxPeerAttempts,
       windowSeconds: rateWindow,
+      trustPeerAddress: trustPeerAddressRaw === '1',
     },
     logLevel: logLevelName,
     testPasscode: requireString(

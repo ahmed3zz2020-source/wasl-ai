@@ -18,6 +18,11 @@ export interface RequestOptions {
   readonly path: string;
   readonly token?: string | null;
   readonly payload?: unknown;
+  /**
+   * ⭐ D-069 / M67: extra headers (the tests need to send a
+   *   spoofed X-Forwarded-For and prove that it changes nothing).
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1']);
@@ -47,6 +52,7 @@ export class LocalApiClient {
             ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
             ...(payload ? { 'content-type': 'application/json' } : {}),
             ...(payload ? { 'content-length': Buffer.byteLength(payload) } : {}),
+            ...(options.headers ?? {}),
           },
         },
         (response) => {

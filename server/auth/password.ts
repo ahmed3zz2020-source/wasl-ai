@@ -114,3 +114,98 @@ export function isCurrentPasswordHash(stored: string): boolean {
     parts[3] === String(SCRYPT_PARALLELISM)
   );
 }
+
+// ============================================================
+// FOUNDATION BUILD 02 / PHASE 02 (D-069) — M67
+// ⭐⭐⭐ The asynchronous key derivation
+// ------------------------------------------------------------
+// ⭐ WHY
+//   `scryptSync` blocks the event loop for the whole derivation (~50 ms
+//   at the configured cost). A burst of login attempts therefore
+//   stopped the WHOLE server: the health check, the ready probe and
+//   every other request waited behind the derivations of the
+//   attacker. The key derivation is the most expensive thing the
+//   process does, so it must not run on the event loop.
+// ⭐ HOW
+//   `crypto.scrypt` (the asynchronous form) runs the derivation on the
+//   libuv thread pool: the event loop keeps serving the other
+//   requests while the key is derived.
+// ⛔ The parameters and the stored format are EXACTLY the same as the
+//   synchronous ones: a hash written by one function is verified by
+//   the other, so the existing synthetic passcodes keep working and
+//   the security level does not change.
+// ⛔ The derivation is still CPU bound: the thread pool is the
+//   bottleneck, not the event loop. That is why the platform wide
+//   login budget exists (server/auth/rate-limit.ts).
+// ============================================================
+
+/** ⭐ Derive the key without blocking the event loop. */
+function scryptAsync(
+  passcode: string,
+  salt: Buffer,
+  keyLength: number,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(passcode, salt, keyLength, PASSWORD_HASH_PARAMETERS, (error, derived) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(derived);
+    });
+  });
+}
+
+/** ⭐⭐ Derive a new salted hash (the salt is random for every call). */
+export async function hashPasscodeAsync(passcode: string): Promise<string> {
+  if (typeof passcode !== 'string' || passcode.length === 0) {
+    throw new Error('passcode_invalid');
+  }
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  const derived = await scryptAsync(passcode, salt, KEY_LENGTH);
+  return [
+    PASSWORD_ALGORITHM,
+    String(SCRYPT_COST),
+    String(SCRYPT_BLOCK_SIZE),
+    String(SCRYPT_PARALLELISM),
+    salt.toString('base64'),
+    derived.toString('base64'),
+  ].join('$');
+}
+
+/** ⭐⭐ Verify a passcode without blocking the event loop (constant time). */
+export async function verifyPasscodeAsync(stored: string, passcode: string): Promise<boolean> {
+  if (typeof stored !== 'string' || typeof passcode !== 'string') return false;
+  const parts = stored.split('$');
+  if (parts.length !== 6) return false;
+  const [algorithm, n, r, p, saltPart, keyPart] = parts as [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  if (algorithm !== PASSWORD_ALGORITHM) return false;
+  // ⛔ Only the configured cost is accepted (no parameter injection).
+  if (n !== String(SCRYPT_COST)) return false;
+  if (r !== String(SCRYPT_BLOCK_SIZE)) return false;
+  if (p !== String(SCRYPT_PARALLELISM)) return false;
+  let salt: Buffer;
+  let expected: Buffer;
+  try {
+    salt = Buffer.from(saltPart, 'base64');
+    expected = Buffer.from(keyPart, 'base64');
+  } catch {
+    return false;
+  }
+  if (salt.length !== SALT_LENGTH) return false;
+  if (expected.length !== KEY_LENGTH) return false;
+  let derived: Buffer;
+  try {
+    derived = await scryptAsync(passcode, salt, KEY_LENGTH);
+  } catch {
+    return false;
+  }
+  return crypto.timingSafeEqual(derived, expected);
+}

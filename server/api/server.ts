@@ -183,6 +183,20 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+/**
+ * ⭐⭐ D-069 / M67: the peer address of the SOCKET.
+ * ⛔ X-Forwarded-For (and every other client sent header) is NEVER
+ *   read: the client chooses its value, so trusting it would move the
+ *   limit to the attacker. The only address this server sees is the
+ *   one of the TCP peer.
+ */
+function peerAddressOf(req: http.IncomingMessage): string | null {
+  const address = req.socket.remoteAddress;
+  if (typeof address !== 'string' || address === '') return null;
+  // The IPv4 mapped IPv6 form of the loopback is normalized.
+  return address.startsWith('::ffff:') ? address.slice(7) : address;
+}
+
 /** ⭐ The request id: the caller's one when it is safe, a new one otherwise. */
 function requestIdOf(req: http.IncomingMessage): string {
   const header = req.headers['x-request-id'];
@@ -597,7 +611,10 @@ export class WaslApiServer {
       rate_limit: {
         max_account_attempts: this.#config.rateLimit.maxAccountAttempts,
         max_tenant_attempts: this.#config.rateLimit.maxTenantAttempts,
+        max_global_attempts: this.#config.rateLimit.maxGlobalAttempts,
+        max_peer_attempts: this.#config.rateLimit.maxPeerAttempts,
         window_seconds: this.#config.rateLimit.windowSeconds,
+        trust_peer_address: this.#config.rateLimit.trustPeerAddress,
       },
     };
     return { status: dbOk ? 200 : 503, body };
@@ -614,22 +631,31 @@ export class WaslApiServer {
         body: { ok: false, error: { code: 'login_input_invalid', message: 'tenant_id, user_id and passcode are required' } },
       };
     }
-    // ⭐⭐ The rate limit is checked BEFORE the passcode is verified, so
-    //   a guessing attempt costs one database round trip and not one
-    //   key derivation per guess. The counter lives in PostgreSQL, so
-    //   the limit is the same for every backend instance.
-    const limit = await readRateLimitState(this.#pool, tenantId, userId, this.#config.rateLimit);
-    if (limit.limited) {
-      this.#logger.warn('login_rate_limited', {
+    // ⭐⭐ D-069 / M67 — the peer address comes from the socket.
+    const peerAddress = peerAddressOf(req);
+    // ⭐ The counters live in PostgreSQL, so the limit is the same for
+    //   every backend instance.
+    const limit = await readRateLimitState(
+      this.#pool,
+      tenantId,
+      userId,
+      this.#config.rateLimit,
+      peerAddress,
+    );
+    // ⭐⭐ The PLATFORM budget is the hard ceiling: it is checked
+    //   BEFORE the key derivation, so a flood of guesses cannot eat the
+    //   CPU of the installation (the health check keeps answering).
+    if (limit.platformLimited) {
+      this.#logger.warn('login_platform_limited', {
         tenant_id: tenantId,
         user_id: userId,
-        code: 'login_rate_limited',
+        code: 'login_platform_limited',
       });
       return {
         status: 429,
         body: {
           ok: false,
-          error: { code: 'login_rate_limited', message: 'too many failed login attempts' },
+          error: { code: 'login_platform_limited', message: 'the login budget of the installation is exhausted' },
         },
       };
     }
@@ -660,12 +686,26 @@ export class WaslApiServer {
       // ⭐ Only a credential failure counts as a guess: a malformed
       //   request or a disabled account is an answer, not an attempt.
       if (error instanceof SessionError && error.code === 'credentials_invalid') {
-        await recordLoginFailure(this.#pool, tenantId, userId);
+        await recordLoginFailure(this.#pool, tenantId, userId, peerAddress);
         this.#logger.warn('login_failed', {
           tenant_id: tenantId,
           user_id: userId,
           code: 'credentials_invalid',
         });
+        // ⭐⭐ D-069 / M67.7: the guess budget of the account (or of
+        //   the company) refuses the GUESS, never the legitimate user.
+        //   ⭐ The passcode was verified above: a CORRECT credential is
+        //   always accepted, so a deliberate attack on an account can
+        //   not lock its owner out. Only the guess itself is refused.
+        if (limit.limited) {
+          return {
+            status: 429,
+            body: {
+              ok: false,
+              error: { code: 'login_rate_limited', message: 'too many failed login attempts' },
+            },
+          };
+        }
       }
       throw error;
     }
