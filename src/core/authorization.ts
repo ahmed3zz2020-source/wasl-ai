@@ -15,7 +15,19 @@
 //   ⇒ **`resolveProductionTenantContext` يرفضها بنيوياً.**
 // ============================================================
 
-import { assertCapability, ROLE_CAPABILITIES, TRUSTED_ROLES, type TrustedRole } from './capability.ts';
+import {
+  assertCapability,
+  CONVERSATION_CREATE_CAPABILITY,
+  CONVERSATION_WRITE_CAPABILITY,
+  CUSTOMER_MANAGE_CAPABILITY,
+  PRIVACY_DELETE_CAPABILITY,
+  PRIVACY_EXPORT_CAPABILITY,
+  RETENTION_READ_CAPABILITY,
+  ROLE_CAPABILITIES,
+  SESSION_MANAGE_CAPABILITY,
+  TRUSTED_ROLES,
+  type TrustedRole,
+} from './capability.ts';
 import { CONVERSATION_REF_PATTERN, type TenantContext, type VerifiedIdentity } from './tenant.ts';
 import { registerSessionSource, resolveTenantContext, type SessionSource } from './session.ts';
 import {
@@ -46,6 +58,13 @@ export const LOCAL_AUTHORIZATION_OPERATIONS: Readonly<Record<string, string>> = 
   'conversation.changes': CONVERSATION_STATE_READ_CAPABILITY,
   'conversation.queue.read': CONVERSATION_QUEUE_CAPABILITY,
   'conversation.metrics.read': CONVERSATION_METRICS_CAPABILITY,
+  'conversation.create': CONVERSATION_CREATE_CAPABILITY,
+  'conversation.write': CONVERSATION_WRITE_CAPABILITY,
+  'customer.create': CUSTOMER_MANAGE_CAPABILITY,
+  'privacy.export': PRIVACY_EXPORT_CAPABILITY,
+  'privacy.delete': PRIVACY_DELETE_CAPABILITY,
+  'retention.read': RETENTION_READ_CAPABILITY,
+  'session.revoke': SESSION_MANAGE_CAPABILITY,
 });
 
 /** ⭐⭐ اسم عملية التفويض المعلنة. */
