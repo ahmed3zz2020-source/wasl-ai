@@ -1,5 +1,5 @@
 # ============================================================
-# WASL AI — the matrix of the tests (PHASE 01 of BUILD 03)
+# WASL AI — the matrix of the tests (PHASE 02 of BUILD 03)
 # ------------------------------------------------------------
 # ⭐ WHAT THIS DOCUMENT IS
 #   The evidence of a phase is not one number: it is four groups of
@@ -15,9 +15,9 @@
 
 | Group | Command | Files | What it proves | What it does NOT prove |
 |:-:|---|:-:|---|---|
-| ⭐ **unit** | `npm run test:unit` | 21 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
-| ⭐ **integration** | `npm run test:integration` | 12 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image | nothing about a load that a machine of the production size would see |
-| ⭐ **security** | `npm run test:security` | 7 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)** | nothing about a penetration test of a third party |
+| ⭐ **unit** | `npm run test:unit` | 20 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
+| ⭐ **integration** | `npm run test:integration` | 15 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image, **the customer CRM on the real backend (D-071)**, **the refresh and the lost answer on two instances (D-071)** | nothing about a load that a machine of the production size would see |
+| ⭐ **security** | `npm run test:security` | 9 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)**, **the scope of the access of an agent (M-76)** | nothing about a penetration test of a third party |
 | ⭐ **recovery** | `npm run test:recovery` | 3 | the backup really restores, encrypted, verified and measured, **and never writes a clear text dump on the disk (M-72)** | nothing about a restore on the hardware of the production |
 | ⭐ **e2e** | `npm run e2e` | 1 | the journey of a customer service works from the login to the conversation and the privacy | nothing about a channel other than the local web one |
 | ⭐ **all** | `npm run test:all` | — | every group above plus the journey | — |
@@ -30,11 +30,26 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-> ⭐⭐ **PHASE 01 (BUILD 03)**: the partition is checked by a script and
-> the three new files were added to the groups they belong to ⇒ now:
-> **559 + 108 + 91 + 16 = 774** = the number of `npm test` exactly
-> (107 of the 108 in `integration` pass and **1 is SKIPPED**: the
+> ⭐⭐ **PHASE 02 (BUILD 03)**: the partition is checked by a script and
+> the new files were added to the groups they belong to ⇒ now:
+> **559 + 137 + 100 + 16 = 812** = the number of `npm test` exactly
+> (136 of the 137 in `integration` pass and **1 is SKIPPED**: the
 > dynamic Docker drill, see §6).
+>
+> ⭐⭐⭐ **The partition is a partition AND the files are isolated (D-071).**
+> The files run in parallel over ONE database ⇒ a file that uses the
+> shared seeded company (`tnt_alpha`) depends on the moment another
+> file wipes it (five files call `resetSyntheticData`) ⇒ **the first
+> run of PHASE 02 showed 11 failures that were NOT defects of the
+> product** (a wiped fixture, a rate-limit budget consumed by another
+> file, a passcode missing in the middle of a re-seed).
+> ⇒ **The new files of this phase own their companies** (`tnt_d071_scope`
+> · `tnt_d071_crm` · `tnt_d071_sync` · `tnt_b03_ui2`) through the new
+> helper `createSyntheticCompany()` ⇒ **a drill that counts measures
+> its own rows and nothing else.**
+> ⇒ **The residual risk between the OLD files stays and is declared:**
+> they still share `tnt_alpha` ⇒ **one company per file is a structural
+> decision that belongs to the owner.**
 
 ## 2. The environment of the measurement
 
@@ -198,6 +213,25 @@ npm run db:restore -- <artifact file> --target <scratch database>
 > / 715 passed / 2 skipped. ⭐ The number **724** appears only with the
 > privileged connection ⇒ ⭐ **the comparison of the phases is only
 > valid with it.**
+
+### The measured results of PHASE 02 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline of the phase, before the first change | **774** · 773 pass · 0 fail · 1 skipped | `/tmp/baseline-full.log` |
+| ⭐ 1 | the first full run (after the new files) | **787** · 775 pass · **11 fail** · 1 skipped ⇒ **the interference of the files, analysed and fixed** | `/tmp/p2-full-first.log` |
+| ⭐ 2 | `npm test` (after the isolation of the new files) | **812** · **811 pass** · **0 fail** · **1 skipped** | `/tmp/p2-full3.log` |
+| ⭐ 3 | `npm run test:unit` | **559/559** | `/tmp/p2-unit.log` |
+| ⭐ 4 | `npm run test:integration` | **136/137** · 1 skipped (the Docker drill) | `/tmp/p2-integration.log` |
+| ⭐ 5 | `npm run test:security` | **100/100** | `/tmp/p2-security.log` |
+| ⭐ 6 | `npm run test:recovery` | **16/16** | `/tmp/p2-recovery.log` |
+| ⭐ 7 | `npm run test:server` | **174/174** | `/tmp/p2-server.log` |
+| ⭐ 8 | `npm run e2e` | **JOURNEY OK** (15/15) | `/tmp/p2-e2e.log` |
+
+> ⭐⭐ **The run #1 is kept in the record on purpose**: 11 failures that
+> came from the SHARED fixtures and not from the product are part of
+> the evidence of this phase ⇒ ⭐ **the fix is measured, not claimed**
+> (run #2: 0 failures, the same code of the product).
 
 > ⭐ Every number above was measured in the same session and comes from
 > the log of the run that produced it. The full report is
