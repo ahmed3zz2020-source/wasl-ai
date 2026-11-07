@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ملفات العملاء — WASL</title>
+    <link rel="stylesheet" href="/ui/crm.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">و</span>
+        <div>
+          <h1>ملفات العملاء</h1>
+          <p class="tagline">سجل العملاء ومحادثاتهم · بيانات تجريبية محلية فقط</p>
+        </div>
+      </div>
+
+      <div class="session" id="session-area">
+        <div class="login-row" id="login-row">
+          <label class="field">
+            <span>الشركة</span>
+            <select id="login-tenant">
+              <option value="tnt_alpha">شركة ألفا</option>
+              <option value="tnt_beta">شركة بيتا</option>
+              <option value="tnt_gamma">شركة جاما</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>الموظف</span>
+            <select id="login-user">
+              <option value="usr_alpha_owner">مالك ألفا</option>
+              <option value="usr_alpha_super">مشرف ألفا</option>
+              <option value="usr_alpha_agent">موظف ألفا</option>
+              <option value="usr_alpha_viewer">قارئ ألفا</option>
+              <option value="usr_beta_owner">مالك بيتا</option>
+              <option value="usr_gamma_owner">مالك جاما</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>كلمة المرور</span>
+            <input id="login-passcode" type="password" value="wasl-local-test" autocomplete="current-password" />
+          </label>
+          <button class="primary" id="btn-login" type="button">دخول</button>
+        </div>
+        <div class="who" id="who" hidden>
+          <span class="pill" id="who-name"></span>
+          <span class="pill muted" id="who-role"></span>
+          <a class="ghost link" href="/ui/inbox.html" id="link-inbox">صندوق الوارد</a>
+          <button class="ghost" id="btn-logout" type="button">خروج</button>
+        </div>
+      </div>
+    </header>
+
+    <p class="notice" id="login-notice" hidden></p>
+
+    <main class="workspace" id="workspace" hidden>
+      <section class="toolbar" aria-label="أدوات البحث والتصفية">
+        <label class="field grow">
+          <span>بحث</span>
+          <input id="filter-query" type="search" placeholder="اسم العميل أو بريده أو رقمه" />
+        </label>
+        <label class="field">
+          <span>ترتيب</span>
+          <select id="filter-sort">
+            <option value="name">الاسم</option>
+            <option value="recent">آخر تفاعل</option>
+            <option value="conversations">عدد المحادثات</option>
+          </select>
+        </label>
+        <button class="ghost" id="btn-refresh" type="button">تحديث</button>
+      </section>
+
+      <div class="panes">
+        <section class="pane list" aria-label="قائمة العملاء">
+          <header class="pane-head">
+            <h2>العملاء</h2>
+            <span class="counter" id="list-counter"></span>
+          </header>
+          <div class="state-box" id="list-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span> جارٍ تحميل العملاء…
+          </div>
+          <div class="state-box error" id="list-error" hidden></div>
+          <div class="state-box" id="list-empty" hidden>
+            <strong>لا يوجد عملاء.</strong>
+            <span>غيّر البحث لترى المزيد.</span>
+          </div>
+          <ul class="customers" id="customer-list"></ul>
+          <nav class="pagination" id="pagination" aria-label="صفحات العملاء" hidden>
+            <button class="ghost" id="btn-prev" type="button">السابق</button>
+            <span class="page-label" id="page-label"></span>
+            <button class="ghost" id="btn-next" type="button">التالي</button>
+          </nav>
+        </section>
+
+        <section class="pane profile" id="profile-pane" aria-label="ملف العميل">
+          <div class="state-box placeholder" id="profile-placeholder">
+            <strong>اختر عميلاً</strong>
+            <span>اختر عميلاً من القائمة لترى ملفه ومحادثاته.</span>
+          </div>
+
+          <div id="profile" hidden>
+            <header class="pane-head profile-head">
+              <button class="ghost back" id="btn-back" type="button" aria-label="رجوع إلى القائمة">رجوع</button>
+              <div class="profile-title">
+                <h2 id="profile-name">—</h2>
+                <span class="muted" id="profile-id"></span>
+              </div>
+            </header>
+
+            <div class="state-box error" id="profile-error" hidden></div>
+
+            <dl class="facts" id="profile-facts"></dl>
+
+            <section class="edit-block" id="edit-block" hidden>
+              <h3>تعديل البيانات</h3>
+              <form id="edit-form">
+                <label class="field">
+                  <span>الاسم</span>
+                  <input id="edit-name" type="text" maxlength="120" />
+                </label>
+                <label class="field">
+                  <span>البريد الإلكتروني</span>
+                  <input id="edit-email" type="email" maxlength="160" />
+                </label>
+                <label class="field">
+                  <span>رقم الهاتف</span>
+                  <input id="edit-phone" type="tel" maxlength="32" />
+                </label>
+                <div class="edit-actions">
+                  <button class="primary" id="btn-save" type="submit">حفظ التعديل</button>
+                  <span class="muted" id="edit-note"></span>
+                </div>
+              </form>
+            </section>
+
+            <section class="conversations-block">
+              <h3>المحادثات</h3>
+              <ul class="conversation-list" id="conversation-list"></ul>
+              <p class="state-box" id="conversations-empty" hidden>لا توجد محادثات لهذا العميل.</p>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+    <footer class="foot">
+      <p>هذا البناء محلي بالكامل: المتصفح يتحدث مع الخادم على 127.0.0.1، ولا يوجد أي إرسال خارجي.</p>
+    </footer>
+
+    <script src="/ui/crm.js"></script>
+  </body>
+</html>

@@ -66,6 +66,12 @@ import {
   type InboxState,
 } from '../inbox/queries.ts';
 import {
+  listCustomers,
+  readCustomer,
+  updateCustomer,
+  type CrmCustomerFilters,
+} from '../crm/queries.ts';
+import {
   exportTenantData,
   executeDeletion,
   previewDeletion,
@@ -99,6 +105,10 @@ const UI_FILES: Readonly<Record<string, { file: string; type: string }>> = Objec
   '/ui/inbox.html': { file: 'inbox.html', type: 'text/html; charset=utf-8' },
   '/ui/inbox.js': { file: 'inbox.js', type: 'text/javascript; charset=utf-8' },
   '/ui/inbox.css': { file: 'inbox.css', type: 'text/css; charset=utf-8' },
+  // ⭐⭐ D-071: the customer CRM (the second page of the work).
+  '/ui/crm.html': { file: 'crm.html', type: 'text/html; charset=utf-8' },
+  '/ui/crm.js': { file: 'crm.js', type: 'text/javascript; charset=utf-8' },
+  '/ui/crm.css': { file: 'crm.css', type: 'text/css; charset=utf-8' },
 });
 
 const UI_DIR = nodePath.join(nodePath.resolve(import.meta.dirname, '..'), 'ui');
@@ -661,6 +671,25 @@ export class WaslApiServer {
         }
         if (method === 'POST' && segments[4] === 'state') {
           return locked(() => this.#updateState(context, ref, req));
+        }
+      }
+    }
+
+    // ⭐⭐ D-071: the customer CRM.
+    // ⭐ The decisions are taken by the core: `conversation.list` and
+    //   `conversation.read` to read, and `customer.manage` (the core
+    //   operation `customer.create`) to edit a customer.
+    if (segments[1] === 'crm' && segments[2] === 'customers') {
+      if (method === 'GET' && segments.length === 3) {
+        return this.#listCrmCustomers(context, url);
+      }
+      if (segments[3]) {
+        const customerId = decodeURIComponent(segments[3]);
+        if (method === 'GET' && segments.length === 4) {
+          return this.#readCrmCustomer(context, customerId);
+        }
+        if (method === 'PATCH' && segments.length === 4) {
+          return locked(() => this.#updateCrmCustomer(context, customerId, req));
         }
       }
     }
@@ -1434,6 +1463,259 @@ export class WaslApiServer {
             : 400;
       return { status, body: { ok: false, error: { code, message: code } } };
     }
+  }
+
+  // ------------------------------------------------------------ the CRM
+  /**
+   * ⭐⭐ D-071: does this employee carry the capability that manages a
+   *   customer? ⭐⭐ The core decides: the operation `customer.create`
+   *   maps to the capability `customer.manage`, and the core grants it
+   *   to the owner and the supervisor only. ⛔ The interface never
+   *   decides this and never invents a capability.
+   */
+  #mayManageCustomers(context: RequestContext): boolean {
+    return this.#authorize(context, 'customer.create', SCOPE_REF).allowed;
+  }
+
+  /**
+   * ⭐⭐ D-071: the list of the customers of a company.
+   * ⭐ The pagination is real (the total comes with the page) ⇒ ⭐ a
+   *   company with more than a hundred customers sees all of them.
+   */
+  async #listCrmCustomers(context: RequestContext, url: URL): Promise<JsonResponse> {
+    const decision = this.#authorize(context, 'conversation.list', SCOPE_REF);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'crm.customers.list',
+        'denied',
+        decision.code,
+        {},
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const query = url.searchParams.get('q');
+    const limit = Number(url.searchParams.get('limit') ?? '25');
+    const offset = Number(url.searchParams.get('offset') ?? '0');
+    const filters: CrmCustomerFilters = {
+      ...(query !== null ? { query } : {}),
+      actorId: context.session.actorId,
+      role: context.session.role,
+      mayManage: this.#mayManageCustomers(context),
+      // ⭐ The order is a closed list: an unknown value falls back to
+      //   the name, and nothing of the client reaches SQL.
+      sort: ['name', 'recent', 'conversations'].includes(url.searchParams.get('sort') ?? '')
+        ? (url.searchParams.get('sort') as string)
+        : 'name',
+      limit: Number.isFinite(limit) ? limit : 25,
+      offset: Number.isFinite(offset) ? offset : 0,
+    };
+    const page = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+      listCustomers(uow, context.session.tenantId, filters),
+    );
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'crm.customers.list',
+      'allowed',
+      null,
+      { count: page.rows.length },
+    );
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        customers: page.rows,
+        total: page.total,
+        limit: filters.limit,
+        offset: filters.offset,
+        may_manage: filters.mayManage,
+      },
+    };
+  }
+
+  /**
+   * ⭐⭐ D-071: the profile of one customer and its conversations.
+   * ⭐ The scope of the role is applied: an agent reaches the
+   *   conversations that are assigned to them, and nothing else.
+   */
+  async #readCrmCustomer(context: RequestContext, customerId: string): Promise<JsonResponse> {
+    const decision = this.#authorize(context, 'conversation.read', SCOPE_REF);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'crm.customer.read',
+        'denied',
+        decision.code,
+        { target: customerId },
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const detail = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+      readCustomer(uow, context.session.tenantId, customerId, {
+        role: context.session.role,
+        actorId: context.session.actorId,
+      }),
+    );
+    if (!detail.customer) {
+      return {
+        status: 404,
+        body: { ok: false, error: { code: 'customer_not_found', message: customerId } },
+      };
+    }
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'crm.customer.read',
+      'allowed',
+      null,
+      { target: customerId },
+    );
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        customer: detail.customer,
+        conversations: detail.conversations,
+        may_manage: this.#mayManageCustomers(context),
+      },
+    };
+  }
+
+  /**
+   * ⭐⭐ D-071: the edit of a customer.
+   * ⭐⭐ The permission is the core's (`customer.manage`): the owner
+   *   and the supervisor. ⛔ No new capability is created.
+   * ⭐⭐ The lock: the client sends the version it read ⇒ ⭐ a second
+   *   employee gets a conflict instead of overwriting silently.
+   * ⭐⭐ The change is audited (the same audit of the other routes).
+   */
+  async #updateCrmCustomer(
+    context: RequestContext,
+    customerId: string,
+    req: http.IncomingMessage,
+  ): Promise<JsonResponse> {
+    const decision = this.#authorize(context, 'customer.create', SCOPE_REF);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'crm.customer.update',
+        'denied',
+        decision.code,
+        { target: customerId },
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const body = asRecord(parseJson(await readBody(req)));
+    const expectedVersion = Number(body['version']);
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'version_required', message: 'the version is required' } },
+      };
+    }
+    const patch: { display_name?: string; email?: string; phone?: string; expected_version: number } = {
+      expected_version: expectedVersion,
+    };
+    const changed: string[] = [];
+    if (body['display_name'] !== undefined) {
+      const displayName = asString(body['display_name']);
+      if (!displayName || displayName.length > 120) {
+        return {
+          status: 400,
+          body: { ok: false, error: { code: 'name_invalid', message: 'the name is not valid' } },
+        };
+      }
+      patch.display_name = displayName;
+      changed.push('display_name');
+    }
+    if (body['email'] !== undefined) {
+      const email = asString(body['email']);
+      if (email !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return {
+          status: 400,
+          body: { ok: false, error: { code: 'email_invalid', message: 'the email is not valid' } },
+        };
+      }
+      patch.email = email ?? '';
+      changed.push('email');
+    }
+    if (body['phone'] !== undefined) {
+      const phone = asString(body['phone']);
+      if (phone !== null && !/^[0-9+()\-\s]{6,32}$/.test(phone)) {
+        return {
+          status: 400,
+          body: { ok: false, error: { code: 'phone_invalid', message: 'the phone is not valid' } },
+        };
+      }
+      patch.phone = phone ?? '';
+      changed.push('phone');
+    }
+    if (changed.length === 0) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'nothing_to_change', message: 'no field to change' } },
+      };
+    }
+
+    const outcome = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+      updateCustomer(uow, context.session.tenantId, customerId, patch),
+    );
+    if (outcome.status === 'not_found') {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'crm.customer.update',
+        'denied',
+        'customer_not_found',
+        { target: customerId },
+      );
+      return {
+        status: 404,
+        body: { ok: false, error: { code: 'customer_not_found', message: customerId } },
+      };
+    }
+    if (outcome.status === 'conflict') {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'crm.customer.update',
+        'denied',
+        'customer_version_conflict',
+        { target: customerId, current_version: outcome.current_version },
+      );
+      return {
+        status: 409,
+        body: {
+          ok: false,
+          error: {
+            code: 'customer_version_conflict',
+            message: 'the customer was changed by another employee',
+            current_version: outcome.current_version,
+          },
+        },
+      };
+    }
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'crm.customer.update',
+      'allowed',
+      null,
+      { target: customerId, fields: changed },
+    );
+    return { status: 200, body: { ok: true, customer: outcome.customer, changed: changed } };
   }
 
   // ------------------------------------------------------------ inbox
