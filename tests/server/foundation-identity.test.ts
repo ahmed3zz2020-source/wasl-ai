@@ -17,6 +17,7 @@ import { WaslApiServer } from '../../server/api/server.ts';
 import { createPool } from '../../server/db/pool.ts';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
+import { hashPasscode, verifyPasscode } from '../../server/auth/sessions.ts';
 import { seedDatabase } from '../../server/db/setup.ts';
 import { startHarness, loginAs, resetSyntheticData } from './harness.ts';
 
@@ -277,5 +278,84 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
       payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_owner', passcode: PASSCODE },
     });
     assert.equal(restored.status, 200, 'the seed did not restore the membership');
+  });
+  // ------------------------------------------------------------
+  // D-067 / R-03: the sessions and the permissions.
+  // ------------------------------------------------------------
+
+  await t.test('⭐ R-03a: a disabled account stops the next request', async () => {
+    const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const before = await harness.client.request({ path: '/api/conversations', token: agent });
+    assert.equal(before.status, 200);
+
+    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await uow.query(`update users set status = 'disabled' where id = $1`, ['usr_alpha_agent']);
+    });
+    try {
+      const after = await harness.client.request({ path: '/api/conversations', token: agent });
+      assert.ok(after.status === 401 || after.status === 403, `the disabled account still works: ${after.status}`);
+    } finally {
+      await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+        await uow.query(`update users set status = 'active' where id = $1`, ['usr_alpha_agent']);
+      });
+    }
+  });
+
+  await t.test('⭐ R-03b: an old session stays dead after a new login', async () => {
+    const first = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const before = await harness.client.request({ path: '/api/conversations', token: first });
+    assert.equal(before.status, 200);
+
+    const revoked = await harness.client.request({ method: 'DELETE', path: '/api/session', token: first });
+    assert.equal(revoked.status, 200);
+
+    const second = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    assert.notEqual(second, first, 'the new login returned the old token');
+
+    const oldToken = await harness.client.request({ path: '/api/conversations', token: first });
+    assert.ok(oldToken.status === 401 || oldToken.status === 403, `the revoked session was accepted again: ${oldToken.status}`);
+    const newToken = await harness.client.request({ path: '/api/conversations', token: second });
+    assert.equal(newToken.status, 200, 'the new session does not work');
+  });
+
+  await t.test('⭐ R-03c: a tampered token is refused', async () => {
+    const token = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const parts = token.split('.');
+    assert.equal(parts.length, 4, 'the token is not the expected shape');
+
+    const forgedSecret = `${parts[0]}.${parts[1]}.${parts[2]}.${'a'.repeat(parts[3]!.length)}`;
+    const forged = await harness.client.request({ path: '/api/conversations', token: forgedSecret });
+    assert.ok(forged.status === 401 || forged.status === 403, `a forged secret was accepted: ${forged.status}`);
+
+    const forgedSession = `${parts[0]}.${parts[1]}.sess_0000000000000000.${parts[3]}`;
+    const unknown = await harness.client.request({ path: '/api/conversations', token: forgedSession });
+    assert.ok(unknown.status === 401 || unknown.status === 403, `an unknown session id was accepted: ${unknown.status}`);
+
+    const noToken = await harness.client.request({ path: '/api/conversations' });
+    assert.ok(noToken.status === 401 || noToken.status === 403, `a request without a token was accepted: ${noToken.status}`);
+  });
+
+  await t.test('⭐ R-03d: the experimental passcode is salted and never stored in clear', async () => {
+    // ⭐ Two users with the same passcode must not share a hash: the
+    //   salt is what makes the stored value useless to an attacker.
+    const first = hashPasscode(PASSCODE, 'salt-one');
+    const second = hashPasscode(PASSCODE, 'salt-two');
+    assert.notEqual(first, second, 'the hash does not depend on the salt');
+    assert.ok(!first.includes(PASSCODE), 'the passcode is stored in clear');
+    assert.ok(verifyPasscode(first, PASSCODE), 'the salted hash does not verify');
+    assert.ok(!verifyPasscode(first, `${PASSCODE}x`), 'a wrong passcode verifies');
+    assert.ok(!verifyPasscode('not-a-hash', PASSCODE), 'a malformed hash verifies');
+
+    // ⭐ The database holds the hash, never the passcode.
+    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      const result = await uow.query<{ passcode_hash: string }>(
+        `select passcode_hash from users where id = $1`,
+        ['usr_alpha_owner'],
+      );
+      return result.rows.map((row) => row.passcode_hash);
+    });
+    assert.equal(rows.length, 1);
+    assert.ok(!rows[0]!.includes(PASSCODE), 'the database stores the passcode in clear');
+    assert.ok(rows[0]!.includes(':'), 'the stored hash is not salted');
   });
 });
