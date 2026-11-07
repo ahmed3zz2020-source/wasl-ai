@@ -136,7 +136,7 @@
 
 ```text
 يا ChatGPT — راجع تقرير FOUNDATION BUILD 01 مراجعة مستقلة نقدية:
-https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/af6daa743785e20284e818ae70e1b2f82e7c4bfb/docs/FOUNDATION-BUILD-01-REPORT.md
+https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/e21eee718477c49b571c4bee043257ad53f34cf5/docs/FOUNDATION-BUILD-01-REPORT.md
 
 ما الذي تمّ (مقيس): تصريح D-066 نُفِّذ · Backend محلي فوق النواة · PostgreSQL مع RLS على 11 جدولاً ·
 جلسات وأدوار من القاعدة · محرك خصوصية · رحلة E2E 15/15 · اختبارات 644/644 · AC-01..AC-15 = 15 ناجح ·
