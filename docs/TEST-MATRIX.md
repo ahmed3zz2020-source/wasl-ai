@@ -30,6 +30,8 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
+<!-- wasl:current-partition 574 + 172 + 112 + 16 = 874 -->
+
 > ⭐⭐ **PHASE 03 (BUILD 03)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
