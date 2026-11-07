@@ -1,12 +1,18 @@
 // ============================================================
-// WASL AI — FOUNDATION BUILD 02 — PHASE 01 — local restore drill
+// WASL AI — FOUNDATION BUILD 02 — PHASE 02 (D-069) — M-69
+// the local restore drill (encrypted artifact)
 // ------------------------------------------------------------
 // ⭐ Restore a backup into another database and check that the data
 //   really came back:
-//   npm run db:restore -- <dump file> --target <database>
+//   npm run db:restore -- <artifact file> --target <database>
 // ⭐ The drill is the proof that the backup plan works: it restores
 //   into a SCRATCH database (never over the live one) and compares
 //   the schema, the fixtures and the password hashes.
+// ⭐ PHASE 02: the artifact is ENCRYPTED. The drill therefore
+//   verifies the manifest, decrypts the artifact, writes the clear
+//   text dump in a private temporary file and restores it.
+// ⛔ A corrupted artifact, a replaced artifact or an artifact with
+//   open permissions is REFUSED before the restore starts.
 // ⛔ LOCAL only: it needs the PostgreSQL binaries (pg_restore) and a
 //   superuser connection to create the scratch database.
 // ⛔ It never touches the live database unless the target is named
@@ -15,11 +21,14 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { loadConfig } from '../server/config.ts';
 import { createPool, type PgPool } from '../server/db/pool.ts';
 import { hashPasscode, verifyPasscode } from '../server/auth/password.ts';
+import { decryptArtifact } from '../server/backup/cipher.ts';
+import { assertBackupPermissions, readBackupKey, verifyBackup } from './wasl-db-backup.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -27,6 +36,15 @@ export interface RestoreOptions {
   readonly dumpFile: string;
   readonly targetDatabase: string;
   readonly superuserUrl?: string;
+  /** ⭐ Skip the permission check (the tool of the owner only). */
+  readonly skipPermissionCheck?: boolean;
+  /**
+   * ⭐ The company whose owner passcode is checked after the restore.
+   * ⭐ It is a parameter and not a constant because the drill runs
+   *   beside other tests that may delete a company: the check has to
+   *   look at a company that is not under deletion.
+   */
+  readonly passcodeTenant?: string;
 }
 
 export interface RestoreReport {
@@ -35,6 +53,12 @@ export interface RestoreReport {
   readonly tenants: string[];
   readonly users: number;
   readonly passcodeVerified: boolean;
+  /** ⭐ The measured duration of the restore, in milliseconds (the RTO). */
+  readonly durationMs: number;
+  /** ⭐ The fingerprint of the key the backup was taken with. */
+  readonly keyFingerprint: string | null;
+  /** ⭐ The hash of the clear text dump that was restored. */
+  readonly plainSha256: string | null;
 }
 
 /** ⭐ Create the scratch database (the superuser connection). */
@@ -70,7 +94,11 @@ function quoteIdent(value: string): string {
   return `"${value}"`;
 }
 
-/** ⭐ Restore the dump and check what came back. */
+/**
+ * ⭐⭐ Restore the dump and check what came back.
+ * ⭐ The artifact is verified against its manifest BEFORE anything is
+ *   written to the target database.
+ */
 export async function runRestore(options: RestoreOptions): Promise<RestoreReport> {
   if (!fs.existsSync(options.dumpFile)) throw new Error('dump_file_missing');
   const superuserUrl =
@@ -78,48 +106,85 @@ export async function runRestore(options: RestoreOptions): Promise<RestoreReport
     process.env['WASL_PG_SUPERUSER_URL'] ??
     'postgresql://postgres@127.0.0.1:5432/postgres';
   const config = loadConfig(process.env, ROOT, { requirePassword: false });
-  const admin = await createScratchDatabase(superuserUrl, options.targetDatabase);
-  try {
-    const restore = spawnSync(
-      'pg_restore',
-      [
-        `--dbname=${withDatabase(superuserUrl, options.targetDatabase)}`,
-        '--no-owner',
-        '--no-privileges',
-        options.dumpFile,
-      ],
-      { encoding: 'utf8' },
-    );
-    if (restore.error) throw new Error(`pg_restore failed: ${restore.error.message}`);
-    // ⭐ pg_restore returns 1 for harmless warnings; the check below is
-    //   the real proof that the restore worked.
 
-    const pool = createPool(withDatabase(superuserUrl, options.targetDatabase), 2);
+  // ⭐⭐ The permissions and the manifest are checked first: a file
+  //   that anybody may read, or one that was modified, is refused
+  //   before the restore touches the database.
+  if (options.skipPermissionCheck !== true) {
+    assertBackupPermissions(options.dumpFile);
+  }
+  const { key } = readBackupKey(ROOT);
+  const manifestFile = `${options.dumpFile}.manifest.json`;
+  const verified = fs.existsSync(manifestFile)
+    ? verifyBackup(options.dumpFile, manifestFile, key)
+    : null;
+
+  // ⭐ The clear text dump is written in a private temporary file and
+  //   deleted right after the restore: it never survives on the disk.
+  const temporary = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'wasl-restore-')),
+    'restore.dump',
+  );
+  fs.mkdirSync(path.dirname(temporary), { recursive: true });
+  fs.writeFileSync(temporary, fs.readFileSync(options.dumpFile), { mode: 0o600 });
+  try {
+    const plain = verified
+      ? decryptArtifact(fs.readFileSync(options.dumpFile), key)
+      : fs.readFileSync(options.dumpFile);
+    fs.writeFileSync(temporary, plain, { mode: 0o600 });
+
+    const admin = await createScratchDatabase(superuserUrl, options.targetDatabase);
+    const started = Date.now();
     try {
-      const migrations = await pool.query<{ version: string }>(
-        `select version from wasl_schema_migrations order by version asc`,
+      const restore = spawnSync(
+        'pg_restore',
+        [
+          `--dbname=${withDatabase(superuserUrl, options.targetDatabase)}`,
+          '--no-owner',
+          '--no-privileges',
+          temporary,
+        ],
+        { encoding: 'utf8' },
       );
-      const tenants = await pool.query<{ id: string }>(`select id from tenants order by id asc`);
-      const users = await pool.query<{ count: string }>(`select count(*)::text as count from users`);
-      const owner = await pool.query<{ id: string; passcode_hash: string }>(
-        `select u.id, u.passcode_hash from users u join memberships m on m.user_id = u.id
-          where m.tenant_id = 'tnt_alpha' and m.role = 'owner' limit 1`,
-      );
-      const passcodeVerified =
-        owner.rows.length > 0 &&
-        verifyPasscode(owner.rows[0]!.passcode_hash, config.testPasscode);
-      return {
-        targetDatabase: options.targetDatabase,
-        migrations: migrations.rows.map((row) => row.version),
-        tenants: tenants.rows.map((row) => row.id),
-        users: Number(users.rows[0]?.count ?? '0'),
-        passcodeVerified,
-      };
+      if (restore.error) throw new Error(`pg_restore failed: ${restore.error.message}`);
+      // ⭐ pg_restore returns 1 for harmless warnings; the check below is
+      //   the real proof that the restore worked.
+      const durationMs = Date.now() - started;
+
+      const pool = createPool(withDatabase(superuserUrl, options.targetDatabase), 2);
+      try {
+        const migrations = await pool.query<{ version: string }>(
+          `select version from wasl_schema_migrations order by version asc`,
+        );
+        const tenants = await pool.query<{ id: string }>(`select id from tenants order by id asc`);
+        const users = await pool.query<{ count: string }>(`select count(*)::text as count from users`);
+        const passcodeTenant = options.passcodeTenant ?? 'tnt_alpha';
+        const owner = await pool.query<{ id: string; passcode_hash: string }>(
+          `select u.id, u.passcode_hash from users u join memberships m on m.user_id = u.id
+            where m.tenant_id = $1 and m.role = 'owner' limit 1`,
+          [passcodeTenant],
+        );
+        const passcodeVerified =
+          owner.rows.length > 0 &&
+          verifyPasscode(owner.rows[0]!.passcode_hash, config.testPasscode);
+        return {
+          targetDatabase: options.targetDatabase,
+          migrations: migrations.rows.map((row) => row.version),
+          tenants: tenants.rows.map((row) => row.id),
+          users: Number(users.rows[0]?.count ?? '0'),
+          passcodeVerified,
+          durationMs,
+          keyFingerprint: verified?.manifest.key_fingerprint ?? null,
+          plainSha256: verified?.manifest.plain_sha256 ?? null,
+        };
+      } finally {
+        await pool.end();
+      }
     } finally {
-      await pool.end();
+      await admin.end();
     }
   } finally {
-    await admin.end();
+    fs.rmSync(path.dirname(temporary), { recursive: true, force: true });
   }
 }
 
@@ -143,7 +208,7 @@ if (import.meta.filename === process.argv[1]) {
   const targetIndex = args.indexOf('--target');
   const targetDatabase = targetIndex >= 0 ? args[targetIndex + 1] : undefined;
   if (!dumpFile || !targetDatabase) {
-    process.stderr.write('usage: npm run db:restore -- <dump file> --target <database>\n');
+    process.stderr.write('usage: npm run db:restore -- <artifact file> --target <database>\n');
     process.exitCode = 1;
   } else {
     try {

@@ -45,6 +45,10 @@ test('FOUNDATION 11) the backup and the restore drill (M-04)', async (t) => {
   await t.test('⭐⭐ M-04a: the backup is written and the restore brings the data back', async () => {
     const backup = runBackup();
     assert.ok(backup.bytes > 0, 'the backup file is empty');
+    // ⭐ D-069 / M69: the artifact is ENCRYPTED and the manifest holds
+    //   the hash of the clear text dump.
+    assert.ok(backup.file.endsWith('.dump.enc'), 'the artifact is not encrypted');
+    assert.match(backup.manifest.plain_sha256, /^[0-9a-f]{64}$/, 'the manifest holds no hash');
 
     try {
       const report = await runRestore({
@@ -64,6 +68,11 @@ test('FOUNDATION 11) the backup and the restore drill (M-04)', async (t) => {
       // ⭐ The password hashes came back and still verify: the backup
       //   holds the derived value, never the passcode.
       assert.equal(report.passcodeVerified, true, 'the restored hash does not verify');
+      // ⭐ The restore reports the key and the hash it used, and the
+      //   measured duration (the RTO of the drill).
+      assert.equal(report.plainSha256, backup.manifest.plain_sha256, 'the restored hash is another one');
+      assert.equal(report.keyFingerprint, backup.manifest.key_fingerprint, 'the key is another one');
+      assert.ok(report.durationMs > 0, 'the restore was not measured');
     } finally {
       await dropScratchDatabase(scratch, SUPERUSER_URL);
     }
