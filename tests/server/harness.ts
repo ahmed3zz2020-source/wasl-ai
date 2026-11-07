@@ -61,7 +61,13 @@ export async function startHarness(): Promise<Harness> {
   //   limit policy is the one of the test profile.
   const config = loadConfig(process.env, ROOT, { profile: 'test' });
   const credentials = readCredentials();
-  const port = Number(process.env['WASL_TEST_PORT'] ?? '8791');
+  // ⭐⭐ D-070: every test file is a process of its own, and the
+  //   runner starts them in parallel. ⭐ Two files that bind the same
+  //   port would fight, so every process takes its own BLOCK of
+  //   ports: the base plus the few the drill opens beside it.
+  const blockSize = 30;
+  const basePort = 8791 + (process.pid % 400) * blockSize;
+  const port = Number(process.env['WASL_TEST_PORT'] ?? String(basePort));
   const testConfig: ServerConfig = { ...config, port, host: '127.0.0.1' };
 
   const ownerPool = createPool(
