@@ -322,6 +322,47 @@ test('FOUNDATION 14) the integrity of the deletion evidence (M-68)', async (t) =
     assert.equal(receipt['evidence_id'], null, 'the receipt invented an evidence');
   });
 
+  await t.test('⭐⭐ M-68h: the answer is lost after the commit', async () => {
+    const fixture = await makeTenant('lost');
+    const token = await loginAs(harness.client, fixture.tenantId, fixture.userId, PASSCODE);
+
+    const preview = await harness.client.request({
+      method: 'POST',
+      path: '/api/privacy/deletion/preview',
+      token,
+      payload: { scope: 'tenant_data' },
+    });
+    const requestId = String(
+      (preview.body['preview'] as Record<string, unknown> | undefined)?.['requestId'] ?? '',
+    );
+    const executed = await harness.client.request({
+      method: 'POST',
+      path: '/api/privacy/deletion/execute',
+      token,
+      payload: { request_id: requestId },
+    });
+    assert.equal(executed.status, 200, 'the deletion failed');
+
+    // ⭐⭐ The client never saw the answer (the connection was lost
+    //   after the COMMIT). It asks for the receipt: the answer is the
+    //   CONFIRMED one, and it is different from the answer of a request
+    //   that was not executed.
+    const receipt = await receiptOf(requestId);
+    assert.equal(receipt['status'], 'executed', 'the receipt does not confirm the deletion');
+    assert.equal(receipt['verified'], true, 'the content hash does not verify');
+    assert.ok(receipt['evidence_id'], 'the receipt holds no evidence id');
+
+    // ⭐ The content is really gone: the deletion happened.
+    const customers = await UnitOfWork.run(harness.ownerPool, fixture.tenantId, async (uow) => {
+      const result = await uow.query<{ count: string }>(
+        `select count(*)::text as count from customers where tenant_id = $1`,
+        [fixture.tenantId],
+      );
+      return Number(result.rows[0]?.count ?? '0');
+    });
+    assert.equal(customers, 0, 'the content was not deleted');
+  });
+
   await t.test('⭐⭐ M-68g: the request id is not guessable', async () => {
     const fixture = await makeTenant('capability');
     const token = await loginAs(harness.client, fixture.tenantId, fixture.userId, PASSCODE);

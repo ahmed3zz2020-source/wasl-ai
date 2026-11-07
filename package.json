@@ -21,7 +21,12 @@
     "db:backup": "node --experimental-strip-types tools/wasl-db-backup.ts",
     "db:restore": "node --experimental-strip-types tools/wasl-db-restore.ts",
     "db:rebuild": "node --experimental-strip-types tools/wasl-db-rebuild.ts",
-    "db:verify": "node --experimental-strip-types tools/wasl-db-verify.ts"
+    "db:verify": "node --experimental-strip-types tools/wasl-db-verify.ts",
+    "test:unit": "node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts tests/slice-02.test.ts tests/contract-freeze.test.ts tests/slice-03.test.ts tests/slice-04.test.ts tests/slice-04-closing.test.ts tests/conversation-atomicity.test.ts tests/slice-05.test.ts tests/first-response.test.ts tests/workbench-snapshot.test.ts tests/slice-07.test.ts tests/core-integrity.test.ts tests/tenant-isolation.test.ts tests/security-hardening.test.ts tests/slice-08.test.ts tests/slice-09-0.test.ts tests/slice-09-0-eviction.test.ts tests/acceptance-journey.test.ts",
+    "test:integration": "node --experimental-strip-types --test tests/server/foundation-isolation.test.ts tests/server/foundation-api.test.ts tests/server/foundation-identity.test.ts tests/server/foundation-privacy.test.ts tests/server/foundation-deletion.test.ts tests/server/foundation-concurrency.test.ts tests/server/foundation-multi-instance.test.ts tests/server/foundation-consistency.test.ts tests/server/foundation-hosting.test.ts",
+    "test:security": "node --experimental-strip-types --test tests/security-trust-boundary.test.ts tests/server/foundation-security.test.ts tests/server/foundation-auth-protection.test.ts tests/server/foundation-boundaries.test.ts tests/server/foundation-deletion-evidence.test.ts tests/server/foundation-deletion-receipt.test.ts",
+    "test:recovery": "node --experimental-strip-types --test tests/server/foundation-backup.test.ts tests/server/foundation-recovery.test.ts",
+    "test:all": "npm test && npm run e2e"
   },
   "devDependencies": {
     "pg": "^8.23.1"

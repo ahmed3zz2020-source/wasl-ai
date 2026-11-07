@@ -1,0 +1,157 @@
+# ============================================================
+# WASL AI — the matrix of the tests (PHASE 02)
+# ------------------------------------------------------------
+# ⭐ WHAT THIS DOCUMENT IS
+#   The evidence of PHASE 02 is not one number: it is four groups of
+#   tests, one end to end journey and a rebuild of the environment
+#   from scratch. This file says WHAT each group proves, HOW it is
+#   run and WHAT it does NOT prove.
+# ⛔ It does not claim any guarantee that the tests did not prove.
+#   ⭐ The number of tests is NOT a quality measure: a group is only
+#   as good as the property it checks.
+# ============================================================
+
+## 1. The groups
+
+| Group | Command | Files | What it proves | What it does NOT prove |
+|:-:|---|:-:|---|---|
+| ⭐ **unit** | `npm run test:unit` | 20 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
+| ⭐ **integration** | `npm run test:integration` | 9 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host | nothing about a load that a machine of the production size would see |
+| ⭐ **security** | `npm run test:security` | 6 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, the protection of the deletion evidence | nothing about a penetration test of a third party |
+| ⭐ **recovery** | `npm run test:recovery` | 2 | the backup really restores, encrypted, verified and measured | nothing about a restore on the hardware of the production |
+| ⭐ **e2e** | `npm run e2e` | 1 | the journey of a customer service works from the login to the conversation and the privacy | nothing about a channel other than the local web one |
+| ⭐ **all** | `npm run test:all` | — | every group above plus the journey | — |
+
+> ⭐ The group `unit` does not touch the database, so it is the group
+> that can be run on a machine without PostgreSQL.
+
+> ⭐ **The four groups are a partition, not an overlap.** The file
+> `tests/security-trust-boundary.test.ts` belongs to the group
+> `security` only (it was listed in `unit` as well in a first draft,
+> which made the sum of the groups 763 while the real total of one run
+> was 724 — a misleading number). Now: 559 + 79 + 77 + 9 = **724** =
+> the number of `npm test` exactly.
+
+## 2. The environment of the measurement
+
+| Item | Value |
+|---|---|
+| ⭐ operating system | Debian GNU/Linux 12 (bookworm) |
+| ⭐ Node.js | v22.19.0 (`--experimental-strip-types`) |
+| ⭐ npm | 10.9.3 |
+| ⭐ PostgreSQL | 15.19 (Debian 15.19-0+deb12u1) — local, loopback only |
+| ⭐ pg_dump / pg_restore | 15.19 |
+| ⭐ OpenSSL | 3.0.20 (the local TLS test of M-70) |
+| ⭐ git | 2.39.5 |
+| ⭐ CPU / memory | 2 cores / 3072 MB |
+| ⭐ **Docker** | ⛔ **NOT INSTALLED** ⇒ the image was NOT built (M-70) |
+| ⭐ database | `wasl_local`, roles `wasl_app` (request) and `wasl_owner` (migration) |
+| ⭐ data | ⭐ **synthetic only**: three seeded companies, no real data, no real credential |
+
+## 3. The commands
+
+```bash
+# the database (the local synthetic one)
+export WASL_PG_SUPERUSER_URL='postgresql://postgres:<local>@127.0.0.1:5432/postgres'
+npm run db:setup            # the roles, the migrations, the seed, the credentials file
+
+# the groups
+npm run test:unit
+npm run test:integration
+npm run test:security
+npm run test:recovery
+npm run e2e
+npm run test:all            # the four groups and the journey
+
+# the database from scratch
+npm run db:rebuild -- --yes # it refuses without --yes: the data is protected
+
+# the backup
+npm run db:backup           # the encrypted artifact and its manifest
+npm run db:verify -- <artifact file>
+npm run db:restore -- <artifact file> --target <scratch database>
+```
+
+> ⭐⭐ The privileged connection is needed by the group `recovery` and
+> by the command `db:backup`. Without it the drill is **SKIPPED** and
+> the skip is visible in the report of the run (`# skipped 1`): it is
+> never hidden behind a success.
+
+## 4. The rules of the measurement
+
+1. ⭐ **A number is published only after it was measured in the same
+   session.** Every number of the report comes from a log file of the
+   run that produced it.
+2. ⭐ **A failure is never hidden.** A refused test stays refused and
+   the summary shows it (`# fail`, `# skipped`).
+3. ⭐ **The suite is run twice** and the two results are compared: a
+   test that depends on the order or on a leftover row shows up.
+4. ⭐ **The environment is rebuilt from scratch** (`db:rebuild`) and
+   the journey is run again: the seed, the migrations and the journey
+   do not depend on the order of the commands.
+5. ⭐ **The core is frozen**: `src/core` has zero changed lines
+   compared with the baseline `d1b17ae`.
+
+## 5. The negative scenarios that are covered
+
+| Scenario | Where |
+|---|---|
+| ⭐ a duplicated message reference | M-66a |
+| ⭐ two instances at the same time | M-01b, M-66e |
+| ⭐ a stale conversation after a restart | M-66c, M-66d |
+| ⭐ a wrong passcode, a budget, a distributed attack | M-02b, M-67b |
+| ⭐ a spoofed `X-Forwarded-For` | M-67c |
+| ⭐ a session expired, revoked, disabled | M-67e |
+| ⭐ a flood of guesses during the health check | M-67f |
+| ⭐ a forged deletion evidence | M-03a, M-03b, M-68a |
+| ⭐ a privileged manipulation of the evidence | M-68c |
+| ⭐ a deletion that fails before the commit | M-03d, M-68f |
+| ⭐ an answer lost after the commit | M-68h |
+| ⭐ a re-sent deletion request | M-03d, M-68e |
+| ⭐ a corrupted backup | M-69c |
+| ⭐ a replaced backup | M-69e |
+| ⭐ a backup with open permissions | M-69d |
+| ⭐ a broken sensitive configuration | M-70f |
+| ⭐ a connection dropped during the deletion | M-03e |
+
+## 6. What is still NOT proven
+
+- ⛔ The image was **not built**: there is no Docker daemon in the
+  measurement environment.
+- ⛔ The restore was **not** measured on the hardware of the
+  production: the RTO of the drill is a local measurement.
+- ⛔ The off-host copy of the backup is a **design**, not a transfer:
+  nothing was copied outside of the machine.
+- ⛔ There is **no** penetration test of a third party, no audit of
+  the code and no certification.
+- ⛔ The load is **synthetic and bounded**: it proves that the health
+  check answers during a burst of guesses, not the capacity of the
+  production.
+- ⛔ The readiness of the installation stays at **9/21**: the owner
+  directive D-069 did not move it.
+
+## 7. The measured results of the round
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline, before the first change | **687/687** · 0 fail · 0 skipped | `/tmp/p02-baseB-test.log` |
+| ⭐ 1 | `npm test` (the first run) | **724/724** · 0 fail · 0 skipped | `/tmp/p02-run1.log` |
+| ⭐ 2 | `npm test` (the repeat) | **724/724** · 0 fail · 0 skipped | `/tmp/p02-run2.log` |
+| ⭐ 3 | `npm run e2e` | **JOURNEY OK** (15/15) | `/tmp/p02-e2e.log` |
+| ⭐ 4 | `npm run db:rebuild -- --yes` | **EXIT=0** (5 migrations + 3 seeded companies) | `/tmp/p02-rebuild.log` |
+| ⭐ 5 | `npm run e2e` after the rebuild | **JOURNEY OK** | `/tmp/p02-e2e-after-rebuild.log` |
+| ⭐ 6 | `npm test` after the rebuild | **724/724** · 0 fail · 0 skipped | `/tmp/p02-test-after-rebuild.log` |
+| ⭐ 7 | `npm run test:unit` | **559/559** | `/tmp/p02-grp-unit.log` |
+| ⭐ 8 | `npm run test:integration` | **79/79** | `/tmp/p02-grp-integration.log` |
+| ⭐ 9 | `npm run test:security` | **77/77** | `/tmp/p02-grp-security.log` |
+| ⭐ 10 | `npm run test:recovery` | **9/9** | `/tmp/p02-grp-recovery.log` |
+| ⭐ 11 | `npm run test:server` | **126/126** | `/tmp/p02-server.log` |
+
+> ⭐ Every number above was measured in the same session and comes from
+> the log of the run that produced it. The full report is
+> `docs/FOUNDATION-BUILD-02-PHASE-02-REPORT.md`.
+
+> ⭐ **A note on the skipped test.** Without the privileged connection
+> (`WASL_PG_SUPERUSER_URL`) the group `recovery` is **SKIPPED** and the
+> run shows `# skipped 1`: the baseline without it was 685 tests / 684
+> passed / 1 skipped. The skip is never hidden behind a success.
