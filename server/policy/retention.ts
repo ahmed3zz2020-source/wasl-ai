@@ -13,6 +13,8 @@
 //   the synthetic local database.
 // ============================================================
 
+import crypto from 'node:crypto';
+
 import type { UnitOfWork } from '../db/unit-of-work.ts';
 
 export const DATA_CLASSES = ['standard', 'sensitive', 'regulated'] as const;
@@ -142,19 +144,64 @@ export async function previewDeletion(
   return { requestId, scope, counts, policies, notes };
 }
 
+export interface DeletionOutcome {
+  readonly removed: Record<string, number>;
+  readonly scope: string;
+  readonly evidenceId: string;
+}
+
+/** ⭐ Write the durable evidence of a deletion (it has no foreign key). */
+async function writeEvidence(
+  uow: UnitOfWork,
+  tenantId: string,
+  requestId: string,
+  scope: string,
+  requestedBy: string,
+  executedBy: string,
+  removed: Record<string, number>,
+): Promise<string> {
+  const evidenceId = `evd_${crypto.randomBytes(9).toString('hex')}`;
+  const result = await uow.query(
+    `insert into tenant_deletion_evidence
+       (id, tenant_id, request_id, scope, requested_by, executed_by, removed)
+     values ($1,$2,$3,$4,$5,$6,$7::jsonb)`,
+    [
+      evidenceId,
+      tenantId,
+      requestId,
+      scope,
+      requestedBy,
+      executedBy,
+      JSON.stringify(removed),
+    ],
+  );
+  if (result.rowCount !== 1) {
+    throw new PolicyError('deletion_evidence_failed', 'the deletion evidence could not be written');
+  }
+  return evidenceId;
+}
+
 /**
  * ⭐ Execute a previously previewed deletion.
- * ⭐ The order respects the foreign keys.
+ * ⭐ The order is fixed and every step is verified against the database:
+ *   1) the content rows are removed,
+ *   2) the request is marked executed (its row still exists),
+ *   3) the tenant row is tombstoned (partial scope) or removed (full
+ *      scope) - in the full scope the audit trail goes with it,
+ *   4) the durable evidence is written last: it has no foreign key, so
+ *      it is the record that survives the deletion itself.
  * ⛔ `tenant_full` removes the tenant row and with it the audit trail.
+ * ⛔ Nothing is reported as done unless the database says so: every
+ *   step checks its row count and a mismatch aborts the unit of work.
  */
 export async function executeDeletion(
   uow: UnitOfWork,
   tenantId: string,
   requestId: string,
   executedBy: string,
-): Promise<{ removed: Record<string, number> }> {
-  const request = await uow.query<{ scope: string; status: string }>(
-    `select scope, status from deletion_requests where id = $1`,
+): Promise<DeletionOutcome> {
+  const request = await uow.query<{ scope: string; status: string; requested_by: string }>(
+    `select scope, status, requested_by from deletion_requests where id = $1`,
     [requestId],
   );
   const row = request.rows[0];
@@ -179,24 +226,72 @@ export async function executeDeletion(
     removed[name] = result.rowCount;
   }
 
-  if (scope === 'tenant_full') {
-    const result = await uow.query(`delete from tenants where id = $1`, [tenantId]);
-    removed['tenants'] = result.rowCount;
-  } else {
-    const result = await uow.query(`update tenants set status = 'deleted' where id = $1`, [tenantId]);
-    removed['tenants'] = result.rowCount;
-  }
-
-  await uow.query(
+  // ⭐ The request is marked executed while its row still exists: the
+  //   full scope removes the tenant row, and with it the request row.
+  const marked = await uow.query(
     `update deletion_requests set status = 'executed', executed_at = now() where id = $1`,
     [requestId],
   );
+  if (marked.rowCount !== 1) {
+    throw new PolicyError(
+      'deletion_request_unknown',
+      'the deletion request disappeared before it could be marked as executed',
+    );
+  }
+
+  if (scope === 'tenant_full') {
+    // ⭐ The audit trail and the retention policies go with the tenant.
+    const trail = await uow.query(`delete from audit_events where tenant_id = $1`, [tenantId]);
+    removed['audit_events'] = trail.rowCount;
+    const policies = await uow.query(`delete from retention_policies where tenant_id = $1`, [tenantId]);
+    removed['retention_policies'] = policies.rowCount;
+
+    // ⭐ The tenant row is removed after the request is marked, so the
+    //   cascade does not race with the bookkeeping above.
+    const tenant = await uow.query(`delete from tenants where id = $1`, [tenantId]);
+    if (tenant.rowCount !== 1) {
+      throw new PolicyError('deletion_tenant_missing', 'the tenant row could not be removed');
+    }
+    removed['tenants'] = tenant.rowCount;
+
+    // ⭐ The evidence is written after the tenant row is gone: it has
+    //   no foreign key, so it survives and proves what was removed.
+    const evidenceId = await writeEvidence(
+      uow,
+      tenantId,
+      requestId,
+      scope,
+      row.requested_by,
+      executedBy,
+      removed,
+    );
+    return { removed, scope, evidenceId };
+  }
+
+  // ⭐ The partial scope keeps the tenant row (tombstoned) and the audit
+  //   trail: the audit event is written inside the same transaction.
+  const tenant = await uow.query(`update tenants set status = 'deleted' where id = $1`, [tenantId]);
+  if (tenant.rowCount !== 1) {
+    throw new PolicyError('deletion_tenant_missing', 'the tenant row could not be marked as deleted');
+  }
+  removed['tenants'] = tenant.rowCount;
+
   await uow.query(
     `insert into audit_events (tenant_id, actor_id, operation, result, detail)
-     values ($1,$2,'privacy.delete','executed',$3::jsonb)`,
+     values ($1,$2,'privacy.delete.execute','allowed',$3::jsonb)`,
     [tenantId, executedBy, JSON.stringify({ requestId, scope, removed })],
   );
-  return { removed };
+
+  const evidenceId = await writeEvidence(
+    uow,
+    tenantId,
+    requestId,
+    scope,
+    row.requested_by,
+    executedBy,
+    removed,
+  );
+  return { removed, scope, evidenceId };
 }
 
 /** ⭐ Export everything the tenant owns (synthetic data). */

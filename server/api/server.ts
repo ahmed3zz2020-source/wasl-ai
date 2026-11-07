@@ -981,7 +981,18 @@ export class WaslApiServer {
       executeDeletion(uow, context.session.tenantId, requestId, context.session.actorId),
     );
     this.#invalidate(context.session.tenantId);
-    await this.#audit(context.session.tenantId, context.session.actorId, context.session.sessionId, 'privacy.delete.execute', 'allowed', null, { request_id: requestId });
-    return { status: 200, body: { ok: true, removed: result.removed } };
+    // The audit event is written INSIDE the deletion transaction: a full
+    // deletion removes the tenant row, so no tenant scoped event can be
+    // written afterwards. The durable evidence carries the proof and
+    // survives the deletion itself.
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        removed: result.removed,
+        scope: result.scope,
+        evidence_id: result.evidenceId,
+      },
+    };
   }
 }
