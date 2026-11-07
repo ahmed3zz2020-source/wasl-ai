@@ -352,13 +352,13 @@ not ok 1 - ⭐ D-01: the full deletion completes and removes the tenant
 | ٩ | `c3349d9` | **D-067: إصلاح R-01** |
 | ١٠ | `981bfdc` | **D-067: توسعة R-02 + R-03** |
 | ١١ | `4e95ea6` | **D-067: إصلاح R-04** |
-| ١٢ | `(هذا الـcommit)` | **D-067: تقرير المعالجة + تصحيح تقرير البناء + الحالة + سجل الردود** |
+| ١٢ | `3111cd0be896df4a66d400b50feb31f86393641b` | **D-067: تقرير المعالجة + تصحيح تقرير البناء + الحالة + سجل الردود** |
 
 ### ١٢.٢ الخلاصة الجاهزة لـChatGPT (انسخ والصق)
 
 ```text
 يا ChatGPT — راجع تقرير معالجة FOUNDATION BUILD 01 (D-067) مراجعة مستقلة نقدية:
-https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<REPORT_COMMIT>/docs/FOUNDATION-BUILD-01-REMEDIATION-REPORT.md
+https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3111cd0be896df4a66d400b50feb31f86393641b/docs/FOUNDATION-BUILD-01-REMEDIATION-REPORT.md
 
 ما الذي تمّ (مقيس):
 - R-01 (الحذف الكامل): عُيب مثبت (409 + تراجع كامل ⇒ لا حذف) ⇒ أُصلح: ترتيب ثابت + تحقق من عدد الصفوف + دليل حذف دائم بلا مفتاح أجنبي + اختبار تراجع عند الفشل.
