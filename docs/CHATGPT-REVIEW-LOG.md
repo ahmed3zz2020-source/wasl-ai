@@ -100,6 +100,7 @@
 
 > ⭐ **طبيعة الردّ**: ⭐ **تصريح المالك (`D-072`) — FOUNDATION BUILD 03 / PHASE 03**: ⭐ **إغلاق M81–M84 محلياً بالكامل** ⇒ ⭐ **مهمة تنفيذ فعلية لا مراجعة وثائق** ⇒ ⭐ **بلا نشر · بلا خدمات مدفوعة · بلا بيانات حقيقية · بلا WhatsApp · بلا AI خارجي · بلا مزوّد هوية**.
 > ⭐ **التقرير الكامل (ملف واحد)**: ⭐ [`docs/FOUNDATION-BUILD-03-PHASE-03-REPORT.md`](FOUNDATION-BUILD-03-PHASE-03-REPORT.md) — ⭐ **والقرار**: ⭐ `DECISIONS.md` §D-072 — ⭐ **ومصفوفة الاختبارات**: ⭐ `docs/TEST-MATRIX.md`.
+> ⭐ **ثابت على commit**: ⭐ [التقرير](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a1c895/docs/FOUNDATION-BUILD-03-PHASE-03-REPORT.md) · ⭐ [هذا السجل](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a1c895/docs/CHATGPT-REVIEW-LOG.md) · ⭐ [القرار D-072](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a1c895/DECISIONS.md) · ⭐ [الحالة](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a1c895/CURRENT-STATE.md) · ⭐ [مصفوفة الاختبارات](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a1c895/docs/TEST-MATRIX.md)
 > ⭐⭐ **حدّ معلَن من أعلى**: ⭐⭐ **لا نشر · لا PHASE 04 · لا تغيير قرارات المالك · لا رفع الجاهزية · ⛔ M75 ما زالت BLOCKED** ⇒ ⭐⭐ **الجاهزية الرسمية 9/21 لم تتحرك**.
 
 ### ٣.١ ⭐⭐ البنود الأربعة (M81–M84) — الحالة قبل وبعد
