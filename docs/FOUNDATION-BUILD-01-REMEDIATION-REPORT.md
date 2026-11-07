@@ -354,6 +354,16 @@ not ok 1 - ⭐ D-01: the full deletion completes and removes the tenant
 | ١١ | `4e95ea6` | **D-067: إصلاح R-04** |
 | ١٢ | `3111cd0be896df4a66d400b50feb31f86393641b` | **D-067: تقرير المعالجة + تصحيح تقرير البناء + الحالة + سجل الردود** |
 
+### ١٢.١-ب ⭐ الروابط المثبَّتة (لا تتغيّر مع الـcommits اللاحقة)
+
+| الملف | الرابط المثبَّت |
+|---|---|
+| ⭐ **تقرير المعالجة (هذا الملف)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3111cd0be896df4a66d400b50feb31f86393641b/docs/FOUNDATION-BUILD-01-REMEDIATION-REPORT.md` |
+| ⭐ **سجل الردود (ردّ #٤٣)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3111cd0be896df4a66d400b50feb31f86393641b/docs/CHATGPT-REVIEW-LOG.md` |
+| ⭐ **تقرير البناء (مُصحَّح)** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3111cd0be896df4a66d400b50feb31f86393641b/docs/FOUNDATION-BUILD-01-REPORT.md` |
+| ⭐ **الحالة الأساسية** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3111cd0be896df4a66d400b50feb31f86393641b/CURRENT-STATE.md` |
+| ⭐ **قرار D-067** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3111cd0be896df4a66d400b50feb31f86393641b/DECISIONS.md` |
+
 ### ١٢.٢ الخلاصة الجاهزة لـChatGPT (انسخ والصق)
 
 ```text
