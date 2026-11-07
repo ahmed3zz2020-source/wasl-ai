@@ -15,6 +15,12 @@ import test from 'node:test';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { startHarness, loginAs, resetSyntheticData, type Harness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'iso';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 /**
@@ -29,21 +35,21 @@ function assertNoLeak(status: number, body: Record<string, unknown>, forbiddenRe
 }
 
 test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
-  await resetSyntheticData(harness.ownerPool, PASSCODE);
+  await resetSyntheticData(harness.ownerPool, PASSCODE, ['tnt_alpha', 'tnt_beta', 'tnt_gamma'], NS);
 
-  const alpha = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-  const beta = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+  const alpha = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+  const beta = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
 
   await t.test('⭐ AC-03a: the two companies do not share conversations', async () => {
     const created = await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: alpha,
-      payload: { conversation_ref: 'conv_iso_alpha', customer_id: 'cus_alpha_1', message: { body: 'hello' } },
+      payload: { conversation_ref: 'conv_iso_alpha', customer_id: `${NS}_cus_alpha_1`, message: { body: 'hello' } },
     });
     assert.equal(created.status, 201);
 
@@ -69,7 +75,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       payload: { body: 'let me in' },
     });
     assert.ok(write.status === 404 || write.status === 403, `unexpected status ${write.status}`);
-    const alphaMessages = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const alphaMessages = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from messages where body = 'let me in'`,
       );
@@ -89,7 +95,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       method: 'POST',
       path: '/api/conversations/conv_iso_alpha/assign',
       token: beta,
-      payload: { actor_id: 'usr_beta_agent' },
+      payload: { actor_id: `${NS}_usr_beta_agent` },
     });
     assert.ok(assign.status === 404 || assign.status === 403, `unexpected status ${assign.status}`);
   });
@@ -102,7 +108,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
     assert.ok(!conversations.some((row) => row['ref'] === 'conv_iso_alpha'), 'the export leaked');
     const messages = bundle['messages'] as Array<Record<string, unknown>>;
     assert.ok(
-      messages.every((row) => row['tenant_id'] === 'tnt_beta'),
+      messages.every((row) => row['tenant_id'] === `${NS}_tnt_beta`),
       'the export contains rows of another tenant',
     );
   });
@@ -132,11 +138,11 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
     );
     assert.equal(Number(without.rows[0]?.count ?? '-1'), 0, 'rows are visible without a tenant context');
 
-    const withAlpha = await UnitOfWork.run(harness.appPool, 'tnt_alpha', async (uow) => {
+    const withAlpha = await UnitOfWork.run(harness.appPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ tenant_id: string }>(`select distinct tenant_id from messages`);
       return result.rows.map((row) => row.tenant_id);
     });
-    assert.deepEqual(withAlpha, ['tnt_alpha'], 'the context did not scope the rows');
+    assert.deepEqual(withAlpha, [`${NS}_tnt_alpha`], 'the context did not scope the rows');
   });
 
   await t.test('⭐ AC-04c: the isolation policy is enabled and forced', async () => {
@@ -175,7 +181,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
   });
 
   await t.test('⭐ AC-07: a failed composite operation leaves nothing behind', async () => {
-    const before = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const before = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(`select count(*)::text as count from conversations`);
       return Number(result.rows[0]?.count ?? '0');
     });
@@ -188,13 +194,13 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       token: alpha,
       payload: {
         conversation_ref: 'conv_atomic_rollback',
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: '' },
       },
     });
     assert.ok(failed.status >= 400, `the invalid message was accepted: ${failed.status}`);
 
-    const after = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const after = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string; messages: string }>(
         `select count(*)::text as count, (select count(*)::text from messages) as messages from conversations`,
       );
@@ -205,15 +211,15 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
   });
 
   await t.test('⭐ AC-07b: a thrown error inside a unit of work rolls everything back', async () => {
-    const result = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`insert into customers (id, tenant_id, display_name, data_class) values ('cus_atomic_probe','tnt_alpha','probe','standard')`);
+    const result = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`insert into customers (id, tenant_id, display_name, data_class) values ('cus_atomic_probe','${NS}_tnt_alpha','probe','standard')`);
       throw new Error('forced_failure');
     }).then(
       () => 'resolved',
       () => 'rejected',
     );
     assert.equal(result, 'rejected');
-    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const probe = await uow.query<{ count: string }>(`select count(*)::text as count from customers where id = 'cus_atomic_probe'`);
       return Number(probe.rows[0]?.count ?? '0');
     });
@@ -228,9 +234,9 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
 
   await t.test('⭐ R-02a: three companies, every operation, no cross talk', async () => {
     const companies = [
-      { tenant: 'tnt_alpha', owner: 'usr_alpha_owner', customer: 'cus_alpha_1' },
-      { tenant: 'tnt_beta', owner: 'usr_beta_owner', customer: 'cus_beta_1' },
-      { tenant: 'tnt_gamma', owner: 'usr_gamma_owner', customer: 'cus_gamma_1' },
+      { tenant: `${NS}_tnt_alpha`, owner: `${NS}_usr_alpha_owner`, customer: `${NS}_cus_alpha_1` },
+      { tenant: `${NS}_tnt_beta`, owner: `${NS}_usr_beta_owner`, customer: `${NS}_cus_beta_1` },
+      { tenant: `${NS}_tnt_gamma`, owner: `${NS}_usr_gamma_owner`, customer: `${NS}_cus_gamma_1` },
     ];
     const refs = new Map<string, string>();
     const tokens = new Map<string, string>();
@@ -268,7 +274,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       { name: 'changes', method: 'GET', path: '/api/conversations/REF/changes' },
       { name: 'write', method: 'POST', path: '/api/conversations/REF/messages', payload: { body: 'x' }, mutating: true },
       { name: 'state', method: 'POST', path: '/api/conversations/REF/state', payload: { to: 'open' }, mutating: true },
-      { name: 'assign', method: 'POST', path: '/api/conversations/REF/assign', payload: { actor_id: 'usr_beta_agent' }, mutating: true },
+      { name: 'assign', method: 'POST', path: '/api/conversations/REF/assign', payload: { actor_id: `${NS}_usr_beta_agent` }, mutating: true },
       { name: 'export', method: 'POST', path: '/api/privacy/export', payload: {} },
       { name: 'deletion preview', method: 'POST', path: '/api/privacy/deletion/preview', payload: { scope: 'tenant_data' } },
     ];
@@ -318,7 +324,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
   });
 
   await t.test('⭐ R-02b: the client cannot choose the tenant', async () => {
-    const alphaToken = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const alphaToken = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const ref = `conv_r02_tamper_${Date.now().toString(36)}`;
     const created = await harness.client.request({
       method: 'POST',
@@ -326,25 +332,25 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       token: alphaToken,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         // ⭐ The client names another company: the server must ignore it.
-        tenant_id: 'tnt_beta',
-        declared_tenant_id: 'tnt_beta',
-        message: { body: 'tampered tenant', tenant_id: 'tnt_beta' },
+        tenant_id: `${NS}_tnt_beta`,
+        declared_tenant_id: `${NS}_tnt_beta`,
+        message: { body: 'tampered tenant', tenant_id: `${NS}_tnt_beta` },
       },
     });
     assert.equal(created.status, 201, 'the tampered creation was refused');
 
-    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ tenant_id: string }>(
         `select tenant_id from conversations where ref = $1`,
         [ref],
       );
       return result.rows.map((row) => row.tenant_id);
     });
-    assert.deepEqual(rows, ['tnt_alpha'], 'the tampered tenant id decided where the row was written');
+    assert.deepEqual(rows, [`${NS}_tnt_alpha`], 'the tampered tenant id decided where the row was written');
 
-    const betaRows = await UnitOfWork.run(harness.ownerPool, 'tnt_beta', async (uow) => {
+    const betaRows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_beta`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from conversations where ref = $1`,
         [ref],
@@ -358,22 +364,22 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       method: 'POST',
       path: '/api/privacy/export',
       token: alphaToken,
-      payload: { tenant_id: 'tnt_beta' },
+      payload: { tenant_id: `${NS}_tnt_beta` },
     });
     assert.equal(exported.status, 200);
     const bundle = exported.body['export'] as Record<string, unknown>;
-    assert.equal(bundle['tenantId'], 'tnt_alpha', 'the export answered with another company');
+    assert.equal(bundle['tenantId'], `${NS}_tnt_alpha`, 'the export answered with another company');
     const customers = Array.isArray(bundle['customers']) ? (bundle['customers'] as Array<Record<string, unknown>>) : [];
     for (const customer of customers) {
       assert.ok(
-        !String(customer['id']).startsWith('cus_beta'),
+        !String(customer['id']).startsWith(`${NS}_cus_beta`),
         `the export carries another company customer: ${String(customer['id'])}`,
       );
     }
   });
 
   await t.test('⭐ R-02c: the database itself refuses a foreign row', async () => {
-    const betaToken = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const betaToken = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
     const ref = `conv_r02_rls_${Date.now().toString(36)}`;
     const created = await harness.client.request({
       method: 'POST',
@@ -381,7 +387,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       token: betaToken,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_beta_1',
+        customer_id: `${NS}_cus_beta_1`,
         message: { body: 'rls probe' },
       },
     });
@@ -389,7 +395,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
 
     // ⭐ With the context of another company the row is invisible, even
     //   to a direct SQL query: the isolation lives in the database.
-    const foreign = await UnitOfWork.run(harness.appPool, 'tnt_alpha', async (uow) => {
+    const foreign = await UnitOfWork.run(harness.appPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from conversations where ref = $1`,
         [ref],
@@ -406,7 +412,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
     assert.equal(foreign.conversations, 0, 'a foreign conversation is visible with a foreign context');
     assert.equal(foreign.messages, 0, 'a foreign message is visible with a foreign context');
 
-    const own = await UnitOfWork.run(harness.appPool, 'tnt_beta', async (uow) => {
+    const own = await UnitOfWork.run(harness.appPool, `${NS}_tnt_beta`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from conversations where ref = $1`,
         [ref],
@@ -417,8 +423,8 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
   });
 
   await t.test('⭐ R-02d: concurrent requests of two companies do not mix', async () => {
-    const alphaToken = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-    const betaToken = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const alphaToken = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+    const betaToken = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
     const alphaRef = `conv_r02_par_a_${Date.now().toString(36)}`;
     const betaRef = `conv_r02_par_b_${Date.now().toString(36)}`;
 
@@ -427,13 +433,13 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
         method: 'POST',
         path: '/api/conversations',
         token: alphaToken,
-        payload: { conversation_ref: alphaRef, customer_id: 'cus_alpha_1', message: { body: 'alpha parallel' } },
+        payload: { conversation_ref: alphaRef, customer_id: `${NS}_cus_alpha_1`, message: { body: 'alpha parallel' } },
       }),
       harness.client.request({
         method: 'POST',
         path: '/api/conversations',
         token: betaToken,
-        payload: { conversation_ref: betaRef, customer_id: 'cus_beta_1', message: { body: 'beta parallel' } },
+        payload: { conversation_ref: betaRef, customer_id: `${NS}_cus_beta_1`, message: { body: 'beta parallel' } },
       }),
     ]);
     assert.equal(alphaCreated.status, 201, 'the parallel creation of the first company failed');
@@ -452,42 +458,42 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
 
     // ⭐ Each company is read in its own context: a foreign row is
     //   invisible to the row level security, not hidden by the test.
-    const placement = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const placement = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ ref: string; tenant_id: string }>(
         `select ref, tenant_id from conversations where ref = $1`,
         [alphaRef],
       );
       return result.rows;
     });
-    const foreign = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const foreign = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from conversations where ref = $1`,
         [betaRef],
       );
       return Number(result.rows[0]?.count ?? '0');
     });
-    const betaPlacement = await UnitOfWork.run(harness.ownerPool, 'tnt_beta', async (uow) => {
+    const betaPlacement = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_beta`, async (uow) => {
       const result = await uow.query<{ ref: string; tenant_id: string }>(
         `select ref, tenant_id from conversations where ref = $1`,
         [betaRef],
       );
       return result.rows;
     });
-    assert.equal(placement[0]?.tenant_id, 'tnt_alpha', 'the parallel conversation of the first company landed elsewhere');
-    assert.equal(betaPlacement[0]?.tenant_id, 'tnt_beta', 'the parallel conversation of the second company landed elsewhere');
+    assert.equal(placement[0]?.tenant_id, `${NS}_tnt_alpha`, 'the parallel conversation of the first company landed elsewhere');
+    assert.equal(betaPlacement[0]?.tenant_id, `${NS}_tnt_beta`, 'the parallel conversation of the second company landed elsewhere');
     assert.equal(foreign, 0, 'the parallel conversation of the second company is visible to the first');
   });
 
   await t.test('⭐ R-02e: the audit trails of the companies are separated', async () => {
-    const alphaToken = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-    const betaToken = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const alphaToken = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+    const betaToken = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
     await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: alphaToken,
       payload: {
         conversation_ref: `conv_r02_audit_${Date.now().toString(36)}`,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'audit probe' },
       },
     });
@@ -501,7 +507,7 @@ test('FOUNDATION 1) isolation, RLS protection and atomicity', async (t) => {
       assert.ok(!alphaIds.has(String(row['id'])), 'the second company sees the audit events of the first');
     }
     for (const row of alphaRows) {
-      assert.ok(String(row['actor_id']).startsWith('usr_alpha'), 'the audit trail of the first company has a foreign actor');
+      assert.ok(String(row['actor_id']).startsWith(`${NS}_usr_alpha`), 'the audit trail of the first company has a foreign actor');
     }
   });
 });

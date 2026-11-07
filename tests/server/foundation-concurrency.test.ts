@@ -23,19 +23,25 @@ import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
 import { loginAs, startHarness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'con';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
 
-  const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+  const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
   // ⭐ The supervisor may change the state (the agent may not): the
   //   race under test is between two employees who are both allowed.
-  const supervisor = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_super', PASSCODE);
-  const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+  const supervisor = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_super`, PASSCODE);
+  const agent = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
 
   await t.test('⭐ R-04a: two concurrent transitions, one valid update, no silent loss', async () => {
     const ref = `conv_r04_a_${Date.now().toString(36)}`;
@@ -45,7 +51,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
       token: owner,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'r04 race' },
       },
     });
@@ -78,7 +84,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
     );
 
     // ⭐ Exactly one increment: no lost update and no double write.
-    const row = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const row = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ state: string; version: number }>(
         `select state, version from conversations where ref = $1`,
         [ref],
@@ -104,7 +110,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
       method: 'POST',
       path: '/api/conversations',
       token: owner,
-      payload: { conversation_ref: ref, customer_id: 'cus_alpha_1', message: { body: 'r04 version' } },
+      payload: { conversation_ref: ref, customer_id: `${NS}_cus_alpha_1`, message: { body: 'r04 version' } },
     });
     assert.equal(created.status, 201);
 
@@ -129,7 +135,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
       'the stale version did not report a conflict',
     );
 
-    const row = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const row = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ state: string; version: number }>(
         `select state, version from conversations where ref = $1`,
         [ref],
@@ -146,7 +152,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
       method: 'POST',
       path: '/api/conversations',
       token: owner,
-      payload: { conversation_ref: ref, customer_id: 'cus_alpha_1', message: { body: 'r04 illegal' } },
+      payload: { conversation_ref: ref, customer_id: `${NS}_cus_alpha_1`, message: { body: 'r04 illegal' } },
     });
     assert.equal(created.status, 201);
 
@@ -174,7 +180,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
       'the illegal transition did not report the declared code',
     );
 
-    const row = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const row = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ state: string; version: number }>(
         `select state, version from conversations where ref = $1`,
         [ref],
@@ -191,15 +197,15 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
       method: 'POST',
       path: '/api/conversations',
       token: owner,
-      payload: { conversation_ref: ref, customer_id: 'cus_alpha_1', message: { body: 'r04 messages' } },
+      payload: { conversation_ref: ref, customer_id: `${NS}_cus_alpha_1`, message: { body: 'r04 messages' } },
     });
     assert.equal(created.status, 201);
 
     // ⭐⭐ M-76: the agent reaches the conversations that are assigned
     //   to them ⇒ the fixture assigns the conversation before the race.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(
-        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = $1`,
+        `update conversations set assignee_actor_id = '${NS}_usr_alpha_agent' where ref = $1`,
         [ref],
       );
     });
@@ -221,7 +227,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
     assert.equal(first.status, 201, 'the first parallel message was refused');
     assert.equal(second.status, 201, 'the second parallel message was refused');
 
-    const messages = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const messages = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ body: string }>(
         `select body from messages where conversation_ref = $1 and direction = 'inbound'`,
         [ref],
@@ -240,7 +246,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
       method: 'POST',
       path: '/api/conversations',
       token: owner,
-      payload: { conversation_ref: ref, customer_id: 'cus_alpha_1', message: { body: 'r04 restart' } },
+      payload: { conversation_ref: ref, customer_id: `${NS}_cus_alpha_1`, message: { body: 'r04 restart' } },
     });
     assert.equal(created.status, 201);
 
@@ -275,7 +281,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
     });
     assert.equal(read.status, 200);
     const stored = read.body['conversation'] as Record<string, unknown>;
-    const inDatabase = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const inDatabase = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ state: string; version: number }>(
         `select state, version from conversations where ref = $1`,
         [ref],
@@ -293,7 +299,7 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
     const address = await restarted.listen();
     const client = new LocalApiClient('127.0.0.1', address.port);
     try {
-      const fresh = await loginAs(client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+      const fresh = await loginAs(client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
       const afterRestart = await client.request({ method: 'GET', path: `/api/conversations/${ref}`, token: fresh });
       assert.equal(afterRestart.status, 200);
       const row = afterRestart.body['conversation'] as Record<string, unknown>;

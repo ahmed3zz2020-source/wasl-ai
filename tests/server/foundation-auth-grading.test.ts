@@ -27,7 +27,13 @@ import { WaslApiServer } from '../../server/api/server.ts';
 import { createPool, type PgPool } from '../../server/db/pool.ts';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
-import { startHarness, type Harness } from './harness.ts';
+import { startHarness, type Harness, withPlatformBudgetLock } from './harness.ts';
+
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'agr';
+
 
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
@@ -84,13 +90,18 @@ async function startWithPolicy(
 }
 
 test('FOUNDATION 17) the login protection is graded and never switches the users off (M-73)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
+  // ⭐⭐ D-072 / M-82: this file MEASURES the platform budget ⇐ ⭐⭐ the
+  //   platform budget is ONE resource of the installation (D-070) ⇒ ⭐⭐
+  //   the measurement takes a lock ⇒ ⭐⭐ the other files keep running
+  //   in parallel, and the measurement is NOT shared with another one.
+  await withPlatformBudgetLock(harness.ownerPool, async () => {
 
   const clearGlobalCounter = async (): Promise<void> => {
     await harness.ownerPool.query(`delete from login_attempts_global`);
   };
   const clearTenantCounter = async (): Promise<void> => {
-    for (const tenantId of ['tnt_alpha', 'tnt_beta', 'tnt_gamma']) {
+    for (const tenantId of [`${NS}_tnt_alpha`, `${NS}_tnt_beta`, `${NS}_tnt_gamma`]) {
       await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
         await uow.query(`delete from login_attempts`);
       });
@@ -132,12 +143,12 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
     try {
       // ⭐⭐ The attack: the guesses are spread over MANY accounts, so
       //   the budget of no single account is reached.
-      const accounts = ['usr_alpha_agent', 'usr_alpha_viewer', 'usr_alpha_super', 'usr_alpha_owner'];
+      const accounts = [`${NS}_usr_alpha_agent`, `${NS}_usr_alpha_viewer`, `${NS}_usr_alpha_super`, `${NS}_usr_alpha_owner`];
       for (const account of accounts) {
         const failed = await instance.client.request({
           method: 'POST',
           path: '/api/session',
-          payload: { tenant_id: 'tnt_alpha', user_id: account, passcode: `${PASSCODE}-wrong` },
+          payload: { tenant_id: `${NS}_tnt_alpha`, user_id: account, passcode: `${PASSCODE}-wrong` },
         });
         assert.equal(failed.status, 401, `the guess was not refused: ${failed.status}`);
       }
@@ -148,7 +159,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
       const allowed = await instance.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
       });
       const waited = Date.now() - started;
       assert.equal(
@@ -180,7 +191,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
         const failed = await instance.client.request({
           method: 'POST',
           path: '/api/session',
-          payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: `${PASSCODE}-wrong` },
+          payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: `${PASSCODE}-wrong` },
         });
         assert.equal(failed.status, 401, `the guess was not refused: ${failed.status}`);
       }
@@ -189,7 +200,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
       const refused = await instance.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: `${PASSCODE}-wrong` },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: `${PASSCODE}-wrong` },
       });
       assert.equal(refused.status, 429, `the guess was not refused: ${refused.status}`);
       const code = String((refused.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
@@ -200,7 +211,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
       const allowed = await instance.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
       });
       assert.equal(allowed.status, 200, `the owner was locked out: ${allowed.status}`);
     } finally {
@@ -233,8 +244,8 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
           method: 'POST',
           path: '/api/session',
           payload: {
-            tenant_id: 'tnt_alpha',
-            user_id: `usr_alpha_agent`,
+            tenant_id: `${NS}_tnt_alpha`,
+            user_id: `${NS}_usr_alpha_agent`,
             passcode: `${PASSCODE}-wrong-${index}`,
           },
         }),
@@ -246,7 +257,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
       const other = await instance.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_beta', user_id: 'usr_beta_owner', passcode: PASSCODE },
+        payload: { tenant_id: `${NS}_tnt_beta`, user_id: `${NS}_usr_beta_owner`, passcode: PASSCODE },
       });
       const waited = Date.now() - started;
       assert.equal(other.status, 200, `the second company was blocked: ${other.status}`);
@@ -282,7 +293,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
           instance.client.request({
             method: 'POST',
             path: '/api/session',
-            payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+            payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
           }),
         ),
       );
@@ -319,7 +330,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
       const first = await instance.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
       });
       assert.equal(first.status, 200, `the first login was refused: ${first.status}`);
       // ⭐⭐ The second one has to wait a whole second, and the ceiling
@@ -327,7 +338,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
       const second = await instance.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
       });
       assert.equal(second.status, 429, `the saturation was not refused: ${second.status}`);
       const code = String((second.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
@@ -364,7 +375,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
           method: 'POST',
           path: '/api/session',
           headers: { 'x-forwarded-for': `10.0.0.${attempt + 1}` },
-          payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: `${PASSCODE}-wrong` },
+          payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: `${PASSCODE}-wrong` },
         });
         assert.ok(
           failed.status === 401 || failed.status === 429,
@@ -375,7 +386,7 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
         method: 'POST',
         path: '/api/session',
         headers: { 'x-forwarded-for': '10.0.0.99' },
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: `${PASSCODE}-wrong` },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: `${PASSCODE}-wrong` },
       });
       assert.equal(refused.status, 429, `the peer budget did not answer: ${refused.status}`);
       const code = String((refused.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
@@ -383,5 +394,6 @@ test('FOUNDATION 17) the login protection is graded and never switches the users
     } finally {
       await instance.close();
     }
+  });
   });
 });

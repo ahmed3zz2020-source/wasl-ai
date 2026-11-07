@@ -29,12 +29,23 @@ import { verifyPasscodeAsync, hashPasscodeAsync } from '../../server/auth/passwo
 import { createPool } from '../../server/db/pool.ts';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
-import { loginAs, startHarness } from './harness.ts';
+import { loginAs, startHarness, withPlatformBudgetLock } from './harness.ts';
+
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'auth';
+
 
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 test('FOUNDATION 13) the login protection and the server under pressure (M-67)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
+  // ⭐⭐ D-072 / M-82: this file MEASURES the platform budget ⇐ ⭐⭐ the
+  //   platform budget is ONE resource of the installation (D-070) ⇒ ⭐⭐
+  //   the measurement takes a lock ⇒ ⭐⭐ the other files keep running
+  //   in parallel, and the measurement is NOT shared with another one.
+  await withPlatformBudgetLock(harness.ownerPool, async () => {
 
   // ⭐ The global counter is shared by every test file: it is emptied
   //   before and after this file so the measurement is repeatable.
@@ -92,7 +103,7 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
     //   ⛔ The delete runs inside the tenant context: the table has
     //     the row level security FORCED, so a statement without the
     //     context sees zero rows and deletes nothing.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`delete from login_attempts`);
     });
 
@@ -124,12 +135,12 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
     const address = await api.listen();
     const client = new LocalApiClient('127.0.0.1', address.port);
     try {
-      const accounts = ['usr_alpha_agent', 'usr_alpha_viewer', 'usr_alpha_super'];
+      const accounts = [`${NS}_usr_alpha_agent`, `${NS}_usr_alpha_viewer`, `${NS}_usr_alpha_super`];
       for (const account of accounts) {
         const failed = await client.request({
           method: 'POST',
           path: '/api/session',
-          payload: { tenant_id: 'tnt_alpha', user_id: account, passcode: `${PASSCODE}-wrong` },
+          payload: { tenant_id: `${NS}_tnt_alpha`, user_id: account, passcode: `${PASSCODE}-wrong` },
         });
         assert.equal(failed.status, 401, `the guess was not refused: ${failed.status}`);
       }
@@ -144,7 +155,7 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
       const allowed = await client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_owner', passcode: PASSCODE },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_owner`, passcode: PASSCODE },
       });
       const waited = Date.now() - started;
       assert.equal(
@@ -174,7 +185,7 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
     const spoofed = await harness.client.request({
       method: 'POST',
       path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_viewer', passcode: `${PASSCODE}-wrong` },
+      payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_viewer`, passcode: `${PASSCODE}-wrong` },
       headers: { 'x-forwarded-for': '203.0.113.7', 'x-real-ip': '198.51.100.9' },
     });
     assert.equal(spoofed.status, 401, 'the guess was not refused');
@@ -183,7 +194,7 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
     //   value of a header sent by the client.
     const stored = await harness.ownerPool.query<{ peer_address: string | null }>(
       `select peer_address from login_attempts_global where user_id = $1 limit 1`,
-      ['usr_alpha_viewer'],
+      [`${NS}_usr_alpha_viewer`],
     );
     const row = stored.rows[0];
     assert.ok(row, 'the attempt was not recorded');
@@ -191,14 +202,14 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
       row.peer_address === null || row.peer_address === '127.0.0.1',
       `a client sent address was trusted: ${String(row.peer_address)}`,
     );
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`delete from login_attempts where user_id = $1`, ['usr_alpha_viewer']);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`delete from login_attempts where user_id = $1`, [`${NS}_usr_alpha_viewer`]);
     });
     await clearGlobalCounter();
   });
 
   await t.test('⭐⭐⭐ M-67d: the live role of the membership is the authority', async () => {
-    const token = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const token = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
 
     // ⭐ The agent may not export the data of the company.
     const before = await harness.client.request({
@@ -210,9 +221,9 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
 
     // ⭐ The membership is promoted: the NEXT request must use the new
     //   role, without waiting for the session to expire.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`update memberships set role = 'owner' where user_id = $1`, [
-        'usr_alpha_agent',
+        `${NS}_usr_alpha_agent`,
       ]);
     });
     try {
@@ -227,9 +238,9 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
         `the new role did not take effect: ${after.status} ${JSON.stringify(after.body)}`,
       );
     } finally {
-      await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
         await uow.query(`update memberships set role = 'agent' where user_id = $1`, [
-          'usr_alpha_agent',
+          `${NS}_usr_alpha_agent`,
         ]);
       });
     }
@@ -237,7 +248,7 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
 
   await t.test('⭐⭐ M-67e: an expired, a revoked and a disabled session stop working', async () => {
     // ⭐ The revocation.
-    const revokedToken = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_viewer', PASSCODE);
+    const revokedToken = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_viewer`, PASSCODE);
     const revoked = await harness.client.request({
       method: 'DELETE',
       path: '/api/session',
@@ -252,11 +263,11 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
     assert.equal(afterRevoke.status, 401, `the revoked session still works: ${afterRevoke.status}`);
 
     // ⭐ The expiry.
-    const expiringToken = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_viewer', PASSCODE);
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const expiringToken = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_viewer`, PASSCODE);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`update sessions set expires_at = now() - interval '1 minute' where token_hash = (
         select token_hash from sessions where id = (split_part($1, '.', 3)) and tenant_id = $2
-      )`, [expiringToken, 'tnt_alpha']);
+      )`, [expiringToken, `${NS}_tnt_alpha`]);
     });
     const afterExpiry = await harness.client.request({
       method: 'GET',
@@ -266,9 +277,9 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
     assert.equal(afterExpiry.status, 401, `the expired session still works: ${afterExpiry.status}`);
 
     // ⭐ The disabled user.
-    const disabledToken = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_viewer', PASSCODE);
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`update users set status = 'disabled' where id = $1`, ['usr_alpha_viewer']);
+    const disabledToken = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_viewer`, PASSCODE);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`update users set status = 'disabled' where id = $1`, [`${NS}_usr_alpha_viewer`]);
     });
     try {
       const afterDisable = await harness.client.request({
@@ -278,21 +289,21 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
       });
       assert.equal(afterDisable.status, 403, `the disabled user still works: ${afterDisable.status}`);
     } finally {
-      await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-        await uow.query(`update users set status = 'active' where id = $1`, ['usr_alpha_viewer']);
+      await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+        await uow.query(`update users set status = 'active' where id = $1`, [`${NS}_usr_alpha_viewer`]);
       });
     }
 
     // ⭐ The revoked membership.
     const revokedMembershipToken = await loginAs(
       harness.client,
-      'tnt_alpha',
-      'usr_alpha_viewer',
+      `${NS}_tnt_alpha`,
+      `${NS}_usr_alpha_viewer`,
       PASSCODE,
     );
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`update memberships set status = 'revoked' where user_id = $1`, [
-        'usr_alpha_viewer',
+        `${NS}_usr_alpha_viewer`,
       ]);
     });
     try {
@@ -314,9 +325,9 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
         `the refusal carries an unexpected code: ${revokeCode}`,
       );
     } finally {
-      await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
         await uow.query(`update memberships set status = 'active' where user_id = $1`, [
-          'usr_alpha_viewer',
+          `${NS}_usr_alpha_viewer`,
         ]);
       });
     }
@@ -332,8 +343,8 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
         method: 'POST',
         path: '/api/session',
         payload: {
-          tenant_id: 'tnt_alpha',
-          user_id: 'usr_alpha_agent',
+          tenant_id: `${NS}_tnt_alpha`,
+          user_id: `${NS}_usr_alpha_agent`,
           passcode: `${PASSCODE}-wrong-${index}`,
         },
       }),
@@ -360,9 +371,10 @@ test('FOUNDATION 13) the login protection and the server under pressure (M-67)',
       slowest < 3000,
       `the health check waited ${slowest} ms for the key derivations to finish`,
     );
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`delete from login_attempts`);
     });
     await clearGlobalCounter();
+  });
   });
 });

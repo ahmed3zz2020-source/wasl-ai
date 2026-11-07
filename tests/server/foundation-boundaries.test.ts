@@ -23,6 +23,12 @@ import { runJourney } from '../../server/e2e/journey.ts';
 import { runUiBrowserCheck } from '../../tools/wasl-ui-browser-check.ts';
 import { startHarness, loginAs, resetSyntheticData } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'bnd';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 const ROOT = path.resolve(import.meta.dirname, '..', '..');
 
@@ -41,11 +47,11 @@ function stripComments(text: string): string {
 }
 
 test('FOUNDATION 5) boundaries, secrets and the notes M59 to M65', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
-  await resetSyntheticData(harness.ownerPool, PASSCODE);
+  await resetSyntheticData(harness.ownerPool, PASSCODE, ['tnt_alpha', 'tnt_beta', 'tnt_gamma'], NS);
 
   await t.test('⭐ AC-10a: the server tree contains no external endpoint', () => {
     const files = listFiles(path.join(ROOT, 'server'));
@@ -101,7 +107,17 @@ test('FOUNDATION 5) boundaries, secrets and the notes M59 to M65', async (t) => 
     } as typeof net.Socket.prototype.connect;
 
     try {
-      const report = await runJourney({ client: harness.client, passcode: PASSCODE });
+      // ⭐⭐ D-072 / M-82: the journey drives the company of THIS file.
+      const report = await runJourney({
+        client: harness.client,
+        passcode: PASSCODE,
+        tenantId: `${NS}_tnt_alpha`,
+        userId: `${NS}_usr_alpha_owner`,
+        assigneeActorId: `${NS}_usr_alpha_agent`,
+        otherTenantId: `${NS}_tnt_beta`,
+        otherUserId: `${NS}_usr_beta_owner`,
+        customerIdPrefix: `cus_e2e_${NS}`,
+      });
       assert.deepEqual(report.failures, []);
       assert.deepEqual(violations, [], 'the build opened an external connection');
     } finally {
@@ -138,14 +154,14 @@ test('FOUNDATION 5) boundaries, secrets and the notes M59 to M65', async (t) => 
   });
 
   await t.test('⭐ M62: every operation refuses the other company', async () => {
-    const alpha = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-    const beta = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const alpha = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+    const beta = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
     const reference = `conv_m62_${Date.now().toString(36)}`;
     const created = await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: alpha,
-      payload: { conversation_ref: reference, customer_id: 'cus_alpha_1', message: { body: 'm62' } },
+      payload: { conversation_ref: reference, customer_id: `${NS}_cus_alpha_1`, message: { body: 'm62' } },
     });
     assert.equal(created.status, 201);
 
@@ -165,7 +181,7 @@ test('FOUNDATION 5) boundaries, secrets and the notes M59 to M65', async (t) => 
       { name: 'audit', method: 'GET', path: '/api/audit' },
       { name: 'write', method: 'POST', path: `/api/conversations/${reference}/messages`, payload: { body: 'x' }, mutating: true },
       { name: 'state', method: 'POST', path: `/api/conversations/${reference}/state`, payload: { to: 'open' }, mutating: true },
-      { name: 'assign', method: 'POST', path: `/api/conversations/${reference}/assign`, payload: { actor_id: 'usr_beta_agent' }, mutating: true },
+      { name: 'assign', method: 'POST', path: `/api/conversations/${reference}/assign`, payload: { actor_id: `${NS}_usr_beta_agent` }, mutating: true },
       // ⭐ The export and the deletion preview act on the caller's own
       //   company, so a 200 is correct: the isolation property is that
       //   their content holds nothing of the other company.
@@ -188,7 +204,7 @@ test('FOUNDATION 5) boundaries, secrets and the notes M59 to M65', async (t) => 
         const rows = Array.isArray(data['audit']) ? (data['audit'] as Array<Record<string, unknown>>) : [];
         for (const row of rows) {
           assert.ok(
-            String(row['actor_id']).startsWith('usr_beta'),
+            String(row['actor_id']).startsWith(`${NS}_usr_beta`),
             `the audit trail contains another company actor: ${JSON.stringify(row).slice(0, 160)}`,
           );
         }
@@ -225,33 +241,40 @@ test('FOUNDATION 5) boundaries, secrets and the notes M59 to M65', async (t) => 
     );
 
     // The server produces it for a membership status outside the closed set.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(
         `update memberships set status = 'weird_status' where tenant_id = $1 and user_id = $2`,
-        ['tnt_alpha', 'usr_alpha_agent'],
+        [`${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`],
       );
     });
     try {
       const response = await harness.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
       });
       assert.equal(response.status, 403);
       const body = JSON.stringify(response.body);
       assert.ok(body.includes('identity_status_invalid'), `the code was not produced: ${body.slice(0, 200)}`);
     } finally {
-      await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
         await uow.query(
           `update memberships set status = 'active' where tenant_id = $1 and user_id = $2`,
-          ['tnt_alpha', 'usr_alpha_agent'],
+          [`${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`],
         );
       });
     }
   });
 
   await t.test('⭐ M61: the console is connected to the real backend', async () => {
-    const result = await runUiBrowserCheck(harness.port);
+    // ⭐⭐ The REAL browser drives the company of THIS file.
+    const result = await runUiBrowserCheck(harness.port, {
+      tenantId: `${NS}_tnt_alpha`,
+      userId: `${NS}_usr_alpha_owner`,
+      agentId: `${NS}_usr_alpha_agent`,
+      otherTenantId: `${NS}_tnt_beta`,
+      otherUserId: `${NS}_usr_beta_owner`,
+    });
     for (const failure of result.failures) {
       assert.fail(failure);
     }
@@ -259,9 +282,10 @@ test('FOUNDATION 5) boundaries, secrets and the notes M59 to M65', async (t) => 
     assert.ok(result.steps.length >= 4);
 
     // The browser drove a real conversation: the database knows about it.
-    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
-        `select count(*)::text as count from conversations where state = 'closed'`,
+        `select count(*)::text as count from conversations where state = 'closed' and tenant_id = $1`,
+        [`${NS}_tnt_alpha`],
       );
       return Number(result.rows[0]?.count ?? '0');
     });

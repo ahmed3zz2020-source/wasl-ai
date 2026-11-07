@@ -39,6 +39,12 @@ import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
 import { startHarness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'host';
+
+
 const ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 function readRepoFile(relative: string): string {
@@ -59,7 +65,7 @@ async function freePort(): Promise<number> {
 }
 
 test('FOUNDATION 16) the preparation of a host (M-70)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
 
   t.after(async () => {
     await harness.stop();
@@ -92,7 +98,7 @@ test('FOUNDATION 16) the preparation of a host (M-70)', async (t) => {
     // ⭐ The request role may not read the evidence.
     let readCode = 'none';
     try {
-      await UnitOfWork.run(harness.appPool, 'tnt_alpha', async (uow) => {
+      await UnitOfWork.run(harness.appPool, `${NS}_tnt_alpha`, async (uow) => {
         await uow.query(`select count(*)::text as count from tenant_deletion_evidence`);
       });
     } catch (error) {
@@ -106,8 +112,8 @@ test('FOUNDATION 16) the preparation of a host (M-70)', async (t) => {
     // ⭐ The request role may not change the evidence either.
     let changeCode = 'none';
     try {
-      await UnitOfWork.run(harness.appPool, 'tnt_alpha', async (uow) => {
-        await uow.query(`delete from tenant_deletion_evidence where tenant_id = $1`, ['tnt_alpha']);
+      await UnitOfWork.run(harness.appPool, `${NS}_tnt_alpha`, async (uow) => {
+        await uow.query(`delete from tenant_deletion_evidence where tenant_id = $1`, [`${NS}_tnt_alpha`]);
       });
     } catch (error) {
       changeCode = (error as { code?: string }).code ?? 'unknown';
@@ -120,7 +126,7 @@ test('FOUNDATION 16) the preparation of a host (M-70)', async (t) => {
     // ⭐ The request role may not touch the schema.
     let ddlCode = 'none';
     try {
-      await UnitOfWork.run(harness.appPool, 'tnt_alpha', async (uow) => {
+      await UnitOfWork.run(harness.appPool, `${NS}_tnt_alpha`, async (uow) => {
         await uow.query(`create table if not exists wasl_forbidden (id int)`);
       });
     } catch (error) {

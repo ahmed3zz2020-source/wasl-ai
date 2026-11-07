@@ -19,17 +19,33 @@ import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { runJourney } from '../../server/e2e/journey.ts';
 import { startHarness, loginAs, resetSyntheticData, type Harness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'api';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 test('FOUNDATION 2) API contract, durability and the end to end journey', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
-  await resetSyntheticData(harness.ownerPool, PASSCODE);
+  await resetSyntheticData(harness.ownerPool, PASSCODE, ['tnt_alpha', 'tnt_beta', 'tnt_gamma'], NS);
 
   await t.test('⭐ AC-09a: the accepted journey passes every step', async () => {
-    const report = await runJourney({ client: harness.client, passcode: PASSCODE });
+    // ⭐⭐ D-072 / M-82: the journey drives the company of THIS file.
+    const report = await runJourney({
+      client: harness.client,
+      passcode: PASSCODE,
+      tenantId: `${NS}_tnt_alpha`,
+      userId: `${NS}_usr_alpha_owner`,
+      assigneeActorId: `${NS}_usr_alpha_agent`,
+      otherTenantId: `${NS}_tnt_beta`,
+      otherUserId: `${NS}_usr_beta_owner`,
+      customerIdPrefix: `cus_e2e_${NS}`,
+    });
     for (const failure of report.failures) {
       assert.fail(failure);
     }
@@ -38,7 +54,7 @@ test('FOUNDATION 2) API contract, durability and the end to end journey', async 
   });
 
   await t.test('⭐ AC-09b: the rejected journey is refused', async () => {
-    const viewer = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_viewer', PASSCODE);
+    const viewer = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_viewer`, PASSCODE);
     const created = await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
@@ -57,20 +73,20 @@ test('FOUNDATION 2) API contract, durability and the end to end journey', async 
   });
 
   await t.test('⭐ AC-02: a write survives a service restart and a new connection', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const reference = `conv_durable_${Date.now().toString(36)}`;
     const created = await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: owner,
-      payload: { conversation_ref: reference, customer_id: 'cus_alpha_1', message: { body: 'durable message' } },
+      payload: { conversation_ref: reference, customer_id: `${NS}_cus_alpha_1`, message: { body: 'durable message' } },
     });
     assert.equal(created.status, 201);
 
     // A brand new connection sees the row: the data is in PostgreSQL.
     const freshPool = createPool(harness.config.appDatabaseUrl, 2);
     try {
-      const rows = await UnitOfWork.run(freshPool, 'tnt_alpha', async (uow) => {
+      const rows = await UnitOfWork.run(freshPool, `${NS}_tnt_alpha`, async (uow) => {
         const result = await uow.query<{ count: string }>(
           `select count(*)::text as count from conversations where ref = $1`,
           [reference],
@@ -99,7 +115,7 @@ test('FOUNDATION 2) API contract, durability and the end to end journey', async 
   });
 
   await t.test('⭐ input validation: the API refuses malformed requests', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
 
     const noBody = await harness.client.request({
       method: 'POST',
@@ -136,7 +152,7 @@ test('FOUNDATION 2) API contract, durability and the end to end journey', async 
   });
 
   await t.test('⭐ errors are safe: no SQL text and no secrets in the answers', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const response = await harness.client.request({
       method: 'POST',
       path: '/api/conversations',

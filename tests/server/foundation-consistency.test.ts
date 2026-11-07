@@ -30,6 +30,12 @@ import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
 import { loginAs, startHarness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'cons';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 interface Instance {
@@ -39,7 +45,7 @@ interface Instance {
 }
 
 test('FOUNDATION 12) the consistency between two backend instances (M-66)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
 
   const secondPool = createPool(harness.config.appDatabaseUrl, 6);
   const secondConfig = { ...harness.config, port: harness.port + 1 };
@@ -69,8 +75,8 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
     await harness.stop();
   });
 
-  const ownerA = await loginAs(instances[0]!.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-  const ownerB = await loginAs(instances[1]!.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+  const ownerA = await loginAs(instances[0]!.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+  const ownerB = await loginAs(instances[1]!.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
 
   const createConversation = async (
     client: LocalApiClient,
@@ -82,13 +88,13 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
       method: 'POST',
       path: '/api/conversations',
       token,
-      payload: { conversation_ref: ref, customer_id: 'cus_alpha_1', message: { body } },
+      payload: { conversation_ref: ref, customer_id: `${NS}_cus_alpha_1`, message: { body } },
     });
     assert.equal(created.status, 201, `the conversation was not created: ${created.status}`);
   };
 
   const countMessages = async (ref: string): Promise<{ count: number; bodies: string }> => {
-    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string; bodies: string }>(
         `select count(*)::text as count, coalesce(string_agg(body, '|'), '') as bodies
            from messages where conversation_ref = $1`,
@@ -221,7 +227,7 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
     const restartAddress = await restartApi.listen();
     const restartClient = new LocalApiClient('127.0.0.1', restartAddress.port);
     try {
-      const token = await loginAs(restartClient, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+      const token = await loginAs(restartClient, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
       const read = await restartClient.request({
         method: 'GET',
         path: `/api/conversations/${ref}`,
@@ -240,7 +246,7 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
   await t.test('⭐⭐ M-66e: two companies run in parallel and never mix', async () => {
     const alphaRef = `conv_m66_e_a_${Date.now().toString(36)}`;
     const betaRef = `conv_m66_e_b_${Date.now().toString(36)}`;
-    const betaOwner = await loginAs(instances[1]!.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const betaOwner = await loginAs(instances[1]!.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
 
     const alphaCreated = await instances[0]!.client.request({
       method: 'POST',
@@ -248,7 +254,7 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
       token: ownerA,
       payload: {
         conversation_ref: alphaRef,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'm66e alpha' },
       },
     });
@@ -269,7 +275,7 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
         token: betaOwner,
         payload: {
           conversation_ref: betaRef,
-          customer_id: 'cus_beta_1',
+          customer_id: `${NS}_cus_beta_1`,
           message: { body: 'm66e beta body' },
         },
       }),
@@ -277,14 +283,14 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
     assert.equal(alphaWrite.status, 201, `the alpha write failed: ${alphaWrite.status}`);
     assert.equal(betaWrite.status, 201, `the beta write failed: ${betaWrite.status}`);
 
-    const alphaRows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const alphaRows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from messages where conversation_ref = $1`,
         [alphaRef],
       );
       return Number(result.rows[0]?.count ?? '0');
     });
-    const betaRows = await UnitOfWork.run(harness.ownerPool, 'tnt_beta', async (uow) => {
+    const betaRows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_beta`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from messages where conversation_ref = $1`,
         [betaRef],
@@ -319,7 +325,7 @@ test('FOUNDATION 12) the consistency between two backend instances (M-66)', asyn
     });
     assert.equal(appended.status, 201, `the append failed: ${appended.status}`);
 
-    const row = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const row = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ version: number; state: string }>(
         `select version, state from conversations where ref = $1`,
         [ref],

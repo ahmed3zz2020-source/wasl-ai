@@ -21,22 +21,28 @@ import { hashPasscode, verifyPasscode } from '../../server/auth/sessions.ts';
 import { seedDatabase } from '../../server/db/setup.ts';
 import { startHarness, loginAs, resetSyntheticData } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'idn';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 test('FOUNDATION 3) identity, roles and sessions', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
-  await resetSyntheticData(harness.ownerPool, PASSCODE);
+  await resetSyntheticData(harness.ownerPool, PASSCODE, ['tnt_alpha', 'tnt_beta', 'tnt_gamma'], NS);
 
   await t.test('⭐ AC-05a: the owner can do the owner things', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const created = await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: owner,
-      payload: { conversation_ref: 'conv_role_owner', customer_id: 'cus_alpha_1', message: { body: 'hello' } },
+      payload: { conversation_ref: 'conv_role_owner', customer_id: `${NS}_cus_alpha_1`, message: { body: 'hello' } },
     });
     assert.equal(created.status, 201);
 
@@ -53,7 +59,7 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ AC-05b: the supervisor can write but not delete', async () => {
-    const supervisor = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_super', PASSCODE);
+    const supervisor = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_super`, PASSCODE);
     const write = await harness.client.request({
       method: 'POST',
       path: '/api/conversations/conv_role_owner/messages',
@@ -83,13 +89,13 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ AC-05c: the agent can write but not create or export', async () => {
-    const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const agent = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
     // ⭐⭐ M-76: the agent reaches the conversations that are assigned
     //   to them (the scope of the core work queue). ⭐ The fixture
     //   assigns the conversation, exactly as the owner does.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(
-        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = 'conv_role_owner'`,
+        `update conversations set assignee_actor_id = '${NS}_usr_alpha_agent' where ref = 'conv_role_owner'`,
       );
     });
     const write = await harness.client.request({
@@ -113,7 +119,7 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ AC-05d: the viewer can only read', async () => {
-    const viewer = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_viewer', PASSCODE);
+    const viewer = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_viewer`, PASSCODE);
     const list = await harness.client.request({ path: '/api/conversations', token: viewer });
     assert.equal(list.status, 200);
 
@@ -127,12 +133,12 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ AC-05e: a role sent by the client changes nothing', async () => {
-    const viewer = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_viewer', PASSCODE);
+    const viewer = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_viewer`, PASSCODE);
     const escalated = await harness.client.request({
       method: 'POST',
       path: '/api/conversations/conv_role_owner/messages',
       token: viewer,
-      payload: { body: 'escalation', role: 'owner', tenant_id: 'tnt_alpha', capabilities: ['conversation.write'] },
+      payload: { body: 'escalation', role: 'owner', tenant_id: `${NS}_tnt_alpha`, capabilities: ['conversation.write'] },
     });
     assert.equal(escalated.status, 403, 'the client managed to escalate its role');
 
@@ -146,15 +152,15 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ AC-05f: the tenant of a session cannot be switched by the client', async () => {
-    const alpha = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const alpha = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const listed = await harness.client.request({
       path: '/api/conversations',
       token: alpha,
-      payload: { tenant_id: 'tnt_beta' },
+      payload: { tenant_id: `${NS}_tnt_beta` },
     });
     assert.equal(listed.status, 200);
     const rows = listed.body['conversations'] as Array<Record<string, unknown>>;
-    const beta = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const beta = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
     const betaList = await harness.client.request({ path: '/api/conversations', token: beta });
     const betaRows = betaList.body['conversations'] as Array<Record<string, unknown>>;
     const alphaRefs = new Set(rows.map((row) => String(row['ref'])));
@@ -172,7 +178,7 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
     const address = await shortLived.listen();
     const client = new LocalApiClient('127.0.0.1', address.port);
     try {
-      const token = await loginAs(client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+      const token = await loginAs(client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
       const first = await client.request({ path: '/api/conversations', token });
       assert.equal(first.status, 200);
       await new Promise((resolve) => setTimeout(resolve, 2500));
@@ -184,7 +190,7 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ AC-06b: a revoked session is refused', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const before = await harness.client.request({ path: '/api/conversations', token: owner });
     assert.equal(before.status, 200);
     const revoked = await harness.client.request({ method: 'DELETE', path: '/api/session', token: owner });
@@ -194,30 +200,30 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ AC-06c: a disabled membership stops the next operation', async () => {
-    const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const agent = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
     const before = await harness.client.request({ path: '/api/conversations', token: agent });
     assert.equal(before.status, 200);
 
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`update memberships set status = 'revoked' where tenant_id = $1 and user_id = $2`, [
-        'tnt_alpha',
-        'usr_alpha_agent',
+        `${NS}_tnt_alpha`,
+        `${NS}_usr_alpha_agent`,
       ]);
     });
 
     const after = await harness.client.request({ path: '/api/conversations', token: agent });
     assert.ok(after.status === 401 || after.status === 403, `unexpected status ${after.status}`);
 
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`update memberships set status = 'active' where tenant_id = $1 and user_id = $2`, [
-        'tnt_alpha',
-        'usr_alpha_agent',
+        `${NS}_tnt_alpha`,
+        `${NS}_usr_alpha_agent`,
       ]);
     });
   });
 
   await t.test('⭐ M59: a role change in the database is effective on the next request', async () => {
-    const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const agent = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
     const before = await harness.client.request({
       method: 'POST',
       path: '/api/privacy/export',
@@ -225,20 +231,20 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
     });
     assert.equal(before.status, 403, 'the agent could export before the change');
 
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`update memberships set role = 'supervisor' where tenant_id = $1 and user_id = $2`, [
-        'tnt_alpha',
-        'usr_alpha_agent',
+        `${NS}_tnt_alpha`,
+        `${NS}_usr_alpha_agent`,
       ]);
     });
 
     const after = await harness.client.request({ method: 'POST', path: '/api/privacy/export', token: agent });
     assert.equal(after.status, 200, 'the role change did not reach the next request');
 
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(`update memberships set role = 'agent' where tenant_id = $1 and user_id = $2`, [
-        'tnt_alpha',
-        'usr_alpha_agent',
+        `${NS}_tnt_alpha`,
+        `${NS}_usr_alpha_agent`,
       ]);
     });
     const restored = await harness.client.request({ method: 'POST', path: '/api/privacy/export', token: agent });
@@ -246,9 +252,10 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ M59b: a token of one company cannot be replayed in another', async () => {
-    const alpha = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const alpha = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const parts = alpha.split('.');
-    const forged = `wsl.tnt_beta.${parts[2]}.${parts[3]}`;
+    // ⭐⭐ The forged token carries the OTHER company of THIS file.
+    const forged = `wsl.${NS}_tnt_beta.${parts[2]}.${parts[3]}`;
     const response = await harness.client.request({ path: '/api/conversations', token: forged });
     assert.equal(response.status, 401, 'the forged tenant token was accepted');
   });
@@ -269,21 +276,21 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ R-02: the seed restores the identity rows after a tenant wipe', async () => {
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`delete from memberships where tenant_id = $1`, ['tnt_alpha']);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`delete from memberships where tenant_id = $1`, [`${NS}_tnt_alpha`]);
     });
     const refused = await harness.client.request({
       method: 'POST',
       path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_owner', passcode: PASSCODE },
+      payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_owner`, passcode: PASSCODE },
     });
     assert.equal(refused.status, 401, 'the login still worked without a membership');
 
-    await seedDatabase(harness.ownerPool, PASSCODE);
+    await seedDatabase(harness.ownerPool, PASSCODE, NS);
     const restored = await harness.client.request({
       method: 'POST',
       path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_owner', passcode: PASSCODE },
+      payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_owner`, passcode: PASSCODE },
     });
     assert.equal(restored.status, 200, 'the seed did not restore the membership');
   });
@@ -292,32 +299,32 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   // ------------------------------------------------------------
 
   await t.test('⭐ R-03a: a disabled account stops the next request', async () => {
-    const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const agent = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
     const before = await harness.client.request({ path: '/api/conversations', token: agent });
     assert.equal(before.status, 200);
 
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`update users set status = 'disabled' where id = $1`, ['usr_alpha_agent']);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`update users set status = 'disabled' where id = $1`, [`${NS}_usr_alpha_agent`]);
     });
     try {
       const after = await harness.client.request({ path: '/api/conversations', token: agent });
       assert.ok(after.status === 401 || after.status === 403, `the disabled account still works: ${after.status}`);
     } finally {
-      await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-        await uow.query(`update users set status = 'active' where id = $1`, ['usr_alpha_agent']);
+      await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+        await uow.query(`update users set status = 'active' where id = $1`, [`${NS}_usr_alpha_agent`]);
       });
     }
   });
 
   await t.test('⭐ R-03b: an old session stays dead after a new login', async () => {
-    const first = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const first = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const before = await harness.client.request({ path: '/api/conversations', token: first });
     assert.equal(before.status, 200);
 
     const revoked = await harness.client.request({ method: 'DELETE', path: '/api/session', token: first });
     assert.equal(revoked.status, 200);
 
-    const second = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const second = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     assert.notEqual(second, first, 'the new login returned the old token');
 
     const oldToken = await harness.client.request({ path: '/api/conversations', token: first });
@@ -327,7 +334,7 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ R-03c: a tampered token is refused', async () => {
-    const token = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const token = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const parts = token.split('.');
     assert.equal(parts.length, 4, 'the token is not the expected shape');
 
@@ -369,10 +376,10 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
     assert.ok(!verifyPasscode(tampered, PASSCODE), 'a tampered cost is accepted');
 
     // ⭐ The database holds the hash, never the passcode.
-    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ passcode_hash: string }>(
         `select passcode_hash from users where id = $1`,
-        ['usr_alpha_owner'],
+        [`${NS}_usr_alpha_owner`],
       );
       return result.rows.map((row) => row.passcode_hash);
     });

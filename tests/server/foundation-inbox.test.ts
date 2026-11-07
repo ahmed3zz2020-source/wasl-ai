@@ -35,6 +35,12 @@ import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
 import { loginAs, startHarness, type Harness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'inbox';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 /**
@@ -51,15 +57,15 @@ function rowsOf(body: Record<string, unknown>, key: string): Record<string, unkn
 }
 
 test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
 
-  const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-  const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
-  const viewer = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_viewer', PASSCODE);
-  const otherCompany = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+  const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+  const agent = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
+  const viewer = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_viewer`, PASSCODE);
+  const otherCompany = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
 
   await t.test('⭐⭐⭐ IN-01: the list carries the customer, the state and the last message', async () => {
     const answer = await harness.client.request({
@@ -114,9 +120,9 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
     // ⭐⭐ M-76: the scope of the core work queue ⇒ an agent works on
     //   the conversations that are assigned to them. ⭐ The fixture
     //   assigns it, exactly as the supervisor does in the product.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(
-        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = $1`,
+        `update conversations set assignee_actor_id = '${NS}_usr_alpha_agent' where ref = $1`,
         [ref],
       );
     });
@@ -129,11 +135,11 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
     assert.equal(answer.status, 201, `the reply failed: ${answer.status} ${JSON.stringify(answer.body)}`);
     const message = answer.body['message'] as Record<string, unknown>;
     assert.equal(message['direction'], 'outbound', 'the reply is not outbound');
-    assert.equal(message['from'], 'usr_alpha_agent', 'the reply is not from the employee');
+    assert.equal(message['from'], `${NS}_usr_alpha_agent`, 'the reply is not from the employee');
     assert.equal(message['body'], 'أهلا بك، نتابع الفاتورة ونتحقق منها.', 'the body was changed');
 
     // ⭐⭐ It is really in PostgreSQL.
-    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query(
         `select direction, sender, body from messages where message_ref = $1`,
         [`reply_test_in03_${RUN}`],
@@ -152,9 +158,9 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
     });
     const ref = String(rowsOf(list.body, 'conversations')[0]!['ref']);
     // ⭐⭐ M-76: the conversation is assigned to the employee first.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(
-        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = $1`,
+        `update conversations set assignee_actor_id = '${NS}_usr_alpha_agent' where ref = $1`,
         [ref],
       );
     });
@@ -175,7 +181,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
     assert.equal(second.status, 409, `the double send was accepted: ${second.status}`);
     const code = String((second.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
     assert.equal(code, 'message_duplicate', `the refusal carries an unexpected code: ${code}`);
-    const count = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const count = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query(
         `select count(*)::text as count from messages where message_ref = $1`,
         [`reply_test_in04_${RUN}`],
@@ -217,7 +223,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
       method: 'POST',
       path: `/api/inbox/conversations/${ref}/assign`,
       token: owner,
-      payload: { actor_id: 'usr_beta_owner', reason: 'inbox test' },
+      payload: { actor_id: `${NS}_usr_beta_owner`, reason: 'inbox test' },
     });
     assert.equal(refused.status, 409, `the foreign employee was accepted: ${refused.status}`);
     const code = String((refused.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
@@ -231,7 +237,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
       method: 'POST',
       path: `/api/inbox/conversations/${ref}/assign`,
       token: owner,
-      payload: { actor_id: 'usr_alpha_agent', reason: 'inbox test' },
+      payload: { actor_id: `${NS}_usr_alpha_agent`, reason: 'inbox test' },
     });
     assert.equal(accepted.status, 200, `the employee was refused: ${accepted.status}`);
   });
@@ -262,12 +268,12 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
 
     const byAssignee = await harness.client.request({
       method: 'GET',
-      path: '/api/inbox/conversations?assignee=usr_alpha_agent',
+      path: `/api/inbox/conversations?assignee=${NS}_usr_alpha_agent`,
       token: owner,
     });
     assert.equal(byAssignee.status, 200, 'the assignee filter failed');
     for (const row of rowsOf(byAssignee.body, 'conversations')) {
-      assert.equal(row['assignee_actor_id'], 'usr_alpha_agent', 'the filter returned another assignee');
+      assert.equal(row['assignee_actor_id'], `${NS}_usr_alpha_agent`, 'the filter returned another assignee');
     }
 
     const byText = await harness.client.request({
@@ -334,7 +340,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
       method: 'POST',
       path: '/api/inbox/conversations/conv_alpha_1/assign',
       token: agent,
-      payload: { actor_id: 'usr_alpha_agent' },
+      payload: { actor_id: `${NS}_usr_alpha_agent` },
     });
     assert.equal(assign.status, 403, `the agent was allowed to assign: ${assign.status}`);
     const state = await harness.client.request({
@@ -366,7 +372,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
     for (const row of rowsOf(list.body, 'conversations')) {
       assert.equal(
         row['assignee_actor_id'],
-        'usr_alpha_agent',
+        `${NS}_usr_alpha_agent`,
         'the agent sees a conversation that is not assigned to them',
       );
     }
@@ -380,7 +386,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
   });
 
   await t.test('⭐⭐⭐ IN-11: a session that is over cannot change anything', async () => {
-    const throwaway = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const throwaway = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
     const revoked = await harness.client.request({
       method: 'DELETE',
       path: '/api/session',

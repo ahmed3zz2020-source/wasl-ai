@@ -28,10 +28,16 @@ import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
 import { loginAs, startHarness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'multi';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
 
   // ⭐ The second instance: another process would behave exactly the
   //   same way (the state lives in PostgreSQL, not in the process).
@@ -47,9 +53,9 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
     await harness.stop();
   });
 
-  const ownerA = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-  const ownerB = await loginAs(secondClient, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-  const betaA = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+  const ownerA = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+  const ownerB = await loginAs(secondClient, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+  const betaA = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
 
   await t.test('⭐⭐ M-01a: a write of one instance is visible to the other', async () => {
     const ref = `conv_m01_a_${Date.now().toString(36)}`;
@@ -59,7 +65,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
       token: ownerA,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'm01 visibility' },
       },
     });
@@ -86,7 +92,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
       token: ownerA,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'm01 race' },
       },
     });
@@ -119,7 +125,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
     );
 
     // ⭐ Exactly one increment and one change row: no lost update.
-    const row = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const row = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const conversation = await uow.query<{ state: string; version: number }>(
         `select state, version from conversations where ref = $1`,
         [ref],
@@ -147,7 +153,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
       token: ownerA,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'm01 sequence' },
       },
     });
@@ -176,7 +182,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
       `the second instance did not see the committed state: ${secondMove.status} ${JSON.stringify(secondMove.body)}`,
     );
 
-    const row = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const row = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const conversation = await uow.query<{ state: string; version: number }>(
         `select state, version from conversations where ref = $1`,
         [ref],
@@ -204,7 +210,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
       token: ownerA,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'm01 isolation' },
       },
     });
@@ -228,7 +234,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
       token: ownerA,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'm01 message' },
       },
     });
@@ -246,7 +252,7 @@ test('FOUNDATION 8) two backend instances on one database (M-01)', async (t) => 
       `the message was not accepted: ${appended.status} ${JSON.stringify(appended.body)}`,
     );
 
-    const rows = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string; body: string }>(
         `select count(*)::text as count, string_agg(body, '|') as body from messages where conversation_ref = $1`,
         [ref],

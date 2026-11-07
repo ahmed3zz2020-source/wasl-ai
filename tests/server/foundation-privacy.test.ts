@@ -15,17 +15,23 @@ import test from 'node:test';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { startHarness, loginAs, resetSyntheticData } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'priv';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
-  await resetSyntheticData(harness.ownerPool, PASSCODE);
+  await resetSyntheticData(harness.ownerPool, PASSCODE, ['tnt_alpha', 'tnt_beta', 'tnt_gamma'], NS);
 
   await t.test('⭐ the retention policies round trip and are per class', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const written = await harness.client.request({
       method: 'POST',
       path: '/api/retention',
@@ -44,7 +50,7 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
   });
 
   await t.test('⭐ an unknown data class is refused', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const response = await harness.client.request({
       method: 'POST',
       path: '/api/retention',
@@ -55,14 +61,14 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
   });
 
   await t.test('⭐ the export contains the tenant data and nothing else', async () => {
-    const alpha = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-    const beta = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const alpha = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+    const beta = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
 
     await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: alpha,
-      payload: { conversation_ref: 'conv_priv_alpha', customer_id: 'cus_alpha_1', message: { body: 'private' } },
+      payload: { conversation_ref: 'conv_priv_alpha', customer_id: `${NS}_cus_alpha_1`, message: { body: 'private' } },
     });
 
     const exported = await harness.client.request({ method: 'POST', path: '/api/privacy/export', token: alpha });
@@ -71,7 +77,7 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
     const conversations = bundle['conversations'] as Array<Record<string, unknown>>;
     assert.ok(conversations.some((row) => row['ref'] === 'conv_priv_alpha'), 'the export misses the conversation');
     for (const row of conversations) {
-      assert.equal(row['tenant_id'], 'tnt_alpha', 'the export contains a row of another tenant');
+      assert.equal(row['tenant_id'], `${NS}_tnt_alpha`, 'the export contains a row of another tenant');
     }
 
     const betaExport = await harness.client.request({ method: 'POST', path: '/api/privacy/export', token: beta });
@@ -84,8 +90,8 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
   });
 
   await t.test('⭐ the deletion preview changes nothing', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
-    const before = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
+    const before = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(`select count(*)::text as count from conversations`);
       return Number(result.rows[0]?.count ?? '0');
     });
@@ -102,7 +108,7 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
     assert.ok(counts['conversations'] > 0, 'the preview does not count the conversations');
     assert.ok(Array.isArray(body['notes']) && (body['notes'] as unknown[]).length > 0, 'the preview has no notes');
 
-    const after = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const after = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(`select count(*)::text as count from conversations`);
       return Number(result.rows[0]?.count ?? '0');
     });
@@ -112,14 +118,14 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
   await t.test('⭐ the deletion removes the data and keeps the audit trail', async () => {
     // ⭐ The deletion runs against the third company, so the other two
     //   keep their fixtures for the checks that follow.
-    const owner = await loginAs(harness.client, 'tnt_gamma', 'usr_gamma_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_gamma`, `${NS}_usr_gamma_owner`, PASSCODE);
     await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: owner,
       payload: {
         conversation_ref: 'conv_priv_gamma',
-        customer_id: 'cus_gamma_1',
+        customer_id: `${NS}_cus_gamma_1`,
         message: { body: 'to be deleted' },
       },
     });
@@ -144,12 +150,12 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
     assert.ok(removed['conversations'] > 0, 'no conversation was removed');
     assert.ok(removed['customers'] > 0, 'no customer was removed');
 
-    const after = await UnitOfWork.run(harness.ownerPool, 'tnt_gamma', async (uow) => {
+    const after = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_gamma`, async (uow) => {
       const conversations = await uow.query<{ count: string }>(`select count(*)::text as count from conversations`);
       const messages = await uow.query<{ count: string }>(`select count(*)::text as count from messages`);
       const customers = await uow.query<{ count: string }>(`select count(*)::text as count from customers`);
       const audits = await uow.query<{ count: string }>(`select count(*)::text as count from audit_events`);
-      const tenant = await uow.query<{ status: string }>(`select status from tenants where id = $1`, ['tnt_gamma']);
+      const tenant = await uow.query<{ status: string }>(`select status from tenants where id = $1`, [`${NS}_tnt_gamma`]);
       const request = await uow.query<{ status: string }>(
         `select status from deletion_requests where id = $1`,
         [requestId],
@@ -174,15 +180,15 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
   await t.test('⭐ a deletion request of another company cannot be executed here', async () => {
     // ⭐ The seed comes back: the deletion removed the memberships of
     //   the third company, which is exactly what a deletion means.
-    await resetSyntheticData(harness.ownerPool, PASSCODE);
-    const gamma = await loginAs(harness.client, 'tnt_gamma', 'usr_gamma_owner', PASSCODE);
+    await resetSyntheticData(harness.ownerPool, PASSCODE, ['tnt_alpha', 'tnt_beta', 'tnt_gamma'], NS);
+    const gamma = await loginAs(harness.client, `${NS}_tnt_gamma`, `${NS}_usr_gamma_owner`, PASSCODE);
     await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: gamma,
       payload: {
         conversation_ref: 'conv_priv_gamma_keep',
-        customer_id: 'cus_gamma_1',
+        customer_id: `${NS}_cus_gamma_1`,
         message: { body: 'must survive' },
       },
     });
@@ -193,7 +199,7 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
       payload: { scope: 'tenant_data' },
     });
     const requestId = String((preview.body['preview'] as Record<string, unknown>)['requestId']);
-    const beta = await loginAs(harness.client, 'tnt_beta', 'usr_beta_owner', PASSCODE);
+    const beta = await loginAs(harness.client, `${NS}_tnt_beta`, `${NS}_usr_beta_owner`, PASSCODE);
     const executed = await harness.client.request({
       method: 'POST',
       path: '/api/privacy/deletion/execute',
@@ -202,9 +208,9 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
     });
     assert.ok(executed.status >= 400, 'the beta session executed the gamma deletion request');
 
-    const stillThere = await UnitOfWork.run(harness.ownerPool, 'tnt_gamma', async (uow) => {
+    const stillThere = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_gamma`, async (uow) => {
       const result = await uow.query<{ count: string }>(
-        `select count(*)::text as count from conversations where tenant_id = 'tnt_gamma'`,
+        `select count(*)::text as count from conversations where tenant_id = '${NS}_tnt_gamma'`,
       );
       return Number(result.rows[0]?.count ?? '0');
     });
@@ -212,14 +218,14 @@ test('FOUNDATION 4) privacy, retention and deletion', async (t) => {
   });
 
   await t.test('⭐ the deletion request cannot be executed twice', async () => {
-    const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     await harness.client.request({
       method: 'POST',
       path: '/api/conversations',
       token: owner,
       payload: {
         conversation_ref: 'conv_priv_twice',
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'twice' },
       },
     });

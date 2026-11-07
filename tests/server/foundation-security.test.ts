@@ -26,10 +26,16 @@ import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
 import { loginAs, startHarness } from './harness.ts';
 
+// ⭐⭐ D-072 / M-82: the companies of THIS file (the namespace) ⇐
+//   ⭐⭐ no other file can touch their rows ⇐ ⭐⭐ the result of the
+//   ⭐⭐ file never depends on the order of the files.
+const NS = 'sec';
+
+
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
 test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', async (t) => {
-  const harness = await startHarness();
+  const harness = await startHarness({ namespace: NS });
   t.after(async () => {
     await harness.stop();
   });
@@ -44,7 +50,7 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     await secondPool.end();
   });
 
-  const owner = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+  const owner = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
 
   await t.test('⭐⭐ M-02a: the health check describes the service and nothing else', async () => {
     const health = await harness.client.request({ method: 'GET', path: '/health' });
@@ -74,16 +80,16 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
       const failed = await harness.client.request({
         method: 'POST',
         path: '/api/session',
-        payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: `${PASSCODE}-wrong` },
+        payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: `${PASSCODE}-wrong` },
       });
       assert.equal(failed.status, 401, `the guess number ${attempt + 1} was not refused`);
     }
 
     // ⭐ The counter lives in the database: the second instance sees it.
-    const attempts = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const attempts = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from login_attempts where user_id = $1 and succeeded = false`,
-        ['usr_alpha_agent'],
+        [`${NS}_usr_alpha_agent`],
       );
       return Number(result.rows[0]?.count ?? '0');
     });
@@ -100,7 +106,7 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     const refused = await harness.client.request({
       method: 'POST',
       path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: `${PASSCODE}-wrong` },
+      payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: `${PASSCODE}-wrong` },
     });
     assert.equal(refused.status, 429, `the guess was not refused: ${refused.status}`);
     const code = String((refused.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
@@ -110,7 +116,7 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     const allowed = await harness.client.request({
       method: 'POST',
       path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+      payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
     });
     assert.equal(
       allowed.status,
@@ -120,10 +126,10 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     assert.ok(typeof allowed.body['token'] === 'string', 'the session was not opened');
 
     // ⭐ The counter is cleaned up: a successful login clears it.
-    const cleared = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const cleared = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from login_attempts where user_id = $1 and succeeded = false`,
-        ['usr_alpha_agent'],
+        [`${NS}_usr_alpha_agent`],
       );
       return Number(result.rows[0]?.count ?? '0');
     });
@@ -133,14 +139,14 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     const allowedAgain = await secondClient.request({
       method: 'POST',
       path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_agent', passcode: PASSCODE },
+      payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_agent`, passcode: PASSCODE },
     });
     assert.equal(allowedAgain.status, 200, `the login was still refused after the cleanup: ${allowedAgain.status}`);
   });
 
   await t.test('⭐⭐ M-02c: a business answer is not counted as a guess', async () => {
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`delete from login_attempts where user_id = $1`, ['usr_alpha_viewer']);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`delete from login_attempts where user_id = $1`, [`${NS}_usr_alpha_viewer`]);
     });
 
     // ⭐ A disabled account with the RIGHT passcode is an answer, not
@@ -148,30 +154,30 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     //   told apart from a wrong passcode without telling the caller
     //   that the account exists, so it stays a credential failure and
     //   it is counted. That order is deliberate.)
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`update users set status = 'disabled' where id = $1`, ['usr_alpha_viewer']);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`update users set status = 'disabled' where id = $1`, [`${NS}_usr_alpha_viewer`]);
     });
     const disabled = await harness.client.request({
       method: 'POST',
       path: '/api/session',
-      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_viewer', passcode: PASSCODE },
+      payload: { tenant_id: `${NS}_tnt_alpha`, user_id: `${NS}_usr_alpha_viewer`, passcode: PASSCODE },
     });
     assert.equal(disabled.status, 403, `unexpected status: ${disabled.status}`);
     const code = String((disabled.body['error'] as Record<string, unknown> | undefined)?.['code'] ?? '');
     assert.equal(code, 'user_disabled', `the refusal carries an unexpected code: ${code}`);
 
-    const counted = await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    const counted = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       const result = await uow.query<{ count: string }>(
         `select count(*)::text as count from login_attempts where user_id = $1`,
-        ['usr_alpha_viewer'],
+        [`${NS}_usr_alpha_viewer`],
       );
       return Number(result.rows[0]?.count ?? '0');
     });
     assert.equal(counted, 0, `a disabled account was counted ${counted} times`);
 
     // ⭐ The account is restored for the other tests.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
-      await uow.query(`update users set status = 'active' where id = $1`, ['usr_alpha_viewer']);
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      await uow.query(`update users set status = 'active' where id = $1`, [`${NS}_usr_alpha_viewer`]);
     });
   });
 
@@ -185,7 +191,7 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     const shortAddress = await shortApi.listen();
     const shortClient = new LocalApiClient('127.0.0.1', shortAddress.port);
     try {
-      const token = await loginAs(shortClient, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+      const token = await loginAs(shortClient, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
       const before = await shortClient.request({ method: 'GET', path: '/api/conversations', token });
       assert.equal(before.status, 200, 'the fresh session was refused');
       await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -200,7 +206,7 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
   });
 
   await t.test('⭐⭐ M-02e: a session is revoked when it is deleted', async () => {
-    const token = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_owner', PASSCODE);
+    const token = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_owner`, PASSCODE);
     const before = await harness.client.request({ method: 'GET', path: '/api/conversations', token });
     assert.equal(before.status, 200);
 
@@ -215,7 +221,7 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
 
   await t.test('⭐⭐⭐ M-02f: the role comes from the database, not from the client', async () => {
     // ⭐ The agent may not change a state; the supervisor may.
-    const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    const agent = await loginAs(harness.client, `${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`, PASSCODE);
     const ref = `conv_m02_f_${Date.now().toString(36)}`;
     const created = await harness.client.request({
       method: 'POST',
@@ -223,7 +229,7 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
       token: owner,
       payload: {
         conversation_ref: ref,
-        customer_id: 'cus_alpha_1',
+        customer_id: `${NS}_cus_alpha_1`,
         message: { body: 'm02 role' },
       },
     });
@@ -239,10 +245,10 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
 
     // ⭐ The role is raised in the database: the NEXT request of the
     //   same session follows it.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(
         `update memberships set role = 'supervisor' where tenant_id = $1 and user_id = $2`,
-        ['tnt_alpha', 'usr_alpha_agent'],
+        [`${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`],
       );
     });
     const allowed = await harness.client.request({
@@ -254,10 +260,10 @@ test('FOUNDATION 9) the sessions, the rate limit and the health check (M-02)', a
     assert.equal(allowed.status, 200, `the raised role was not applied: ${allowed.status}`);
 
     // ⭐ The role is restored.
-    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+    await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
       await uow.query(
         `update memberships set role = 'agent' where tenant_id = $1 and user_id = $2`,
-        ['tnt_alpha', 'usr_alpha_agent'],
+        [`${NS}_tnt_alpha`, `${NS}_usr_alpha_agent`],
       );
     });
   });
