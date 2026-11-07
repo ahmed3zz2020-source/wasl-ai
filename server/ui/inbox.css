@@ -581,3 +581,58 @@ button.ghost:hover:not(:disabled) {
     display: none;
   }
 }
+
+/* ============================================================
+   D-071 — the pagination, the refresh and the link to the CRM
+   ============================================================ */
+
+/* ⭐⭐ M-78: the pages of the list. */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.pagination .page-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ⭐⭐ M-77: the state of the refresh. */
+.refresh-note {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ⭐⭐ the actions of the head of the thread. */
+.thread-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ⭐⭐ a link that looks like the ghost button. */
+a.ghost.link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .thread-head {
+    flex-wrap: wrap;
+  }
+
+  .thread-head-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

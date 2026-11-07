@@ -30,13 +30,16 @@ const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1']);
 export class LocalApiClient {
   readonly #host: string;
   readonly #port: number;
+  /** ⭐⭐ A fresh connection on every request (no reused socket). */
+  readonly #fresh: boolean;
 
-  constructor(host = '127.0.0.1', port = 8787) {
+  constructor(host = '127.0.0.1', port = 8787, options: { readonly fresh?: boolean } = {}) {
     if (!LOOPBACK.has(host)) {
       throw new Error(`refusing to call a non loopback host: ${host}`);
     }
     this.#host = host;
     this.#port = port;
+    this.#fresh = options.fresh === true;
   }
 
   async request(options: RequestOptions): Promise<ApiResponse> {
@@ -48,6 +51,9 @@ export class LocalApiClient {
           port: this.#port,
           path: options.path,
           method: options.method ?? 'GET',
+          // ⭐⭐ A fresh connection ⇒ a socket of a closed server is
+          //   never reused (the drill of a RESTART needs it).
+          ...(this.#fresh ? { agent: false } : {}),
           headers: {
             ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
             ...(payload ? { 'content-type': 'application/json' } : {}),

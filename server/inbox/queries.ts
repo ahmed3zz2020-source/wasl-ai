@@ -76,6 +76,27 @@ export interface InboxAgentRow {
 }
 
 /**
+ * ⭐⭐⭐ The scope of the ROLE — the rule of the core work queue
+ *   (`src/core/agent-queue.ts` · `scopeIsOwnOnly`): an AGENT reaches
+ *   the conversations that are assigned to them, and nothing else.
+ * ⭐⭐ M-76: the same rule is applied to EVERY path (the list, the
+ *   detail and the reply) ⇒ ⭐ **a path can never be wider than the
+ *   list** ⇒ ⭐ the agent cannot reach a conversation of another
+ *   employee by its reference.
+ * ⛔ It is a READ of the rule of the core, not a new rule: the owner
+ *   and the supervisor still reach the whole company.
+ */
+export function roleScopeClause(
+  role: string,
+  actorId: string,
+  column: string,
+  add: (value: unknown) => string,
+): string | null {
+  if (role !== 'agent') return null;
+  return `${column} = ${add(actorId)}`;
+}
+
+/**
  * ⭐⭐ The list of the inbox.
  * ⭐ The order is the order of the work: the most recent activity
  *   first, and the reference as the tie breaker (a stable order).
@@ -93,9 +114,9 @@ export async function listInboxConversations(
   };
 
   // ⭐⭐ The scope of the ROLE (the rule of the core work queue).
-  if (filters.role === 'agent') {
-    const actor = add(filters.actorId);
-    conditions.push(`c.assignee_actor_id = ${actor}`);
+  const scopeClause = roleScopeClause(filters.role, filters.actorId, 'c.assignee_actor_id', add);
+  if (scopeClause) {
+    conditions.push(scopeClause);
   }
   if (filters.state !== undefined) {
     conditions.push(`c.state = ${add(filters.state)}`);
@@ -173,33 +194,72 @@ export async function listInboxConversations(
   };
 }
 
-/** ⭐ The detail of one conversation: the customer and the messages. */
+/**
+ * ⭐ The detail of one conversation: the customer and the messages.
+ * ⭐⭐ M-76: the scope of the role is applied HERE too ⇒ ⭐ a path
+ *   that is not the list cannot be wider than the list.
+ * ⭐ The messages are read only when the conversation is in scope ⇒
+ *   the body of a conversation out of scope is never even loaded.
+ */
 export async function readInboxConversation(
   uow: UnitOfWork,
   tenantId: string,
   ref: string,
+  scope?: { readonly role: string; readonly actorId: string },
+  /** ⭐ M-77: only the messages that are NEWER than this instant. */
+  since?: string,
 ): Promise<{
   readonly conversation: Record<string, unknown> | null;
   readonly messages: readonly Record<string, unknown>[];
+  /** ⭐ M-77: the instant of the database ⇒ the client polls with it. */
+  readonly server_time: string;
 }> {
+  const conditions: string[] = ['c.tenant_id = $1', 'c.ref = $2'];
+  const values: unknown[] = [tenantId, ref];
+  const add = (value: unknown): string => {
+    values.push(value);
+    return `$${values.length}`;
+  };
+  if (scope) {
+    const scopeClause = roleScopeClause(scope.role, scope.actorId, 'c.assignee_actor_id', add);
+    if (scopeClause) {
+      conditions.push(scopeClause);
+    }
+  }
+  const where = conditions.join(' and ');
   const conversation = await uow.query(
     `select c.ref, c.customer_id, cu.display_name as customer_name, c.state,
             c.assignee_actor_id, c.version, c.updated_at
        from conversations c
        left join customers cu on cu.id = c.customer_id and cu.tenant_id = c.tenant_id
-      where c.tenant_id = $1 and c.ref = $2`,
-    [tenantId, ref],
+      where ${where}`,
+    values,
   );
+  const row = conversation.rows[0] as Record<string, unknown> | undefined;
+  if (!row) {
+    // ⭐⭐ Out of scope ⇒ nothing is read, nothing is returned.
+    return { conversation: null, messages: [], server_time: new Date().toISOString() };
+  }
+  // ⭐⭐ M-77: the refresh asks for the NEW messages only ⇒ ⭐ the
+  //   thread is not sent again on every poll (no excessive requests).
+  const messageValues: unknown[] = [tenantId, ref];
+  let messageSince = '';
+  if (since !== undefined && since !== '') {
+    messageValues.push(since);
+    messageSince = ` and occurred_at > $3`;
+  }
   const messages = await uow.query(
     `select message_ref, channel, direction, sender, recipient, body, occurred_at, locale
        from messages
-      where tenant_id = $1 and conversation_ref = $2
+      where tenant_id = $1 and conversation_ref = $2${messageSince}
       order by occurred_at asc, message_ref asc`,
-    [tenantId, ref],
+    messageValues,
   );
+  const clock = await uow.query<{ now: string }>(`select now()::text as now`);
   return {
-    conversation: (conversation.rows[0] as Record<string, unknown> | undefined) ?? null,
+    conversation: row,
     messages: messages.rows as readonly Record<string, unknown>[],
+    server_time: String(clock.rows[0]?.now ?? new Date().toISOString()),
   };
 }
 

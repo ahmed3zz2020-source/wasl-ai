@@ -414,6 +414,19 @@ export class WaslApiServer {
     return { allowed: false, code: decision.code, reason: decision.reason };
   }
 
+  /**
+   * ⭐⭐ M-76: the scope of the role on one conversation.
+   * ⭐⭐ The rule is READ from the core work queue (`agent-queue.ts`):
+   *   an AGENT reaches the conversations that are assigned to them,
+   *   and nothing else. ⛔ It is not a new permission: the owner and
+   *   the supervisor still reach the whole company, and the viewer
+   *   keeps the read-only access the core grants.
+   */
+  #withinRoleScope(context: RequestContext, assigneeActorId: string | null): boolean {
+    if (context.session.role !== 'agent') return true;
+    return assigneeActorId === context.session.actorId;
+  }
+
   async #audit(
     tenantId: string,
     actorId: string,
@@ -636,7 +649,7 @@ export class WaslApiServer {
       if (segments[2] === 'conversations' && segments[3]) {
         const ref = decodeURIComponent(segments[3]);
         if (method === 'GET' && segments.length === 4) {
-          return this.#readInboxConversation(context, ref);
+          return this.#readInboxConversation(context, ref, url);
         }
         if (method === 'POST' && segments[4] === 'replies') {
           return locked(() => this.#sendReply(context, ref, req));
@@ -1175,6 +1188,14 @@ export class WaslApiServer {
         if (!lockedRow) {
           throw new Error('conversation_not_found');
         }
+        // ⭐⭐ M-76: the scope of the role — the rule of the core work
+        //   queue (`agent-queue.ts`): an AGENT reaches the conversations
+        //   that are assigned to them, and nothing else. ⭐ It is
+        //   applied to EVERY path (the detail and every write) ⇒ ⭐ a
+        //   path can never be wider than the list.
+        if (!this.#withinRoleScope(context, lockedRow.assignee_actor_id)) {
+          throw new Error('conversation_not_found');
+        }
         await hydrateEmployees(uow, bundle);
         const exists = await hydrateConversation(uow, bundle, decision.context, ref);
         if (!exists) {
@@ -1283,6 +1304,14 @@ export class WaslApiServer {
         if (!lockedRow) {
           throw new Error('conversation_not_found');
         }
+        // ⭐⭐ M-76: the scope of the role — the rule of the core work
+        //   queue (`agent-queue.ts`): an AGENT reaches the conversations
+        //   that are assigned to them, and nothing else. ⭐ It is
+        //   applied to EVERY path (the detail and every write) ⇒ ⭐ a
+        //   path can never be wider than the list.
+        if (!this.#withinRoleScope(context, lockedRow.assignee_actor_id)) {
+          throw new Error('conversation_not_found');
+        }
         await hydrateEmployees(uow, bundle);
         const exists = await hydrateConversation(uow, bundle, decision.context, ref);
         if (!exists) {
@@ -1358,6 +1387,14 @@ export class WaslApiServer {
         //   lock first, the hydration after it.
         const lockedRow = await lockConversationRow(uow, context.session.tenantId, ref);
         if (!lockedRow) {
+          throw new Error('conversation_not_found');
+        }
+        // ⭐⭐ M-76: the scope of the role — the rule of the core work
+        //   queue (`agent-queue.ts`): an AGENT reaches the conversations
+        //   that are assigned to them, and nothing else. ⭐ It is
+        //   applied to EVERY path (the detail and every write) ⇒ ⭐ a
+        //   path can never be wider than the list.
+        if (!this.#withinRoleScope(context, lockedRow.assignee_actor_id)) {
           throw new Error('conversation_not_found');
         }
         await hydrateEmployees(uow, bundle);
@@ -1462,7 +1499,11 @@ export class WaslApiServer {
   }
 
   /** ⭐⭐ D-070: the detail of one conversation and its messages. */
-  async #readInboxConversation(context: RequestContext, ref: string): Promise<JsonResponse> {
+  async #readInboxConversation(
+    context: RequestContext,
+    ref: string,
+    url: URL,
+  ): Promise<JsonResponse> {
     const decision = this.#authorize(context, 'conversation.read', ref);
     if (!decision.allowed) {
       await this.#audit(
@@ -1476,8 +1517,19 @@ export class WaslApiServer {
       );
       return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
     }
+    // ⭐⭐ M-77: the refresh asks only for what is new.
+    const since = url.searchParams.get('since');
     const detail = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
-      readInboxConversation(uow, context.session.tenantId, ref),
+      readInboxConversation(
+        uow,
+        context.session.tenantId,
+        ref,
+        {
+          role: context.session.role,
+          actorId: context.session.actorId,
+        },
+        since !== null ? since : undefined,
+      ),
     );
     if (!detail.conversation) {
       return {
@@ -1507,6 +1559,9 @@ export class WaslApiServer {
         conversation: detail.conversation,
         messages: detail.messages,
         allowed_states: allowedStates,
+        // ⭐ M-77: the instant of the database ⇒ the next poll asks
+        //   only for what is newer than it.
+        server_time: detail.server_time,
       },
     };
   }
@@ -1556,6 +1611,14 @@ export class WaslApiServer {
         //   conversation at the same time.
         const lockedRow = await lockConversationRow(uow, context.session.tenantId, ref);
         if (!lockedRow) {
+          throw new Error('conversation_not_found');
+        }
+        // ⭐⭐ M-76: the scope of the role — the rule of the core work
+        //   queue (`agent-queue.ts`): an AGENT reaches the conversations
+        //   that are assigned to them, and nothing else. ⭐ It is
+        //   applied to EVERY path (the detail and every write) ⇒ ⭐ a
+        //   path can never be wider than the list.
+        if (!this.#withinRoleScope(context, lockedRow.assignee_actor_id)) {
           throw new Error('conversation_not_found');
         }
         await hydrateEmployees(uow, bundle);

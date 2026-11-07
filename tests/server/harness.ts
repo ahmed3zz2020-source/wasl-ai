@@ -163,6 +163,51 @@ export async function createSyntheticTenant(
 }
 
 /**
+ * ⭐⭐ D-071: a synthetic company with SEVERAL roles, alone.
+ * ⭐⭐ WHY A COMPANY OF ITS OWN
+ *   ⭐ The test files run in parallel over ONE database ⇒ ⭐ a file
+ *     that uses the SHARED seeded tenant (`tnt_alpha`) depends on the
+ *     moment another file wipes it (five files call
+ *     `resetSyntheticData`) ⇒ ⭐ **the drill of a file must own its
+ *     data** ⇒ ⭐ a drill that counts rows or measures a limit
+ *     measures ITS OWN rows and nothing else.
+ */
+export async function createSyntheticCompany(
+  ownerPool: PgPool,
+  tenantId: string,
+  passcode: string,
+  members: readonly { readonly id: string; readonly role: string }[],
+): Promise<{ readonly tenantId: string; readonly userIds: Record<string, string> }> {
+  const { hashPasscode } = await import('../../server/auth/sessions.ts');
+  const userIds: Record<string, string> = {};
+  for (const member of members) {
+    userIds[member.role] = member.id;
+  }
+  await UnitOfWork.run(ownerPool, tenantId, async (uow) => {
+    await uow.query(
+      `insert into tenants (id, name, status) values ($1,$2,'active')
+       on conflict (id) do update set name = excluded.name, status = 'active'`,
+      [tenantId, `Synthetic ${tenantId}`],
+    );
+    for (const member of members) {
+      await uow.query(
+        `insert into users (id, display_name, email, status, passcode_hash)
+         values ($1,$2,$3,'active',$4)
+         on conflict (id) do update set passcode_hash = excluded.passcode_hash, status = 'active'`,
+        [member.id, `${member.role} ${tenantId}`, `${member.id}@example.invalid`, hashPasscode(passcode)],
+      );
+      await uow.query(
+        `insert into memberships (id, tenant_id, user_id, role, status)
+         values ($1,$2,$3,$4,'active')
+         on conflict (tenant_id, user_id) do update set role = excluded.role, status = 'active'`,
+        [`mem_${member.id}`, tenantId, member.id, member.role],
+      );
+    }
+  });
+  return { tenantId, userIds };
+}
+
+/**
  * ⭐⭐ D-069 / M68: purge the synthetic evidence of a tenant.
  * ⭐ The evidence is IMMUTABLE (the guard refuses every UPDATE and
  *   every DELETE, even for the owner role), so the cleanup of the

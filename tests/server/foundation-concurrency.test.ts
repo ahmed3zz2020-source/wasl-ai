@@ -195,6 +195,15 @@ test('FOUNDATION 7) the concurrent operations (D-067 remediation)', async (t) =>
     });
     assert.equal(created.status, 201);
 
+    // ⭐⭐ M-76: the agent reaches the conversations that are assigned
+    //   to them ⇒ the fixture assigns the conversation before the race.
+    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await uow.query(
+        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = $1`,
+        [ref],
+      );
+    });
+
     const [first, second] = await Promise.all([
       harness.client.request({
         method: 'POST',

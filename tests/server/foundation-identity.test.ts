@@ -84,6 +84,14 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
 
   await t.test('⭐ AC-05c: the agent can write but not create or export', async () => {
     const agent = await loginAs(harness.client, 'tnt_alpha', 'usr_alpha_agent', PASSCODE);
+    // ⭐⭐ M-76: the agent reaches the conversations that are assigned
+    //   to them (the scope of the core work queue). ⭐ The fixture
+    //   assigns the conversation, exactly as the owner does.
+    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await uow.query(
+        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = 'conv_role_owner'`,
+      );
+    });
     const write = await harness.client.request({
       method: 'POST',
       path: '/api/conversations/conv_role_owner/messages',

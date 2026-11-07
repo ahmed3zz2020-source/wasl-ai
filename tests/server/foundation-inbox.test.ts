@@ -111,6 +111,15 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
       token: owner,
     });
     const ref = String(rowsOf(list.body, 'conversations')[0]!['ref']);
+    // ⭐⭐ M-76: the scope of the core work queue ⇒ an agent works on
+    //   the conversations that are assigned to them. ⭐ The fixture
+    //   assigns it, exactly as the supervisor does in the product.
+    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await uow.query(
+        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = $1`,
+        [ref],
+      );
+    });
     const answer = await harness.client.request({
       method: 'POST',
       path: `/api/inbox/conversations/${ref}/replies`,
@@ -142,6 +151,13 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
       token: owner,
     });
     const ref = String(rowsOf(list.body, 'conversations')[0]!['ref']);
+    // ⭐⭐ M-76: the conversation is assigned to the employee first.
+    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await uow.query(
+        `update conversations set assignee_actor_id = 'usr_alpha_agent' where ref = $1`,
+        [ref],
+      );
+    });
     const payload = { body: 'رسالة واحدة يجب أن تُخزَّن مرة واحدة فقط.', client_message_ref: `reply_test_in04_${RUN}` };
     const first = await harness.client.request({
       method: 'POST',
@@ -523,25 +539,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
       assert.equal(found!['customer_name'], 'Journey Customer', 'the customer name is wrong');
       assert.equal(found!['state'], 'new', 'the state is wrong');
 
-      // ③ the employee reads the conversation.
-      const detail = await harness.client.request({
-        method: 'GET',
-        path: `/api/inbox/conversations/${ref}`,
-        token: journeyAgent,
-      });
-      assert.equal(detail.status, 200, 'the agent may not read the conversation');
-      assert.equal(rowsOf(detail.body, 'messages').length, 1, 'the message is missing');
-
-      // ④ the employee replies.
-      const reply = await harness.client.request({
-        method: 'POST',
-        path: `/api/inbox/conversations/${ref}/replies`,
-        token: journeyAgent,
-        payload: { body: 'أهلًا بك، تم استلام طلبك.', client_message_ref: 'reply_journey_1' },
-      });
-      assert.equal(reply.status, 201, `the reply failed: ${reply.status}`);
-
-      // ⑤⭐ the supervisor opens the conversation first: the core
+      // ③⭐ the supervisor opens the conversation first: the core
       //   allows the assignment only from a state that accepts it.
       const opened = await harness.client.request({
         method: 'POST',
@@ -551,7 +549,7 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
       });
       assert.equal(opened.status, 200, `the opening failed: ${opened.status}`);
 
-      // ⑥ the supervisor assigns the conversation.
+      // ④ the supervisor assigns the conversation to the employee.
       const assigned = await harness.client.request({
         method: 'POST',
         path: `/api/inbox/conversations/${ref}/assign`,
@@ -559,6 +557,26 @@ test('FOUNDATION 18) the customer inbox works on the real backend (D-070)', asyn
         payload: { actor_id: agentId, reason: 'journey' },
       });
       assert.equal(assigned.status, 200, `the assignment failed: ${assigned.status}`);
+
+      // ⑤⭐⭐ M-76: the employee reads the conversation NOW — the scope
+      //   of the core work queue: an agent reaches the conversations
+      //   that are assigned to them, and nothing else.
+      const detail = await harness.client.request({
+        method: 'GET',
+        path: `/api/inbox/conversations/${ref}`,
+        token: journeyAgent,
+      });
+      assert.equal(detail.status, 200, 'the agent may not read the conversation');
+      assert.equal(rowsOf(detail.body, 'messages').length, 1, 'the message is missing');
+
+      // ⑥ the employee replies.
+      const reply = await harness.client.request({
+        method: 'POST',
+        path: `/api/inbox/conversations/${ref}/replies`,
+        token: journeyAgent,
+        payload: { body: 'أهلًا بك، تم استلام طلبك.', client_message_ref: 'reply_journey_1' },
+      });
+      assert.equal(reply.status, 201, `the reply failed: ${reply.status}`);
 
       // ⑦ the state walks the transitions of the core to the end.
       for (const to of ['pending', 'resolved', 'closed']) {

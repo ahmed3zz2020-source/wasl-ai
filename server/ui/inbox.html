@@ -46,6 +46,7 @@
         <div class="who" id="who" hidden>
           <span class="pill" id="who-name"></span>
           <span class="pill muted" id="who-role"></span>
+          <a class="ghost link" href="/ui/crm.html" id="link-crm">العملاء</a>
           <button class="ghost" id="btn-logout" type="button">خروج</button>
         </div>
       </div>
@@ -97,6 +98,12 @@
             <span>غيّر البحث أو التصفية لترى المزيد.</span>
           </div>
           <ul class="conversations" id="conversation-list"></ul>
+          <!-- ⭐⭐ M-78: the pages are real ⇒ no conversation disappears. -->
+          <nav class="pagination" id="pagination" aria-label="صفحات المحادثات" hidden>
+            <button class="ghost" id="btn-prev" type="button">السابق</button>
+            <span class="page-label" id="page-label"></span>
+            <button class="ghost" id="btn-next" type="button">التالي</button>
+          </nav>
         </section>
 
         <section class="pane thread" id="thread-pane" aria-label="المحادثة">
@@ -111,8 +118,15 @@
               <div class="thread-title">
                 <h2 id="thread-customer">—</h2>
                 <span class="muted" id="thread-ref"></span>
+                <span class="muted refresh-note" id="thread-refresh"></span>
               </div>
-              <span class="state-badge" id="thread-state">—</span>
+              <div class="thread-head-actions">
+                <!-- ⭐⭐ M-77: the refresh of the thread. -->
+                <button class="ghost" id="btn-refresh-thread" type="button">تحديث</button>
+                <!-- ⭐⭐ D-071: the customer of the conversation. -->
+                <a class="ghost link" id="link-customer" href="#" hidden>ملف العميل</a>
+                <span class="state-badge" id="thread-state">—</span>
+              </div>
             </header>
 
             <div class="controls">
