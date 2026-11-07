@@ -143,7 +143,7 @@
 
 ### ٣.٥ ⭐⭐ الطلب على ChatGPT (جاهز للنسخ)
 
-> ⭐ النص الكامل في §١٢ من تقرير Phase 01 — ويُولَّد آلياً بـ`python3 tools/print_gpt_msg.py --reply --check`.
+> ⭐ النص الكامل في **§١٤** من تقرير Phase 01 (`docs/FOUNDATION-BUILD-03-PHASE-01-REPORT.md`) — ويُولَّد آلياً بـ`python3 tools/print_gpt_msg.py --reply --check`.
 
 ## ٤. ⭐ آخر رد — تفصيل كامل (ردّ #٤٥ · ٧ نوفمبر ٢٠٢٦)
 

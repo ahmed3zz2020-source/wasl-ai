@@ -177,7 +177,11 @@ def summary_block(sha: str) -> str:
     dec = (REPO / "DECISIONS.md").read_text(encoding="utf-8") if (REPO / "DECISIONS.md").exists() else ""
     cs = (REPO / "CURRENT-STATE.md").read_text(encoding="utf-8") if (REPO / "CURRENT-STATE.md").exists() else ""
     tracked = git("ls-files").splitlines()
-    n_code = len([f for f in tracked if f.startswith("src/")])
+    # ⭐ **العدّادات تُقاس بالميزة ⇒ كل مجلّد على حدة** ⇒ ⭐ «كود الإنتاج» = النواة + الخادم (مش النواة وحدها).
+    n_core = len([f for f in tracked if f.startswith("src/")])
+    n_server = len([f for f in tracked if f.startswith("server/")])
+    n_tools = len([f for f in tracked if f.startswith("tools/")])
+    n_prod = n_core + n_server
     n_tests = len([f for f in tracked if f.startswith("tests/")])
     rows = decision_rows(dec)
     n_ok = sum(1 for _, t in rows if "✅" in t)
@@ -231,8 +235,11 @@ def summary_block(sha: str) -> str:
                 moved = "لم تتحرك" not in ln
                 break
     if ready:
-        if n_code:
-            state = f"✔ كود الإنتاج ({ar_num(n_code)} ملفات) · ✔ اختبارات محلية ({ar_num(n_tests)} ملفات اختبار)"
+        if n_prod:
+            state = (
+                f"✔ كود الإنتاج ({ar_num(n_prod)} ملفاً = {ar_num(n_core)} نواة + {ar_num(n_server)} خادم) "
+                f"· ✔ اختبارات محلية ({ar_num(n_tests)} ملف اختبار)"
+            )
         else:
             state = "بلا كود · بلا اختبار"
         tail_txt = "" if moved else " (درجات EA-001..EA-007 لم تتحرك)"
@@ -247,7 +254,8 @@ def summary_block(sha: str) -> str:
     n_md = len([f for f in tracked if f.endswith(".md")])
     lines.append(
         f"- ⭐ **الريبو**: {ar_num(len(tracked))} ملف متتبَّع ({ar_num(n_md)} ملف `.md`) · "
-        f"{ar_num(n_code)} ملف إنتاج · {ar_num(n_tests)} ملف اختبار · العدّادات في `CURRENT-STATE.md` مصحَّحة."
+        f"{ar_num(n_core)} نواة + {ar_num(n_server)} خادم + {ar_num(n_tools)} أداة تشغيل "
+        f"· {ar_num(n_tests)} ملف اختبار · العدّادات في `CURRENT-STATE.md` مصحَّحة."
     )
 
     # ⑤ نتائج الاختبارات الحية (تشغيل فعلي)
@@ -261,10 +269,23 @@ def summary_block(sha: str) -> str:
         )
 
     # ⑥ الوثائق الأساسية (روابط مثبَّتة على نفس الـcommit)
-    docs = [
-        ("docs/FOUNDATION-BUILD-02-PHASE-02-REPORT.md", "تقرير FOUNDATION BUILD 02 / PHASE 02"),
+    # ⭐ **أحدث تقريرَين بالترتيب الزمني** ⇒ ⭐ الترتيب من **git** (تاريخ آخر commit لمسّ الملف)
+    # ⇒ ⭐ **ثابت بعد أي clone** ⇒ ⭐ **لا تتقادم باليد**.
+    def report_rank(p: Path) -> int:
+        out = git("log", "-1", "--format=%ct", "--", str(p.relative_to(REPO)))
+        try:
+            return int(out.strip())
+        except ValueError:
+            return 0
+
+    reports = sorted(
+        (p for p in (REPO / "docs").glob("*REPORT.md") if p.is_file()),
+        key=report_rank,
+        reverse=True,
+    )[:2]
+    docs = [(f"docs/{p.name}", p.stem.replace("-", " ")) for p in reports]
+    docs += [
         ("docs/TEST-MATRIX.md", "مصفوفة الاختبارات"),
-        ("docs/FOUNDATION-BUILD-02-PHASE-01-REPORT.md", "تقرير FOUNDATION BUILD 02 / PHASE 01"),
         ("DECISIONS.md", "سجل القرارات"),
     ]
     links = [
@@ -282,7 +303,7 @@ def summary_block(sha: str) -> str:
         lines.append("- ⭐ **ما ينتظر قرار المالك الآن** (من " + where + " في السجل): " + " · ".join(pending))
 
     # ⑧ ما لم يُنفَّذ
-    if n_code:
+    if n_prod:
         lines.append(
             "- ⭐ **⛔ لم يُنفَّذ**: لا تكامل خارجي · لا حسابات · لا تواصل خارجي · لا تعاقد · لا دفعة · لا نشر "
             "· ولا اعتماد نهائي لمسار واتساب · ⭐ **والكود الموجود = ما نُفِّذ محلياً فقط (بلا اتصال وبلا حساب)**."
