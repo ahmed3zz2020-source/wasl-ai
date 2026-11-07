@@ -1,5 +1,7 @@
 # ⭐⭐⭐ تقرير التحقق — مراجعة ChatGPT المستقلة لردّ #٤٩ (M89 · M90 · M91 · M92 · M93)
 
+> ⭐ **ثابت على commit**: ⭐ [`docs/GPT-REVIEW-049-RESPONSE.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/bd36a9f/docs/GPT-REVIEW-049-RESPONSE.md) · ⭐ [`docs/CHATGPT-REVIEW-LOG.md` (ردّ #٥٠)](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/CHATGPT-REVIEW-LOG.md) · ⭐ [`docs/OPEN-DECISIONS.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/bd36a9f/docs/OPEN-DECISIONS.md) · ⭐ [`CURRENT-STATE.md`](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/bd36a9f/CURRENT-STATE.md) · ⭐ [`DECISIONS.md` §D-073](https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/bd36a9f/DECISIONS.md)
+
 > ⭐ **طبيعة هذه الجولة**: ⭐ **مراجعة وتحقيق وتقرير فقط** ⇒ ⭐ **لا إصلاح كود جديد أُنفِّذ** ⇒ ⭐ **ولا تعديل في `src/core/`** ⇒ ⭐ **ولا PHASE 05 ولا نشر ولا بيانات حقيقية ولا موارد خارجية**.
 > ⭐ **المرجع**: ⭐ `4103f1d` (آخر ردّ مُنفَّذ) · ⭐ **القرار**: ⭐ `D-073` · ⭐ **المراجعة**: ⭐ ردّ #٥٠ في `docs/CHATGPT-REVIEW-LOG.md`.
 > ⭐ **النتيجة المختصرة**: ⭐ **M89 وM90 ثبتا حيّاً على PostgreSQL حقيقي** ⇒ ⭐ **وM91 وM92 وM93 ثبتت بالقراءة والعدّ** ⇒ ⭐ **وخمس حزم إصلاح محدودة جاهزة للاعتماد الصريح**.
