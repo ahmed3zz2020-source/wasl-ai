@@ -63,18 +63,38 @@ export interface CrmCustomerRow {
  * ⭐ An AGENT reaches only the customers that have a conversation
  *   assigned to them ⇒ ⭐ the CRM of an agent never shows a customer
  *   that nobody gave them.
+ * ⭐⭐ D-072 / M-83: the scope has TWO parts and BOTH are needed:
+ *   ⭐ (١) WHICH customers the agent sees (`exists …`), and
+ *   ⭐ (٢) WHICH conversations of those customers count for them
+ *      (the derived numbers) ⇒ ⭐⭐ the same parameter is reused in
+ *      the derived parts ⇒ ⭐ the count, the last message and the last
+ *      interaction can NEVER come from a conversation of another
+ *      employee.
+ * ⭐⭐ The owner, the supervisor and the viewer keep the scope of the
+ *   core: the whole company (no clause at all).
  */
+interface CrmScopeSql {
+  /** ⭐ The filter of the list of the customers. */
+  readonly where: string | null;
+  /** ⭐⭐ The parameter of the assignment (the filter of the DERIVED data). */
+  readonly assignee: string | null;
+}
+
 function scopeClause(
   scope: { role: string; actorId: string },
   add: (value: unknown) => string,
-): string | null {
-  if (scope.role !== 'agent') return null;
-  return `exists (
+): CrmScopeSql {
+  if (scope.role !== 'agent') return { where: null, assignee: null };
+  const assignee = add(scope.actorId);
+  return {
+    where: `exists (
       select 1 from conversations c
        where c.tenant_id = cu.tenant_id
          and c.customer_id = cu.id
-         and c.assignee_actor_id = ${add(scope.actorId)}
-    )`;
+         and c.assignee_actor_id = ${assignee}
+    )`,
+    assignee,
+  };
 }
 
 /**
@@ -97,9 +117,16 @@ export async function listCustomers(
   };
 
   const scope = scopeClause({ role: filters.role, actorId: filters.actorId }, add);
-  if (scope) {
-    conditions.push(scope);
+  if (scope.where) {
+    conditions.push(scope.where);
   }
+  // ⭐⭐ M-83: the derived data (the count, the last message, the last
+  //   interaction) is computed over the conversations the employee may
+  //   SEE ⇒ ⭐ for an agent that means the conversations assigned to
+  //   them ⇒ ⭐⭐ otherwise the number of the conversations and the text
+  //   of the last message would come from a conversation of another
+  //   employee.
+  const derivedScope = scope.assignee === null ? '' : ` and c.assignee_actor_id = ${scope.assignee}`;
 
   if (filters.query !== undefined && filters.query.trim() !== '') {
     const needle = add(`%${filters.query.trim()}%`);
@@ -139,14 +166,14 @@ export async function listCustomers(
        left join lateral (
          select count(*)::int as conversation_count
            from conversations c
-          where c.tenant_id = cu.tenant_id and c.customer_id = cu.id
+          where c.tenant_id = cu.tenant_id and c.customer_id = cu.id${derivedScope}
        ) cnt on true
        left join lateral (
          select m.occurred_at, m.body
            from messages m
            join conversations c
              on c.tenant_id = m.tenant_id and c.ref = m.conversation_ref
-          where c.tenant_id = cu.tenant_id and c.customer_id = cu.id
+          where c.tenant_id = cu.tenant_id and c.customer_id = cu.id${derivedScope}
           order by m.occurred_at desc, m.message_ref desc
           limit 1
        ) last on true
@@ -188,8 +215,8 @@ export async function readCustomer(
     return `$${values.length}`;
   };
   const scopeSql = scopeClause(scope, add);
-  if (scopeSql) {
-    conditions.push(scopeSql);
+  if (scopeSql.where) {
+    conditions.push(scopeSql.where);
   }
   const customer = await uow.query(
     `select cu.id, cu.display_name, cu.email, cu.phone, cu.data_class,
