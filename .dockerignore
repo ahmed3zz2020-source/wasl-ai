@@ -1,0 +1,15 @@
+# ============================================================
+# WASL AI — the build context of the image
+# ------------------------------------------------------------
+# ⛔ The local secrets must NEVER enter the build context: the image
+#   is built from this directory and every file of the context is sent
+#   to the daemon.
+# ⛔ `.local/` holds the database credentials and the backup key.
+# ============================================================
+.local/
+node_modules/
+.git/
+.gitignore
+*.log
+docs/previews/
+coverage/

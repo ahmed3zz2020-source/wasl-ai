@@ -477,6 +477,15 @@ export class WaslApiServer {
     if (method === 'GET' && (path === '/' || path === '/health' || path === '/api/health')) {
       return this.#health();
     }
+    // ⭐⭐ D-069 / M70: the readiness probe.
+    // ⭐ Liveness (/health) answers "the process is alive".
+    //   Readiness (/ready) answers "the service can serve a request":
+    //   the database answers AND the schema is in place.
+    // ⭐ The two are separate on purpose: a database that is down
+    //   must not restart the process in a loop.
+    if (method === 'GET' && (path === '/ready' || path === '/api/ready')) {
+      return this.#ready();
+    }
     if (method === 'GET' && (path === '/ui' || path === '/ui/')) {
       return { status: 200, body: { ok: true, ui: '/ui/index.html', connected: true } };
     }
@@ -647,6 +656,42 @@ export class WaslApiServer {
         window_seconds: this.#config.rateLimit.windowSeconds,
         trust_peer_address: this.#config.rateLimit.trustPeerAddress,
       },
+    };
+    return { status: dbOk ? 200 : 503, body };
+  }
+
+  /**
+   * ⭐⭐ D-069 / M70: the readiness answer.
+   * ⭐ The service is ready when the database answers and the schema
+   *   is applied (at least one migration is in place).
+   * ⛔ It exposes nothing sensitive: no host, no credential, no data.
+   */
+  async #ready(): Promise<JsonResponse> {
+    let dbOk = false;
+    let schemaVersion: string | null = null;
+    let migrations = 0;
+    try {
+      const result = await this.#pool.query<{ version: string }>(
+        `select version from wasl_schema_migrations order by applied_at desc limit 1`,
+      );
+      schemaVersion = result.rows[0]?.version ?? null;
+      const count = await this.#pool.query<{ count: string }>(
+        `select count(*)::text as count from wasl_schema_migrations`,
+      );
+      migrations = Number(count.rows[0]?.count ?? '0');
+      dbOk = schemaVersion !== null;
+    } catch {
+      dbOk = false;
+    }
+    const body = {
+      ok: dbOk,
+      service: 'wasl-local-api',
+      scope: 'local-test',
+      profile: this.#config.profile,
+      db_ok: dbOk,
+      schema_version: schemaVersion,
+      migrations,
+      uptime_ms: Date.now() - this.#startedAt,
     };
     return { status: dbOk ? 200 : 503, body };
   }

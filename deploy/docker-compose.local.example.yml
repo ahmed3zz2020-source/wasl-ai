@@ -1,0 +1,111 @@
+# ============================================================
+# WASL AI — the LOCAL compose file (EXAMPLE ONLY)
+# ------------------------------------------------------------
+# ⛔ This file is a LOCAL compose: it runs on a developer machine and
+#   it is NEVER a deployment.
+# ⛔ It was never started in the current environment: the sandbox has
+#   no Docker daemon (see the Phase 02 report, the section about
+#   M-70). The checks that do not need a daemon are part of the test
+#   suite.
+# ⭐ It is RUNNABLE with synthetic data:
+#     cp deploy/env.local.example deploy/env.local
+#     docker compose -f deploy/docker-compose.local.example.yml \
+#       --env-file deploy/env.local up --build
+# ⛔ NO CREDENTIAL VALUE APPEARS IN THIS FILE: every secret is a
+#   variable substitution that the environment of the operator
+#   resolves. Nothing real is ever written here.
+# ⛔ The published port is the LOOPBACK only: the machine that runs
+#   the compose is the only one that can reach the backend.
+# ⛔ The database has NO published port: it lives on the internal
+#   network of the compose and nothing outside of it can reach it.
+# ============================================================
+
+name: wasl-local-example
+
+services:
+  # ------------------------------------------------------------
+  # postgres — the application database (local synthetic data)
+  # ------------------------------------------------------------
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      # ⭐ The values come from the operator environment through the
+      #   substitutions below. The secret is never written in this
+      #   file and never committed.
+      POSTGRES_DB: ${WASL_PG_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # A named volume keeps the data across container restarts.
+      - wasl-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${WASL_PG_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # ⛔ NO published port: the database is reachable only from the
+    #   internal compose network. The host never exposes 5432.
+
+  # ------------------------------------------------------------
+  # backend — the local API server ("npm run server")
+  # ------------------------------------------------------------
+  backend:
+    build:
+      # The build context is the repository root. ⛔ The .dockerignore
+      #   keeps the local secrets out of the context.
+      context: ..
+      dockerfile: Dockerfile
+    image: wasl-backend:local-example
+    command: node --experimental-strip-types tools/wasl-server.ts
+    working_dir: /app
+    restart: unless-stopped
+
+    env_file:
+      # ⭐ The synthetic local values (a copy of env.local.example).
+      - ./env.local
+
+    environment:
+      # ⭐ The database lives on the internal network of the compose.
+      WASL_PG_HOST: postgres
+      WASL_PG_PORT: "5432"
+      WASL_PG_DATABASE: ${WASL_PG_DATABASE}
+      WASL_PG_PASSWORD: ${WASL_PG_PASSWORD}
+      WASL_PG_OWNER_PASSWORD: ${WASL_PG_OWNER_PASSWORD}
+      # ⭐ Inside the container the process binds the address of the
+      #   container; the PUBLISHED port stays on the loopback.
+      WASL_SERVER_HOST: "0.0.0.0"
+      WASL_SERVER_PORT: "8787"
+      WASL_SESSION_TTL_SECONDS: ${WASL_SESSION_TTL_SECONDS}
+      WASL_TEST_PASSCODE: ${WASL_TEST_PASSCODE}
+      WASL_ENV: staging
+      WASL_LOG_LEVEL: ${WASL_LOG_LEVEL}
+
+    ports:
+      # ⛔ Published on the loopback interface only. The reverse proxy
+      #   (see deploy/nginx.conf.example) is the single public entry
+      #   point; the backend is never exposed directly.
+      - "127.0.0.1:8787:8787"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      # ⭐ The liveness route is GET /health. ⭐ The readiness route is
+      #   GET /ready: it checks the database and the schema.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8787/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+    # Long enough for the graceful shutdown (SIGTERM -> api.close()
+    # -> pool.end()) to drain the in-flight requests.
+    stop_grace_period: 30s
+
+volumes:
+  wasl-pgdata:
