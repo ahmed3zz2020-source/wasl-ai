@@ -442,7 +442,7 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
   await t.test('⭐⭐⭐ D-071 (UI-17): the edit is real and it is audited', async () => {
     // ⭐ The owner may manage a customer ⇒ the block of the edit shows.
     assert.equal(await page.isVisible('#edit-block'), true, '⭐⭐⭐ the edit is hidden from the owner');
-    await page.fill('#edit-name', 'عميل معدَّل');
+    await page.fill('#edit-name', 'عميل جديد');
     // ⭐ The confirmation of a change that matters.
     page.evaluate(`window.confirm = () => true`);
     await page.click('#btn-save');
@@ -453,7 +453,7 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     const changed = await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
       const result = await uow.query(
         `select count(*)::int as count from customers where tenant_id = $1 and display_name = $2`,
-        [tenantId, 'عميل معدَّل'],
+        [tenantId, 'عميل جديد'],
       );
       return Number(result.rows[0]?.['count'] ?? '0');
     });
