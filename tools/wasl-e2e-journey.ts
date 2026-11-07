@@ -8,12 +8,23 @@
 
 import { loadConfig } from '../server/config.ts';
 import { createPool } from '../server/db/pool.ts';
+import { runMigrations, seedDatabase } from '../server/db/setup.ts';
 import { WaslApiServer } from '../server/api/server.ts';
 import { LocalApiClient } from '../server/e2e/http-client.ts';
 import { runJourney } from '../server/e2e/journey.ts';
 
 async function main(): Promise<void> {
   const config = loadConfig();
+  // The journey must not depend on the order of the commands: the
+  // privacy suite deletes the synthetic rows of a tenant, so the
+  // migrations and the seed are applied before every journey run.
+  const seedPool = createPool(config.ownerDatabaseUrl, 2);
+  try {
+    await runMigrations(seedPool);
+    await seedDatabase(seedPool, config.testPasscode);
+  } finally {
+    await seedPool.end();
+  }
   const external = process.env['WASL_SERVER_URL'];
   let api: WaslApiServer | null = null;
   let pool = createPool(config.appDatabaseUrl, 4);

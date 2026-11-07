@@ -192,7 +192,8 @@ export async function seedDatabase(ownerPool: PgPool, testPasscode: string): Pro
         await uow.query(
           `insert into users (id, display_name, email, status, passcode_hash)
            values ($1,$2,$3,'active',$4)
-           on conflict (id) do update set display_name = excluded.display_name, status = 'active'`,
+           on conflict (id) do update set display_name = excluded.display_name, status = 'active',
+             passcode_hash = excluded.passcode_hash`,
           [
             member.user,
             member.display,

@@ -45,15 +45,26 @@ function requireString(value: string | undefined, code: string, message: string)
   return value;
 }
 
-function readCredentialFile(repoRoot: string): string | null {
+interface CredentialFile {
+  /** Password of the request role (`wasl_app`). */
+  readonly appPassword: string;
+  /** Password of the migration role (`wasl_owner`) - null when absent. */
+  readonly ownerPassword: string | null;
+}
+
+function readCredentialFile(repoRoot: string): CredentialFile | null {
   const file = path.join(repoRoot, '.local', 'pg-credentials.json');
   try {
     if (!fs.existsSync(file)) return null;
     const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (typeof parsed === 'object' && parsed !== null) {
       const record = parsed as Record<string, unknown>;
-      const password = record['app_password'] ?? record['password'];
-      if (typeof password === 'string' && password !== '') return password;
+      const app = record['app_password'] ?? record['password'];
+      const owner = record['owner_password'];
+      return {
+        appPassword: typeof app === 'string' ? app : '',
+        ownerPassword: typeof owner === 'string' && owner !== '' ? owner : null,
+      };
     }
     return null;
   } catch {
@@ -76,8 +87,12 @@ export function loadConfig(
     throw new ConfigError('pg_port_invalid', 'WASL_PG_PORT is not a valid TCP port');
   }
   const databaseName = env['WASL_PG_DATABASE'] ?? DEFAULT_DB_NAME;
-  const password =
-    env['WASL_PG_PASSWORD'] ?? readCredentialFile(repoRoot) ?? '';
+  const credentials = readCredentialFile(repoRoot);
+  const password = env['WASL_PG_PASSWORD'] ?? credentials?.appPassword ?? '';
+  // The migration role has its own password: the setup command generates
+  // a separate secret for `wasl_owner`. Using the app password for the
+  // owner URL would fail the authentication of the migration connection.
+  const ownerPassword = env['WASL_PG_OWNER_PASSWORD'] ?? credentials?.ownerPassword ?? password;
   if (password === '' && options.requirePassword !== false) {
     throw new ConfigError(
       'pg_password_missing',
@@ -95,7 +110,7 @@ export function loadConfig(
     host: env['WASL_SERVER_HOST'] ?? '127.0.0.1',
     port: parsedPort,
     appDatabaseUrl: buildUrl(databaseName, 'wasl_app', password, host, port),
-    ownerDatabaseUrl: buildUrl(databaseName, 'wasl_owner', password, host, port),
+    ownerDatabaseUrl: buildUrl(databaseName, 'wasl_owner', ownerPassword, host, port),
     databaseName,
     sessionTtlSeconds: ttl,
     testPasscode: requireString(

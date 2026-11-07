@@ -17,6 +17,7 @@ import { WaslApiServer } from '../../server/api/server.ts';
 import { createPool } from '../../server/db/pool.ts';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { LocalApiClient } from '../../server/e2e/http-client.ts';
+import { seedDatabase } from '../../server/db/setup.ts';
 import { startHarness, loginAs, resetSyntheticData } from './harness.ts';
 
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
@@ -241,5 +242,40 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
     const forged = `wsl.tnt_beta.${parts[2]}.${parts[3]}`;
     const response = await harness.client.request({ path: '/api/conversations', token: forged });
     assert.equal(response.status, 401, 'the forged tenant token was accepted');
+  });
+
+  await t.test('⭐ R-01: the migration connection uses the owner role and its own password', async () => {
+    const ownerPool = createPool(harness.config.ownerDatabaseUrl, 1);
+    const who = await ownerPool.query<{ current_user: string }>('select current_user');
+    assert.equal(who.rows[0]?.current_user, 'wasl_owner', 'the owner url did not open as wasl_owner');
+    await ownerPool.end();
+
+    const appPool = createPool(harness.config.appDatabaseUrl, 1);
+    const role = await appPool.query<{ rolbypassrls: boolean; rolsuper: boolean }>(
+      'select rolbypassrls, rolsuper from pg_roles where rolname = current_user',
+    );
+    assert.equal(role.rows[0]?.rolbypassrls, false, 'the request role can bypass the row policies');
+    assert.equal(role.rows[0]?.rolsuper, false, 'the request role is a superuser');
+    await appPool.end();
+  });
+
+  await t.test('⭐ R-02: the seed restores the identity rows after a tenant wipe', async () => {
+    await UnitOfWork.run(harness.ownerPool, 'tnt_alpha', async (uow) => {
+      await uow.query(`delete from memberships where tenant_id = $1`, ['tnt_alpha']);
+    });
+    const refused = await harness.client.request({
+      method: 'POST',
+      path: '/api/session',
+      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_owner', passcode: PASSCODE },
+    });
+    assert.equal(refused.status, 401, 'the login still worked without a membership');
+
+    await seedDatabase(harness.ownerPool, PASSCODE);
+    const restored = await harness.client.request({
+      method: 'POST',
+      path: '/api/session',
+      payload: { tenant_id: 'tnt_alpha', user_id: 'usr_alpha_owner', passcode: PASSCODE },
+    });
+    assert.equal(restored.status, 200, 'the seed did not restore the membership');
   });
 });
