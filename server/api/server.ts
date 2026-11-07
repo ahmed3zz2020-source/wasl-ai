@@ -39,7 +39,12 @@ import {
   type TenantIdentityMirror,
 } from '../auth/registry.ts';
 import { login, resolveSession, revokeSession, SessionError } from '../auth/sessions.ts';
-import { clearLoginFailures, readRateLimitState, recordLoginFailure } from '../auth/rate-limit.ts';
+import {
+  admitLoginAttempt,
+  clearLoginFailures,
+  readRateLimitState,
+  recordLoginFailure,
+} from '../auth/rate-limit.ts';
 import { createLogger, type Logger } from '../log.ts';
 import {
   assertCapability,
@@ -51,6 +56,15 @@ import {
   type TrustedRole,
 } from '../../src/core/index.ts';
 import { classifyJourneyMessage, renderJourneyReply } from '../../src/local/journey/classification.ts';
+import { ALLOWED_TRANSITIONS } from '../../src/core/conversation-state.ts';
+import {
+  isInboxState,
+  listInboxAgents,
+  listInboxConversations,
+  readInboxConversation,
+  type InboxFilters,
+  type InboxState,
+} from '../inbox/queries.ts';
 import {
   exportTenantData,
   executeDeletion,
@@ -62,6 +76,14 @@ import {
 } from '../policy/retention.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
+
+/** ⭐ A wait that does not block the event loop (the admission control). */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    timer.unref?.();
+  });
+}
 const SCOPE_REF = 'tenant-scope';
 
 /**
@@ -73,6 +95,10 @@ const UI_FILES: Readonly<Record<string, { file: string; type: string }>> = Objec
   '/ui/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/ui/app.js': { file: 'app.js', type: 'text/javascript; charset=utf-8' },
   '/ui/style.css': { file: 'style.css', type: 'text/css; charset=utf-8' },
+  // ⭐⭐ D-070: the customer inbox (the work surface of the service).
+  '/ui/inbox.html': { file: 'inbox.html', type: 'text/html; charset=utf-8' },
+  '/ui/inbox.js': { file: 'inbox.js', type: 'text/javascript; charset=utf-8' },
+  '/ui/inbox.css': { file: 'inbox.css', type: 'text/css; charset=utf-8' },
 });
 
 const UI_DIR = nodePath.join(nodePath.resolve(import.meta.dirname, '..'), 'ui');
@@ -597,6 +623,35 @@ export class WaslApiServer {
       return locked(() => this.#previewDeletion(context, req));
     }
 
+    // ⭐⭐ D-070: the customer inbox.
+    // ⭐ The decisions are taken by the core (the same capabilities of
+    //   the other routes): the inbox adds no permission of its own.
+    if (segments[1] === 'inbox') {
+      if (method === 'GET' && segments[2] === 'conversations' && segments.length === 3) {
+        return this.#listInbox(context, url);
+      }
+      if (method === 'GET' && segments[2] === 'agents' && segments.length === 3) {
+        return this.#listInboxAgents(context);
+      }
+      if (segments[2] === 'conversations' && segments[3]) {
+        const ref = decodeURIComponent(segments[3]);
+        if (method === 'GET' && segments.length === 4) {
+          return this.#readInboxConversation(context, ref);
+        }
+        if (method === 'POST' && segments[4] === 'replies') {
+          return locked(() => this.#sendReply(context, ref, req));
+        }
+        // ⭐ The assignment and the state reuse the handlers of the
+        //   other routes: the core decides, exactly once.
+        if (method === 'POST' && segments[4] === 'assign') {
+          return locked(() => this.#assign(context, ref, req));
+        }
+        if (method === 'POST' && segments[4] === 'state') {
+          return locked(() => this.#updateState(context, ref, req));
+        }
+      }
+    }
+
     if (segments[1] === 'conversations' && segments[2]) {
       const ref = decodeURIComponent(segments[2]);
       if (method === 'GET' && segments.length === 3) {
@@ -655,6 +710,13 @@ export class WaslApiServer {
         max_peer_attempts: this.#config.rateLimit.maxPeerAttempts,
         window_seconds: this.#config.rateLimit.windowSeconds,
         trust_peer_address: this.#config.rateLimit.trustPeerAddress,
+        // ⭐⭐ D-070 / M-73: the admission control is the real ceiling.
+        global_rate_per_second: this.#config.rateLimit.globalRatePerSecond,
+        global_burst: this.#config.rateLimit.globalBurst,
+        tenant_rate_per_second: this.#config.rateLimit.tenantRatePerSecond,
+        tenant_burst: this.#config.rateLimit.tenantBurst,
+        degraded_wait_ms: this.#config.rateLimit.degradedWaitMs,
+        max_wait_ms: this.#config.rateLimit.maxWaitMs,
       },
     };
     return { status: dbOk ? 200 : 503, body };
@@ -718,22 +780,41 @@ export class WaslApiServer {
       this.#config.rateLimit,
       peerAddress,
     );
-    // ⭐⭐ The PLATFORM budget is the hard ceiling: it is checked
-    //   BEFORE the key derivation, so a flood of guesses cannot eat the
-    //   CPU of the installation (the health check keeps answering).
-    if (limit.platformLimited) {
-      this.#logger.warn('login_platform_limited', {
+    // ⭐⭐ D-070 / M-73: the ADMISSION CONTROL. ⭐ It never refuses
+    //   because of the platform: it bounds the number of key derivations
+    //   per second (the real ceiling of the CPU) and it makes the
+    //   attempt wait when the platform is under pressure.
+    const admission = await admitLoginAttempt(
+      this.#pool,
+      tenantId,
+      this.#config.rateLimit,
+      limit.degraded,
+    );
+    if (admission.refused) {
+      // ⛔ The LAST RESORT: the wait is longer than the ceiling, so the
+      //   installation is completely flooded. ⭐ This is the only
+      //   refusal that the platform level can cause, and it is honest
+      //   about it: the answer says the platform is saturated.
+      this.#logger.warn('login_platform_saturated', {
         tenant_id: tenantId,
         user_id: userId,
-        code: 'login_platform_limited',
+        code: 'login_platform_saturated',
       });
       return {
         status: 429,
         body: {
           ok: false,
-          error: { code: 'login_platform_limited', message: 'the login budget of the installation is exhausted' },
+          error: {
+            code: 'login_platform_saturated',
+            message: 'the login service is saturated, retry in a moment',
+          },
         },
       };
+    }
+    if (admission.waitMs > 0) {
+      // ⭐ The attempt waits: the flood is slowed down, nobody is
+      //   switched off.
+      await sleep(admission.waitMs);
     }
 
     try {
@@ -773,7 +854,10 @@ export class WaslApiServer {
         //   ⭐ The passcode was verified above: a CORRECT credential is
         //   always accepted, so a deliberate attack on an account can
         //   not lock its owner out. Only the guess itself is refused.
-        if (limit.limited) {
+        // ⭐⭐ D-070 / M-73: the peer budget refuses the guesses of one
+        //   address too. ⭐⭐ The PLATFORM level is NOT here any more:
+        //   it never refuses, it only slows the flood down.
+        if (limit.limited || limit.peerLimited) {
           return {
             status: 429,
             body: {
@@ -1313,6 +1397,233 @@ export class WaslApiServer {
             : 400;
       return { status, body: { ok: false, error: { code, message: code } } };
     }
+  }
+
+  // ------------------------------------------------------------ inbox
+  /**
+   * ⭐⭐ D-070: the list of the inbox.
+   * ⭐ The scope of the role is applied (an agent sees the
+   *   conversations that are assigned to them): that is the rule the
+   *   core already approved for the work queue.
+   */
+  async #listInbox(context: RequestContext, url: URL): Promise<JsonResponse> {
+    const decision = this.#authorize(context, 'conversation.list', SCOPE_REF);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'inbox.list',
+        'denied',
+        decision.code,
+        {},
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const state = url.searchParams.get('state');
+    if (state !== null && !isInboxState(state)) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'state_unknown', message: 'the state is not known' } },
+      };
+    }
+    const filters: InboxFilters = {
+      ...(url.searchParams.get('q') !== null ? { query: url.searchParams.get('q') as string } : {}),
+      ...(state !== null ? { state: state as InboxState } : {}),
+      ...(url.searchParams.get('assignee') !== null
+        ? { assignee: url.searchParams.get('assignee') as string }
+        : {}),
+      actorId: context.session.actorId,
+      role: context.session.role,
+      limit: Number(url.searchParams.get('limit') ?? '50'),
+      offset: Number(url.searchParams.get('offset') ?? '0'),
+    };
+    const page = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+      listInboxConversations(uow, context.session.tenantId, filters),
+    );
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'inbox.list',
+      'allowed',
+      null,
+      { count: page.rows.length },
+    );
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        conversations: page.rows,
+        total: page.total,
+        scope: context.session.role === 'agent' ? 'own' : 'company',
+      },
+    };
+  }
+
+  /** ⭐⭐ D-070: the detail of one conversation and its messages. */
+  async #readInboxConversation(context: RequestContext, ref: string): Promise<JsonResponse> {
+    const decision = this.#authorize(context, 'conversation.read', ref);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'inbox.read',
+        'denied',
+        decision.code,
+        { target: ref },
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const detail = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+      readInboxConversation(uow, context.session.tenantId, ref),
+    );
+    if (!detail.conversation) {
+      return {
+        status: 404,
+        body: { ok: false, error: { code: 'conversation_not_found', message: ref } },
+      };
+    }
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'inbox.read',
+      'allowed',
+      null,
+      { target: ref },
+    );
+    // ⭐⭐ D-070: the states the CORE allows from the current one.
+    // ⭐ The interface offers exactly these, so it never invents a
+    //   state and never proposes an impossible transition.
+    const currentState = String(detail.conversation['state'] ?? '');
+    const allowedStates =
+      (ALLOWED_TRANSITIONS as Record<string, readonly string[]>)[currentState] ?? [];
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        conversation: detail.conversation,
+        messages: detail.messages,
+        allowed_states: allowedStates,
+      },
+    };
+  }
+
+  /**
+   * ⭐⭐ D-070: the reply of an employee.
+   * ⭐ It is stored as an OUTBOUND message written by the employee:
+   *   nothing is sent anywhere, there is no external channel.
+   * ⭐⭐ The double send is refused: the client sends the reference of
+   *   the message it prepared, and the same reference twice is a
+   *   conflict, never a second message.
+   */
+  async #sendReply(
+    context: RequestContext,
+    ref: string,
+    req: http.IncomingMessage,
+  ): Promise<JsonResponse> {
+    const decision = this.#authorize(context, 'conversation.write', ref);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'inbox.reply',
+        'denied',
+        decision.code,
+        { target: ref },
+      );
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const body = asRecord(parseJson(await readBody(req)));
+    const text = asString(body['body']);
+    if (!text) {
+      return {
+        status: 400,
+        body: { ok: false, error: { code: 'body_required', message: 'body is required' } },
+      };
+    }
+    const clientRef = asString(body['client_message_ref']);
+    const bundle = this.#newBundle(context.session.tenantId);
+    resetCaptures(bundle);
+
+    try {
+      const stored = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+        // ⭐⭐ The row lock comes FIRST: the state that is read below is
+        //   the committed one, so two instances never write the same
+        //   conversation at the same time.
+        const lockedRow = await lockConversationRow(uow, context.session.tenantId, ref);
+        if (!lockedRow) {
+          throw new Error('conversation_not_found');
+        }
+        await hydrateEmployees(uow, bundle);
+        const exists = await hydrateConversation(uow, bundle, decision.context, ref);
+        if (!exists) {
+          throw new Error('conversation_not_found');
+        }
+        const outcome = bundle.store.append(decision.context, {
+          schema_version: '1',
+          message_ref: clientRef ?? `reply_${crypto.randomBytes(8).toString('hex')}`,
+          conversation_ref: ref,
+          declared_tenant_id: context.session.tenantId,
+          channel: 'web',
+          direction: 'outbound',
+          from: context.session.actorId,
+          to: 'customer@example.invalid',
+          body: text,
+          occurred_at: new Date().toISOString(),
+          locale: 'ar',
+          attributes: { source: 'inbox' },
+        });
+        // ⭐⭐ The duplicate is REFUSED, never stored twice.
+        if (outcome.status === 'duplicate') {
+          throw new Error('message_duplicate');
+        }
+        if (outcome.status !== 'accepted') {
+          throw new Error(`message_${outcome.status}`);
+        }
+        await persistBundle(uow, bundle);
+        return outcome.message;
+      });
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'inbox.reply',
+        'allowed',
+        null,
+        { target: ref },
+      );
+      return { status: 201, body: { ok: true, message: stored, sent: false } };
+    } catch (error) {
+      if (shouldInvalidate(error)) this.#invalidate(context.session.tenantId);
+      const code = errorCodeOf(error);
+      const status =
+        code === 'conversation_not_found'
+          ? 404
+          : code === 'message_duplicate' || code === 'message_conflict'
+            ? 409
+            : 500;
+      return { status, body: { ok: false, error: { code, message: code } } };
+    }
+  }
+
+  /**
+   * ⭐⭐ D-070: the employees a conversation may be assigned to.
+   * ⭐ The assignment needs the capability of the assignment, so the
+   *   viewer and the agent do not see the list.
+   */
+  async #listInboxAgents(context: RequestContext): Promise<JsonResponse> {
+    const decision = this.#authorize(context, 'conversation.assign', SCOPE_REF);
+    if (!decision.allowed) {
+      return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
+    }
+    const agents = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
+      listInboxAgents(uow, context.session.tenantId),
+    );
+    return { status: 200, body: { ok: true, agents } };
   }
 
   async #readRetention(context: RequestContext): Promise<JsonResponse> {

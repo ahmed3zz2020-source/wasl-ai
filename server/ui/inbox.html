@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>صندوق الوارد — WASL</title>
+    <link rel="stylesheet" href="/ui/inbox.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">و</span>
+        <div>
+          <h1>صندوق وارد العملاء</h1>
+          <p class="tagline">محادثات الخدمة · بيانات تجريبية محلية فقط</p>
+        </div>
+      </div>
+
+      <div class="session" id="session-area">
+        <div class="login-row" id="login-row">
+          <label class="field">
+            <span>الشركة</span>
+            <select id="login-tenant">
+              <option value="tnt_alpha">شركة ألفا</option>
+              <option value="tnt_beta">شركة بيتا</option>
+              <option value="tnt_gamma">شركة جاما</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>الموظف</span>
+            <select id="login-user">
+              <option value="usr_alpha_owner">مالك ألفا</option>
+              <option value="usr_alpha_super">مشرف ألفا</option>
+              <option value="usr_alpha_agent">موظف ألفا</option>
+              <option value="usr_alpha_viewer">قارئ ألفا</option>
+              <option value="usr_beta_owner">مالك بيتا</option>
+              <option value="usr_gamma_owner">مالك جاما</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>كلمة المرور</span>
+            <input id="login-passcode" type="password" value="wasl-local-test" autocomplete="current-password" />
+          </label>
+          <button class="primary" id="btn-login" type="button">دخول</button>
+        </div>
+        <div class="who" id="who" hidden>
+          <span class="pill" id="who-name"></span>
+          <span class="pill muted" id="who-role"></span>
+          <button class="ghost" id="btn-logout" type="button">خروج</button>
+        </div>
+      </div>
+    </header>
+
+    <p class="notice" id="login-notice" hidden></p>
+
+    <main class="workspace" id="workspace" hidden>
+      <section class="toolbar" aria-label="أدوات البحث والتصفية">
+        <label class="field grow">
+          <span>بحث</span>
+          <input id="filter-query" type="search" placeholder="اسم العميل أو رقم المحادثة أو نص الرسالة" />
+        </label>
+        <label class="field">
+          <span>الحالة</span>
+          <select id="filter-state">
+            <option value="">كل الحالات</option>
+            <option value="new">جديدة</option>
+            <option value="open">مفتوحة</option>
+            <option value="assigned">مُسندة</option>
+            <option value="pending">معلّقة</option>
+            <option value="resolved">تم الحل</option>
+            <option value="closed">مغلقة</option>
+          </select>
+        </label>
+        <label class="field" id="assignee-filter-field" hidden>
+          <span>الإسناد</span>
+          <select id="filter-assignee">
+            <option value="">الكل</option>
+            <option value="me">المحفوظة لي</option>
+            <option value="unassigned">غير مُسندة</option>
+          </select>
+        </label>
+        <button class="ghost" id="btn-refresh" type="button">تحديث</button>
+      </section>
+
+      <div class="panes">
+        <section class="pane list" aria-label="قائمة المحادثات">
+          <header class="pane-head">
+            <h2>المحادثات</h2>
+            <span class="counter" id="list-counter"></span>
+          </header>
+          <div class="state-box" id="list-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span> جارٍ تحميل المحادثات…
+          </div>
+          <div class="state-box error" id="list-error" hidden></div>
+          <div class="state-box" id="list-empty" hidden>
+            <strong>لا توجد محادثات.</strong>
+            <span>غيّر البحث أو التصفية لترى المزيد.</span>
+          </div>
+          <ul class="conversations" id="conversation-list"></ul>
+        </section>
+
+        <section class="pane thread" id="thread-pane" aria-label="المحادثة">
+          <div class="state-box placeholder" id="thread-placeholder">
+            <strong>اختر محادثة</strong>
+            <span>اختر محادثة من القائمة لتقرأها وترد عليها.</span>
+          </div>
+
+          <div id="thread" hidden>
+            <header class="pane-head thread-head">
+              <button class="ghost back" id="btn-back" type="button" aria-label="رجوع إلى القائمة">رجوع</button>
+              <div class="thread-title">
+                <h2 id="thread-customer">—</h2>
+                <span class="muted" id="thread-ref"></span>
+              </div>
+              <span class="state-badge" id="thread-state">—</span>
+            </header>
+
+            <div class="controls">
+              <label class="field">
+                <span>الحالة</span>
+                <select id="state-select"></select>
+              </label>
+              <label class="field" id="assign-field" hidden>
+                <span>الموظف المسؤول</span>
+                <select id="assign-select"></select>
+              </label>
+            </div>
+
+            <div class="state-box error" id="thread-error" hidden></div>
+
+            <ol class="messages" id="messages"></ol>
+
+            <form class="composer" id="composer">
+              <label class="field grow">
+                <span class="sr-only">نص الرد</span>
+                <textarea id="reply-body" rows="3" placeholder="اكتب ردك هنا…"></textarea>
+              </label>
+              <button class="primary" id="btn-send" type="submit">إرسال</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+    <footer class="foot">
+      <p>هذا البناء محلي بالكامل: المتصفح يتحدث مع الخادم على 127.0.0.1، ولا يوجد أي إرسال خارجي.</p>
+    </footer>
+
+    <script src="/ui/inbox.js"></script>
+  </body>
+</html>
