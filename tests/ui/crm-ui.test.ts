@@ -442,7 +442,7 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
   await t.test('⭐⭐⭐ D-071 (UI-17): the edit is real and it is audited', async () => {
     // ⭐ The owner may manage a customer ⇒ the block of the edit shows.
     assert.equal(await page.isVisible('#edit-block'), true, '⭐⭐⭐ the edit is hidden from the owner');
-    await page.fill('#edit-name', `اسم محدَّث ${RUN}`);
+    await page.fill('#edit-name', 'عميل معدَّل');
     // ⭐ The confirmation of a change that matters.
     page.evaluate(`window.confirm = () => true`);
     await page.click('#btn-save');
@@ -453,13 +453,15 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     const changed = await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
       const result = await uow.query(
         `select count(*)::int as count from customers where tenant_id = $1 and display_name = $2`,
-        [tenantId, `اسم محدَّث ${RUN}`],
+        [tenantId, 'عميل معدَّل'],
       );
       return Number(result.rows[0]?.['count'] ?? '0');
     });
     assert.equal(changed, 1, '⭐⭐⭐ the change is not in the database');
   });
 
+  // ⭐⭐ The deep link of the customer (the two pages carry each other).
+  let customerHref = '';
   await t.test('⭐⭐⭐ D-071 (UI-18): the two pages carry each other', async () => {
     // ⭐ The inbox links to the file of the customer.
     await page.goto(`${base}/ui/inbox.html`);
@@ -469,17 +471,22 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     assert.equal(await page.isVisible('#link-customer'), true, '⭐⭐⭐ the link to the CRM is hidden');
     const href = await page.evaluate(`document.getElementById('link-customer').getAttribute('href')`);
     assert.match(String(href), /crm\.html\?customer=/, `⭐⭐⭐ the link is wrong: ${href}`);
+    customerHref = String(href);
     // ⭐⭐⭐ And the CRM opens that customer.
-    await page.goto(`${base}${href}`);
+    await page.goto(`${base}${customerHref}`);
     await page.waitForTimeout(1200);
     assert.equal(await page.isVisible('#profile'), true, '⭐⭐⭐ the CRM did not open the customer');
     const name = await page.innerText('#profile-name');
     assert.ok(name.length > 0, '⭐⭐⭐ the name of the customer is missing');
+    // ⭐⭐⭐ The form of the edit is there (the owner may edit).
+    assert.equal(await page.isVisible('#edit-form'), true, '⭐⭐⭐ the form of the edit is not visible');
+    await page.screenshot({ path: path.join(SHOT_DIR, 'crm-desktop.png'), fullPage: false });
   });
 
   await t.test('⭐⭐⭐ UI-19: the CRM on a phone width', async () => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`${base}/ui/crm.html`);
+    // ⭐ The file of the customer (the same state as the desktop shot).
+    await page.goto(`${base}${customerHref}`);
     await page.waitForTimeout(1200);
     const overflow = await page.evaluate(
       `document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2`,
@@ -488,7 +495,6 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     await page.screenshot({ path: path.join(SHOT_DIR, 'crm-mobile.png'), fullPage: false });
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.waitForTimeout(300);
-    await page.screenshot({ path: path.join(SHOT_DIR, 'crm-desktop.png'), fullPage: false });
   });
 
   await t.test('⭐⭐⭐ M-79 (UI-13b): the refresh stops when the session is over', async () => {
