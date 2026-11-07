@@ -23,6 +23,19 @@ export class PersistConflictError extends Error {
   }
 }
 
+/**
+ * ⭐⭐ FOUNDATION BUILD 02 / PHASE 02 (D-069) — M66.
+ * The message already exists in the database: the write is REFUSED,
+ * never silently dropped and never overwritten.
+ */
+export class MessageConflictError extends Error {
+  readonly code = 'message_conflict';
+  constructor(message: string) {
+    super(message);
+    this.name = 'MessageConflictError';
+  }
+}
+
 interface ConversationRow {
   ref: string;
   state: string;
@@ -64,6 +77,14 @@ export async function hydrateEmployees(uow: UnitOfWork, bundle: TenantBundle): P
  * ⭐ Load one conversation (messages + state row) into the bundle.
  * ⭐ The state row is restored with its exact version, so the core
  *   optimistic lock keeps working across a process restart.
+ * ⭐⭐ FOUNDATION BUILD 02 / PHASE 02 (D-069) — M66.
+ *   The bundle is a PER OPERATION scratchpad, so this function reads
+ *   the rows from PostgreSQL EVERY time it is called. The short
+ *   circuit below only protects against a double hydration inside the
+ *   SAME operation, never against a stale process cache.
+ *   ⭐ The caller takes the row lock FIRST (`lockConversationRow`):
+ *     the rows read here are then the committed ones, so the core
+ *     never decides on a stale conversation.
  */
 export async function hydrateConversation(
   uow: UnitOfWork,
@@ -81,7 +102,11 @@ export async function hydrateConversation(
       order by occurred_at asc, message_ref asc`,
     [bundle.tenantId, conversationRef],
   );
-  if (messages.rows.length === 0) return false;
+  if (messages.rows.length === 0) {
+    // ⭐⭐ D-069 / M66: an existing conversation with no message yet is
+    //   NOT a missing conversation. The state row below is the proof of
+    //   existence; the message list may legitimately be empty.
+  }
 
   for (const row of messages.rows) {
     // ⭐ PostgreSQL returns timestamptz as a Date: the core envelope
@@ -110,19 +135,52 @@ export async function hydrateConversation(
       where tenant_id = $1 and ref = $2`,
     [bundle.tenantId, conversationRef],
   );
-  if (state.rows.length > 0) {
-    const row = state.rows[0]!;
-    bundle.states.ensure(context as never, conversationRef);
-    bundle.states.restore(context as never, conversationRef, {
-      conversation_ref: conversationRef,
-      state: row.state as never,
-      assignee_actor_id: row.assignee_actor_id,
-      updated_at: toIso(row.updated_at),
-      version: row.version,
-    });
-  }
+  if (state.rows.length === 0) return false;
+  const row = state.rows[0]!;
+  bundle.states.ensure(context as never, conversationRef);
+  bundle.states.restore(context as never, conversationRef, {
+    conversation_ref: conversationRef,
+    state: row.state as never,
+    assignee_actor_id: row.assignee_actor_id,
+    updated_at: toIso(row.updated_at),
+    version: row.version,
+  });
   bundle.hydrated.add(conversationRef);
   return true;
+}
+
+/**
+ * ⭐⭐⭐ Take the row lock of a conversation (the cross instance gate).
+ * ------------------------------------------------------------
+ * ⭐ FOUNDATION BUILD 02 / PHASE 02 (D-069) — M66.
+ *   WHY THIS FUNCTION EXISTS
+ *   The in-memory bundle used to live for the whole life of the
+ *   PROCESS (one bundle per company), so a conversation that was
+ *   hydrated once was never read again: the second backend instance
+ *   could not see what the first one had committed.
+ *   ⭐ The bundle is now a PER OPERATION scratchpad and every shared
+ *     datum is read from PostgreSQL inside the transaction.
+ *   ⭐ The lock is taken BEFORE the conversation is hydrated, so the
+ *     rows that are read (the messages and the state) belong to the
+ *     committed state at the moment of the lock: no other instance can
+ *     commit between the read and the write.
+ * ⛔ Nothing is written by this function: it only reads and locks.
+ * ⛔ The lock is released when the unit of work ends (commit or
+ *   rollback), so a failure never leaves a conversation locked.
+ */
+export async function lockConversationRow(
+  uow: UnitOfWork,
+  tenantId: string,
+  conversationRef: string,
+): Promise<ConversationRow | null> {
+  const locked = await uow.query<ConversationRow>(
+    `select ref, state, assignee_actor_id, version, updated_at
+       from conversations
+      where tenant_id = $1 and ref = $2
+      for update`,
+    [tenantId, conversationRef],
+  );
+  return locked.rows[0] ?? null;
 }
 
 /**
@@ -185,12 +243,18 @@ export async function lockConversation(
  */
 export async function persistBundle(uow: UnitOfWork, bundle: TenantBundle): Promise<void> {
   for (const message of bundle.store.appended) {
-    await uow.query(
+    // ⭐⭐ D-069 / M66: the conflict is DETECTED, never ignored.
+    //   The old statement was `on conflict do nothing`: a message that
+    //   another instance had already stored was silently dropped and
+    //   the caller was told it was accepted. Now the insert reports
+    //   what it did and a refused write aborts the unit of work.
+    const inserted = await uow.query(
       `insert into messages
          (message_ref, tenant_id, conversation_ref, channel, direction, sender, recipient,
           body, occurred_at, locale, attributes, stored_at)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12)
-       on conflict (tenant_id, message_ref) do nothing`,
+       on conflict (tenant_id, message_ref) do nothing
+       returning message_ref`,
       [
         message.message_ref,
         message.tenant_id,
@@ -206,6 +270,11 @@ export async function persistBundle(uow: UnitOfWork, bundle: TenantBundle): Prom
         message.stored_at,
       ],
     );
+    if (inserted.rowCount === 0) {
+      throw new MessageConflictError(
+        `message ${message.message_ref} already exists (the write was refused, not overwritten)`,
+      );
+    }
   }
 
   for (const view of bundle.states.changed) {

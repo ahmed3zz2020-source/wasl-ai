@@ -29,7 +29,7 @@ import {
 import {
   hydrateConversation,
   hydrateEmployees,
-  lockConversation,
+  lockConversationRow,
   persistBundle,
 } from '../db/repositories/persistence.ts';
 import {
@@ -194,7 +194,18 @@ function requestIdOf(req: http.IncomingMessage): string {
 export class WaslApiServer {
   readonly #config: ServerConfig;
   readonly #pool: PgPool;
-  readonly #bundles = new Map<string, TenantBundle>();
+  /**
+   * ⭐⭐ D-069 / M66: there is NO per company bundle any more.
+   *   The bundle used to live for the whole life of the PROCESS, so a
+   *   conversation that was hydrated once was never read again and a
+   *   second backend instance worked on a stale conversation.
+   *   ⭐ The bundle is now a PER OPERATION scratchpad: it is created
+   *     for one request, filled from PostgreSQL inside the request
+   *     transaction and thrown away with it.
+   *   ⭐ Nothing that is shared between two requests is kept in memory:
+   *     the messages, the state, the version and the membership roles
+   *     are read from the database every time.
+   */
   readonly #mirrors = new Map<string, TenantIdentityMirror>();
   /** ⭐ One queue per company (the in-memory bundle is per company). */
   readonly #tenantLocks = new Map<string, Promise<void>>();
@@ -245,18 +256,22 @@ export class WaslApiServer {
   }
 
   // ------------------------------------------------------------- helpers
-  #bundleFor(tenantId: string): TenantBundle {
-    let bundle = this.#bundles.get(tenantId);
-    if (!bundle) {
-      bundle = createBundle(tenantId);
-      this.#bundles.set(tenantId, bundle);
-    }
-    return bundle;
+  /**
+   * ⭐⭐ D-069 / M66: a FRESH bundle per operation.
+   *   ⭐ The bundle is a scratchpad, not a cache: it holds what the
+   *     core produced during this operation and it dies with it.
+   *   ⭐ The memory is never reused across requests, so no request can
+   *     read a value that another instance has already replaced.
+   */
+  #newBundle(tenantId: string): TenantBundle {
+    return createBundle(tenantId);
   }
 
-  /** ⭐ Drop the in-memory bundle (used when a write could not be persisted). */
+  /**
+   * ⭐ Drop the cached identity mirror (the memberships are re-read on
+   *   every request, so the mirror is rebuilt when they change).
+   */
   #invalidate(tenantId: string): void {
-    this.#bundles.delete(tenantId);
     this.#mirrors.delete(tenantId);
   }
 
@@ -793,7 +808,7 @@ export class WaslApiServer {
     const customerId = asString(body['customer_id']);
     const message = asRecord(body['message']);
 
-    const bundle = this.#bundleFor(context.session.tenantId);
+    const bundle = this.#newBundle(context.session.tenantId);
     resetCaptures(bundle);
     try {
       const created = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
@@ -862,7 +877,7 @@ export class WaslApiServer {
     if (!text) {
       return { status: 400, body: { ok: false, error: { code: 'body_required', message: 'body is required' } } };
     }
-    const bundle = this.#bundleFor(context.session.tenantId);
+    const bundle = this.#newBundle(context.session.tenantId);
     resetCaptures(bundle);
 
     const classification = classifyJourneyMessage(text);
@@ -870,6 +885,15 @@ export class WaslApiServer {
 
     try {
       const result = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+        // ⭐⭐ D-069 / M66: the row lock comes FIRST. Everything that
+        //   is read below (the messages and the state) is the
+        //   committed state at the moment of the lock, so the core
+        //   never decides on a stale conversation and two instances
+        //   cannot write the same conversation at the same time.
+        const lockedRow = await lockConversationRow(uow, context.session.tenantId, ref);
+        if (!lockedRow) {
+          throw new Error('conversation_not_found');
+        }
         await hydrateEmployees(uow, bundle);
         const exists = await hydrateConversation(uow, bundle, decision.context, ref);
         if (!exists) {
@@ -934,7 +958,15 @@ export class WaslApiServer {
       //   failure drops it, so the next request re-hydrates.
       if (shouldInvalidate(error)) this.#invalidate(context.session.tenantId);
       const code = errorCodeOf(error);
-      const status = code === 'conversation_not_found' ? 404 : 500;
+      // ⭐ D-069 / M66: a duplicate message and a refused write are
+      //   ANSWERS (409), not server faults: the caller is told the
+      //   truth instead of receiving a 500 for a refused write.
+      const status =
+        code === 'conversation_not_found'
+          ? 404
+          : code === 'message_duplicate' || code === 'message_conflict'
+            ? 409
+            : 500;
       return { status, body: { ok: false, error: { code, message: code } } };
     }
   }
@@ -955,21 +987,24 @@ export class WaslApiServer {
       return { status: 400, body: { ok: false, error: { code: 'target_state_required', message: 'to is required' } } };
     }
     const expected = typeof body['expected_version'] === 'number' ? body['expected_version'] : null;
-    const bundle = this.#bundleFor(context.session.tenantId);
+    const bundle = this.#newBundle(context.session.tenantId);
     resetCaptures(bundle);
 
     try {
       const view = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+        // ⭐⭐ D-069 / M66: the database row lock comes FIRST and the
+        //   conversation is hydrated AFTER it. The messages and the
+        //   state that the core reads are therefore the committed ones:
+        //   the write is serialized across the backend instances, not
+        //   only inside one process, and no instance ever decides on a
+        //   stale conversation.
+        const lockedRow = await lockConversationRow(uow, context.session.tenantId, ref);
+        if (!lockedRow) {
+          throw new Error('conversation_not_found');
+        }
         await hydrateEmployees(uow, bundle);
         const exists = await hydrateConversation(uow, bundle, decision.context, ref);
         if (!exists) {
-          throw new Error('conversation_not_found');
-        }
-        // ⭐⭐ The database locks the conversation row and the state is
-        //   re-read after the lock: the write is serialized across the
-        //   backend instances, not only inside one process.
-        const locked = await lockConversation(uow, bundle, decision.context, ref);
-        if (!locked) {
           throw new Error('conversation_not_found');
         }
         if (expected !== null) {
@@ -1033,20 +1068,20 @@ export class WaslApiServer {
     if (!assignee) {
       return { status: 400, body: { ok: false, error: { code: 'actor_id_required', message: 'actor_id is required' } } };
     }
-    const bundle = this.#bundleFor(context.session.tenantId);
+    const bundle = this.#newBundle(context.session.tenantId);
     resetCaptures(bundle);
 
     try {
       const view = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+        // ⭐⭐ D-069 / M66: the same gate as the state update — the row
+        //   lock first, the hydration after it.
+        const lockedRow = await lockConversationRow(uow, context.session.tenantId, ref);
+        if (!lockedRow) {
+          throw new Error('conversation_not_found');
+        }
         await hydrateEmployees(uow, bundle);
         const exists = await hydrateConversation(uow, bundle, decision.context, ref);
         if (!exists) {
-          throw new Error('conversation_not_found');
-        }
-        // ⭐⭐ The same database lock as the state update: the assignment
-        //   is serialized across the backend instances as well.
-        const locked = await lockConversation(uow, bundle, decision.context, ref);
-        if (!locked) {
           throw new Error('conversation_not_found');
         }
         const updated = assignConversation(
