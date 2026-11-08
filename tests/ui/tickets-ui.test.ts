@@ -184,6 +184,14 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
     await harness.stop();
   });
 
+  // ⭐⭐⭐ M-100: THE FIXTURE IS IDEMPOTENT ⇒ ⭐⭐ the leftovers of
+  // ⭐⭐ a run that was KILLED must not change the counts ⇒ ⭐⭐⇒ the
+  // ⭐⭐ rows are wiped BEFORE the fixture too (not only after it).
+  await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+    await uow.query(`delete from messages where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from conversations where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);
+  });
   const { hashPasscode } = await import('../../server/auth/sessions.ts');
   const ticketRef = `tkt_b04_ui_1_${RUN}`;
   const agentTicketRef = `tkt_b04_ui_2_${RUN}`;

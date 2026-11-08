@@ -260,6 +260,38 @@ python3 tools/test_count_audit.py --log <run.log> --docs \
   --group-log security=<s.log> --group-log recovery=<r.log>
 ```
 
+### The measured results of PHASE 04 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline of the phase, before the first change | **827** · 826 pass · 0 fail · 1 skipped | the run of the session |
+| ⭐ 1 | `npm test` | **874** · 873 pass · 0 fail · 1 skipped | the run of the session |
+| ⭐ 2 | the four groups, two consecutive parallel rounds | **574 + 172 + 112 + 16 = 874** · identical in the two rounds | the run of the session |
+| ⭐ 3 | `npm run e2e` | **JOURNEY OK** (15/15) | the run of the session |
+
+### ⭐ The measured results of PHASE 04 bis (BUILD 03) — ٨ نوفمبر ٢٠٢٦
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline of the phase, before the first change | **874** · 873 pass · 0 fail · 1 skipped | the run of the session |
+| ⭐ 1 | `npm test` | **891** · 890 pass · 0 fail · 1 skipped | the run of the session |
+| ⭐ 2 | `npm run test:unit` | **580/580** | the run of the session |
+| ⭐ 3 | `npm run test:integration` | **182** · 181 pass · 0 fail · 1 skipped (the Docker drill) | the run of the session |
+| ⭐ 4 | `npm run test:security` | **113/113** | the run of the session |
+| ⭐ 5 | `npm run test:recovery` | **16/16** | the run of the session |
+| ⭐ 6 | the four groups, two consecutive parallel rounds | **580 + 182 + 113 + 16 = 891** · identical in the two rounds | the run of the session |
+| ⭐ 7 | `npm run e2e` | **JOURNEY OK** (15/15) | the run of the session |
+
+> ⭐⭐ **The three defects that the measurement of this phase exposed**
+> are part of the record on purpose: M97 (the trigger of the deletion
+> evidence was disabled for the WHOLE table by another file ⇒ a false
+> failure) · M98 (the administrative drill inherited the 15s statement
+> timeout of a request ⇒ a false failure) · M99 (`pid % 400` is not
+> injective over the live processes ⇒ `EADDRINUSE` ⇒ a false failure)
+> ⇒ ⭐⭐ and all three were fixed with the M-82 pattern (a lock or a
+> reservation on the shared resource itself) ⇒ ⭐⭐ **the parallelism
+> was never disabled to hide them.**
+
 ### The measured results of PHASE 02 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
 
 | # | Run | Result | Log |

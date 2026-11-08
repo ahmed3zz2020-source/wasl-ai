@@ -284,8 +284,10 @@ export const PLATFORM_BUDGET_LOCK_KEY = 0x5741_534c; // "WASL"
  *   RESERVED with an atomic marker (a directory) ⇒ ⭐⭐ and the probe
  *   stays as the second line of defence (a port taken by something
  *   that is not a test).
- * ⭐⭐⭐ The marker is released when the harness stops ⇒ the block goes
- *   back to the pool.
+ * ⭐⭐⭐ THE MARKER HOLDS THE PID OF ITS OWNER ⇒ ⭐⭐ a marker whose
+ *   owner is gone is STALE ⇒ ⭐⭐ and a stale marker is reclaimed ⇒
+ *   ⭐⭐⇒ (otherwise the markers pile up and the run dies with
+ *   `no_free_port_block`).
  */
 const PORT_BLOCK_DIR = path.join(os.tmpdir(), 'wasl-test-port-blocks');
 
@@ -301,23 +303,65 @@ async function portIsFree(port: number): Promise<boolean> {
   });
 }
 
+/** ⭐⭐ Is this process still alive? */
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * ⭐⭐ Take the marker of a block (atomic ⇒ two files never take one).
+ * ⭐⭐ A marker whose owner is gone is reclaimed ⇒ ⭐⭐ and a marker of
+ * ⭐⭐ a LIVE owner is never touched.
+ */
+function takeMarker(marker: string): boolean {
+  const ownerFile = path.join(marker, 'owner.pid');
+  if (fs.existsSync(marker)) {
+    let owner = 0;
+    try {
+      owner = Number(fs.readFileSync(ownerFile, 'utf8').trim());
+    } catch {
+      owner = 0;
+    }
+    if (owner > 0 && processAlive(owner)) {
+      // ⭐⭐ the owner is alive (even if it is US) ⇒ the block is
+      // ⭐⭐ really taken ⇒ ⭐⭐ it is never reclaimed from a live owner.
+      return false;
+    }
+    try {
+      fs.rmSync(marker, { recursive: true, force: true });
+    } catch {
+      // ⭐⭐ it is gone anyway ⇒ nothing to reclaim.
+    }
+  }
+  try {
+    fs.mkdirSync(marker);
+    fs.writeFileSync(ownerFile, String(process.pid));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** ⭐⭐ Reserve a block of ports (atomic ⇒ two files never share one). */
 export async function reservePortBlock(
   blockSize = 30,
 ): Promise<{ base: number; release: () => void }> {
   fs.mkdirSync(PORT_BLOCK_DIR, { recursive: true });
-  const first = 8791 + (process.pid % 2000) * blockSize;
-  for (let k = 0; k < 400; k += 1) {
-    const base = first + k * blockSize;
-    if (base + blockSize > 65535) break;
+  // ⭐⭐⭐ M-99: the candidates cover EVERY block of the port space of
+  //   the machine ⇒ ⭐⭐ a pid that lands high does not narrow the
+  //   search (that was the bug: the block went past 65535 and the
+  //   search stopped at once ⇒ `no_free_port_block`).
+  const totalBlocks = Math.floor((65535 - 8791) / blockSize);
+  const hint = (process.pid * 7919) % totalBlocks;
+  for (let k = 0; k < totalBlocks; k += 1) {
+    const base = 8791 + ((hint + k) % totalBlocks) * blockSize;
     const marker = path.join(PORT_BLOCK_DIR, `block-${base}`);
-    try {
-      // ⭐⭐ the reservation is ATOMIC (the directory is created once) ⇒
-      // ⭐⭐ two files can never take the same block.
-      fs.mkdirSync(marker);
-    } catch {
-      continue;
-    }
+    if (!takeMarker(marker)) continue;
     let free = true;
     for (let offset = 0; offset < blockSize; offset += 1) {
       if (!(await portIsFree(base + offset))) {
@@ -330,7 +374,7 @@ export async function reservePortBlock(
         base,
         release: () => {
           try {
-            fs.rmdirSync(marker);
+            fs.rmSync(marker, { recursive: true, force: true });
           } catch {
             // ⭐⭐ the marker is already gone ⇒ nothing to release.
           }
@@ -338,7 +382,7 @@ export async function reservePortBlock(
       };
     }
     try {
-      fs.rmdirSync(marker);
+      fs.rmSync(marker, { recursive: true, force: true });
     } catch {
       // ⭐⭐ nothing to release.
     }

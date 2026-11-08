@@ -147,6 +147,16 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
   });
 
   const { hashPasscode } = await import('../../server/auth/sessions.ts');
+  // ⭐⭐⭐ M-100: THE FIXTURE IS IDEMPOTENT ⇒ ⭐⭐ the leftovers of a
+  // ⭐⭐ run that was KILLED (no cleanup) used to stay in the company
+  // ⭐⭐ ⇒ ⇒ ⇒ the counter of the list doubled (120 ⇒ 240) ⇒ ⇒ ⇒ a
+  // ⭐⭐ false failure of the browser drill ⇒ ⭐⭐⇒ the rows are wiped
+  // ⭐⭐ BEFORE the fixture too (not only after it).
+  await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+    await uow.query(`delete from messages where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from conversations where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);
+  });
   // ⭐⭐ 120 conversations ⇒ the list MUST page (M-78).
   const refs: string[] = [];
   await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
