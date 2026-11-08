@@ -26,6 +26,17 @@ import path from 'node:path';
 
 import { loadConfig } from '../server/config.ts';
 import { createPool, type PgPool } from '../server/db/pool.ts';
+
+/**
+ * \u2b50\u2b50\u2b50 M-98: the timeout of the ADMINISTRATIVE drill.
+ * \u2b50 A backup, a restore and the creation of a scratch database are
+ *   long operations by nature \u21d2 \u2b50 and the 15 seconds of a
+ *   request of the API killed them under a parallel load \u21d2 \u2b50
+ *   (a false failure of the drill, not a defect of the product).
+ * \u2b50 The drill asks for two minutes \u21d2 \u2b50 and the drill is
+ *   measured (the RTO), not killed by an arbitrary timeout.
+ */
+const ADMIN_STATEMENT_TIMEOUT_MS = 120_000;
 import { hashPasscode, verifyPasscode } from '../server/auth/password.ts';
 import {
   assertBackupPermissions,
@@ -67,7 +78,7 @@ export interface RestoreReport {
 
 /** ⭐ Create the scratch database (the superuser connection). */
 async function createScratchDatabase(superuserUrl: string, databaseName: string): Promise<PgPool> {
-  const pool = createPool(superuserUrl, 2);
+  const pool = createPool(superuserUrl, 2, { statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS });
   const exists = await pool.query<{ count: string }>(
     `select count(*)::text as count from pg_database where datname = $1`,
     [databaseName],
@@ -157,7 +168,9 @@ export async function runRestore(options: RestoreOptions): Promise<RestoreReport
       //   the real proof that the restore worked.
       const durationMs = Date.now() - started;
 
-      const pool = createPool(withDatabase(superuserUrl, options.targetDatabase), 2);
+      const pool = createPool(withDatabase(superuserUrl, options.targetDatabase), 2, {
+        statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS,
+      });
       try {
         const migrations = await pool.query<{ version: string }>(
           `select version from wasl_schema_migrations order by version asc`,
@@ -200,7 +213,7 @@ export async function dropScratchDatabase(
   superuserUrl?: string,
 ): Promise<void> {
   const url = superuserUrl ?? process.env['WASL_PG_SUPERUSER_URL'] ?? 'postgresql://postgres@127.0.0.1:5432/postgres';
-  const pool = createPool(url, 2);
+  const pool = createPool(url, 2, { statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS });
   try {
     await pool.query(`drop database if exists ${quoteIdent(databaseName)}`);
   } finally {

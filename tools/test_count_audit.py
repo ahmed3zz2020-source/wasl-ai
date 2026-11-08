@@ -153,7 +153,7 @@ def audit(
     log: Path | None = None,
     group_logs: dict | None = None,
     commit: str | None = None,
-    strict: bool = False,
+    strict: bool = True,
 ) -> tuple[list, list]:
     """⭐ The audit itself ⇒ (the failures, the notes)."""
     failures: list[str] = []
@@ -394,7 +394,7 @@ def audit(
             else:
                 notes.append(
                     f"the commit {commit} declares no current partition "
-                    "\u21d2 the check of the commit is skipped (use --strict to fail)"
+                    "\u21d2 the check of the commit is skipped (use --strict to fail \u2014 it is ON by default)"
                 )
         elif marker is not None:
             notes.append(
@@ -429,8 +429,9 @@ def main(argv: list | None = None) -> int:
     )
     parser.add_argument(
         "--strict",
-        action="store_true",
-        help="fail when the commit declares no current partition (M85)",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="fail when the commit declares no current partition (M85) \u2014 ON by default since M93",
     )
     parser.add_argument("--log", help="the log of a real run (the summary of node --test)")
     parser.add_argument("--docs", action="store_true", help="compare the published documents")

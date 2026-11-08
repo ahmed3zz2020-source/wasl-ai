@@ -1,5 +1,5 @@
 # ============================================================
-# WASL AI — the matrix of the tests (PHASE 03 of BUILD 03)
+# WASL AI — the matrix of the tests (PHASE 04 + PHASE 04 bis of BUILD 03)
 # ------------------------------------------------------------
 # ⭐ WHAT THIS DOCUMENT IS
 #   The evidence of a phase is not one number: it is four groups of
@@ -15,9 +15,9 @@
 
 | Group | Command | Files | What it proves | What it does NOT prove |
 |:-:|---|:-:|---|---|
-| ⭐ **unit** | `npm run test:unit` | 20 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
-| ⭐ **integration** | `npm run test:integration` | 15 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image, **the customer CRM on the real backend (D-071)**, **the refresh and the lost answer on two instances (D-071)** | nothing about a load that a machine of the production size would see |
-| ⭐ **security** | `npm run test:security` | 9 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)**, **the scope of the access of an agent (M-76)** | nothing about a penetration test of a third party |
+| ⭐ **unit** | `npm run test:unit` | 23 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
+| ⭐ **integration** | `npm run test:integration` | 19 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image, **the customer CRM on the real backend (D-071)**, **the refresh and the lost answer on two instances (D-071)** | nothing about a load that a machine of the production size would see |
+| ⭐ **security** | `npm run test:security` | 11 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)**, **the scope of the access of an agent (M-76)** | nothing about a penetration test of a third party |
 | ⭐ **recovery** | `npm run test:recovery` | 3 | the backup really restores, encrypted, verified and measured, **and never writes a clear text dump on the disk (M-72)** | nothing about a restore on the hardware of the production |
 | ⭐ **e2e** | `npm run e2e` | 1 | the journey of a customer service works from the login to the conversation and the privacy | nothing about a channel other than the local web one |
 | ⭐ **all** | `npm run test:all` | — | every group above plus the journey | — |
@@ -30,16 +30,22 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 574 + 172 + 112 + 16 = 874 -->
+<!-- wasl:current-partition 580 + 182 + 113 + 16 = 891 -->
 
-> ⭐⭐ **PHASE 03 (BUILD 03)**: the partition is checked by a TOOL
+> ⭐⭐ **CURRENT (PHASE 04 bis)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **559 + 147 + 105 + 16 = 827** = the number of `npm test` exactly
-> (146 of the 147 in `integration` pass and **1 is SKIPPED**: the
-> dynamic Docker drill, see §6).
+> **580 + 182 + 113 + 16 = 891** = the number of `npm test` exactly
+> (890 of the 891 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> see §6).
 > ⭐⭐ **The tool fails when a published number is not the measured one**
 > ⇒ ⇒ ⇒ a number can no longer drift silently.
+> ⭐⭐ **The `Files` column of the table above is derived from
+> `package.json`** (the scripts `test:unit` · `test:integration` ·
+> `test:security` · `test:recovery`) ⇒ ⇒ ⇒ it cannot drift from the
+> real commands.
+> ⭐⭐⭐ **M96**: the CURRENT table is here (§1) and the HISTORY is §8
+> ⇒ ⇒ ⇒ a number of an old phase is never overwritten by a new one.
 >
 > ⭐⭐⭐ **The partition is a partition AND the files are isolated (D-071).**
 > The files run in parallel over ONE database ⇒ a file that uses the
@@ -281,3 +287,24 @@ python3 tools/test_count_audit.py --log <run.log> --docs \
 > (`WASL_PG_SUPERUSER_URL`) the group `recovery` is **SKIPPED** and the
 > run shows `# skipped 1`: the baseline without it was 685 tests / 684
 > passed / 1 skipped. The skip is never hidden behind a success.
+
+
+---
+
+## 8. ⭐ The history of the phases (the measurements are NOT rewritten)
+
+> ⭐⭐ **M96**: the current table of the groups is §1 and the history is
+> HERE ⇒ ⇒ ⇒ a number of an old phase is never overwritten by the
+> number of a new one ⇒ ⭐ and the history is the record of what was
+> measured THEN (with the log that measured it).
+
+### The measured partition of PHASE 03 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
+
+> ⭐⭐ **PHASE 03 (BUILD 03)**: the partition is checked by a TOOL
+> (`tools/test_count_audit.py`) and the numbers are read from the LOG of
+> a real run, never written by hand ⇒ now:
+> **559 + 147 + 105 + 16 = 827** = the number of `npm test` exactly
+> (146 of the 147 in `integration` pass and **1 is SKIPPED**: the
+> dynamic Docker drill, see §6).
+> ⭐⭐ **The tool fails when a published number is not the measured one**
+> ⇒ ⇒ ⇒ a number can no longer drift silently.

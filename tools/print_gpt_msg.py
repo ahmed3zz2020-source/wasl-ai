@@ -25,6 +25,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import NamedTuple
 
 REPO = Path(__file__).resolve().parent.parent
 SRC = REPO / "docs/CHATGPT-POST-REVIEW-QUERY.md"
@@ -121,8 +122,24 @@ def decision_title(dec: str, did: str) -> str:
     return title
 
 
-def test_counts() -> tuple[int, int, int] | None:
-    """⭐ عدّادات الاختبارات من **تشغيل فعلي** ⇒ رقم حيّ لا رقم مكتوب يدوياً."""
+class LiveCounts(NamedTuple):
+    """\u2b50\u2b50\u2b50 M93: \u0627\u0644\u0642\u064a\u0627\u0633 \u0627\u0644\u062d\u064a\u0651 \u0628\u0643\u0645 \u0627\u0644\u0639\u0648\u062f\u0629 \u0648\u0627\u0644\u0645\u062a\u0637\u0649\u0643\u0629."""
+
+    total: int
+    passed: int
+    failed: int
+    skipped: int
+    returncode: int
+    parsed: bool
+    skip_reason: str
+
+
+def test_counts() -> LiveCounts | None:
+    """\u2b50 \u0639\u062f\u0651\u0627\u062a \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631\u0627\u062a \u0645\u0646 **\u062a\u0634\u063a\u064a\u0644 \u0641\u0639\u0644\u064a\u064b** \u21d2 \u0631\u0642\u0645 \u062d\u064a\u0651 \u0644\u0627 \u0631\u0642\u0645 \u0645\u0643\u062a\u0648\u0628 \u0628\u064a\u062f\u064a\u064b\u0627.
+
+    \u2b50\u2b50\u2b50 M93: \u0643\u0648\u062f \u0627\u0644\u062e\u0631\u0648\u062c **\u064a\u0642\u0646\u0639** \u0645\u0639 \u0627\u0644\u0627\u0646\u0641\u0627\u0631 \u21d2 \u0648\u0644\u062f \u0627\u0644\u0645\u062e\u0631\u062c \u0627\u0644\u0630\u064a \u0648\u0645\u0627 \u0627\u0636\u0627\u0639\u0627\u064b.
+    \u2b50 \u0625\u0630\u0627 \u064a\u0646\u0641\u0635\u0644 \u0648\u064a\u062e\u0631\u062c \u0645\u0639 \u0645\u0644\u062e\u0635 \u0648\u0627\u062d\u062f \u21d2 \u0627\u0644\u062a\u062d\u0642\u064a\u0642 \u064a\u0645\u064a\u0632 \u0627\u0644\u062a\u0634\u062f\u064a\u0644.
+    """
     try:
         p = subprocess.run(
             ["npm", "test", "--silent"], cwd=str(REPO), capture_output=True, text=True, timeout=900
@@ -136,9 +153,16 @@ def test_counts() -> tuple[int, int, int] | None:
         return int(m.group(1)) if m else 0
 
     total = grab("tests")
+    skip_reason = ""
+    m_skip = re.search(r"#\s*SKIP\s*(.+)", out)
+    if m_skip:
+        skip_reason = m_skip.group(1).strip()[:200]
     if not total:
-        return None
-    return total, grab("pass"), grab("fail")
+        # \u2b50\u2b50\u2b50 M93: \u0627\u0644\u062a\u0634\u063a\u064a\u0644 \u062d\u062f\u062b \u0648\u0644\u0645 \u064a\u064f\u0636\u0639 \u0645\u0644\u062e\u0635 \u21d2 \u0647\u0630\u0627 \u0645\u0639\u0631\u0641 \u062a\u0639\u0631\u064b\u0636 \u0648\u0644\u064a\u0633 \u00ab\u0644\u0645 \u064a\u064f\u0646\u0641\u0651\u0630\u00bb.
+        return LiveCounts(0, 0, 0, 0, p.returncode, False, skip_reason)
+    return LiveCounts(
+        total, grab("pass"), grab("fail"), grab("skipped"), p.returncode, True, skip_reason
+    )
 
 
 # ⭐⭐⭐ M85 — مصدر الرقم لازم يكون **الـcommit نفسه** ⇒ ⭐ ولا رقم من شجرة مختلفة.
@@ -216,7 +240,9 @@ def summary_block(sha: str) -> str:
     n_server = len([f for f in tracked if f.startswith("server/")])
     n_tools = len([f for f in tracked if f.startswith("tools/")])
     n_prod = n_core + n_local + n_server
-    n_tests = len([f for f in tracked if f.startswith("tests/")])
+    # \u2b50\u2b50\u2b50 M93: \u0641\u0627\u0644\u0645 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631\u064a\u0629 \u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0645\u062c\u0645\u0648\u0639\u0629 \u0639\u0644\u0649 \u0627\u0644\u0645\u062c\u0645\u0648\u0639\u0627\u062a \u0648\u0644\u064a\u0633 \u0645\u0644\u0641\u0627\u062a \u062f\u0639\u0645.
+    n_tests = len([f for f in tracked if f.startswith("tests/") and f.endswith(".test.ts")])
+    n_test_support = len([f for f in tracked if f.startswith("tests/") and not f.endswith(".test.ts")])
     rows = decision_rows(dec)
     n_ok = sum(1 for _, t in rows if "✅" in t)
     n_mid = sum(1 for _, t in rows if "🟡" in t)
@@ -272,7 +298,7 @@ def summary_block(sha: str) -> str:
         if n_prod:
             state = (
                 f"✔ كود الإنتاج ({ar_num(n_prod)} ملفاً = {ar_num(n_core)} نواة (src/core) + {ar_num(n_local)} محاكاة محلية (src/local) + {ar_num(n_server)} خادم) "
-                f"· ✔ اختبارات محلية ({ar_num(n_tests)} ملف اختبار)"
+                f"\u00b7 \u2714 \u0627\u062e\u062a\u0628\u0627\u0631\u0627\u062a \u0645\u062d\u0644\u064a\u0629 ({ar_num(n_tests)} \u0645\u0644\u0641 `.test.ts` \u00b7 + {ar_num(n_test_support)} \u0645\u0644\u0641 \u062f\u0639\u0645)"
             )
         else:
             state = "بلا كود · بلا اختبار"
@@ -289,7 +315,7 @@ def summary_block(sha: str) -> str:
     lines.append(
         f"- ⭐ **الريبو**: {ar_num(len(tracked))} ملف متتبَّع ({ar_num(n_md)} ملف `.md`) · "
         f"{ar_num(n_core)} نواة (src/core) + {ar_num(n_local)} محاكاة محلية (src/local) + {ar_num(n_server)} خادم + {ar_num(n_tools)} أداة تشغيل "
-        f"· {ar_num(n_tests)} ملف اختبار · العدّادات في `CURRENT-STATE.md` مصحَّحة."
+        f"· {ar_num(n_tests)} \u0645\u0644\u0641 `.test.ts` + {ar_num(n_test_support)} \u0645\u0644\u0641 \u062f\u0639\u0645 \u00b7 \u0627\u0644\u0639\u062f\u0651\u0627\u062a \u0641\u064a `CURRENT-STATE.md` \u0645\u0635\u062d\u0651\u062d\u0629."
     )
 
     # ① ⭐ M85 — الرقم المنشور = رقم ال-commit نفسه ⇒ ⭐ ولا رقم من شجرة مختلفة.
@@ -298,8 +324,20 @@ def summary_block(sha: str) -> str:
     short = sha[:7]
     if cp:
         total_c, _n_files, expr = cp
-        if counts:
-            total_l, passed_l, failed_l = counts
+        if counts and not counts.parsed:
+            # \u2b50\u2b50\u2b50 M93: \u0627\u0644\u062a\u0634\u063a\u064a\u0644 \u062d\u062f\u062b \u0648\u0644\u0645 \u064a\u064f\u0636\u0639 \u0645\u0644\u062e\u0635 \u21d2 \u0647\u0630\u0627 \u062a\u0639\u0631\u0651\u0636 \u0648\u0644\u064a\u0633 \u00ab\u0644\u0645 \u064a\u064f\u0646\u0641\u0651\u0630\u00bb.
+            PROBLEMS.append(
+                f"\u0627\u0644\u0642\u064a\u0627\u0633 \u0627\u0644\u062d\u064a\u0651 \u0627\u0646\u062a\u0647\u0649 \u0628\u0644\u0627 \u0645\u0644\u062e\u0635 (M93): \u0643\u0648\u062f \u0627\u0644\u062e\u0631\u0648\u062c {counts.returncode} "
+                "\u21d2 \u0644\u0627 \u0631\u0642\u0645 \u0645\u0646\u0634\u0648\u0631."
+            )
+            lines.append(
+                f"- \u26d4 **\u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631\u0627\u062a**: \u26d4 \u0627\u0644\u0642\u064a\u0627\u0633 \u0627\u0644\u062d\u064a\u0651 \u0627\u0646\u062a\u0647\u0649 \u0628\u0644\u0627 \u0645\u0644\u062e\u0635 "
+                f"(\u0643\u0648\u062f \u0627\u0644\u062e\u0631\u0648\u062c {counts.returncode}) \u00b7 \u23f3 \u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0645\u0646\u0634\u0648\u0631 = \u0631\u0642\u0645 \u0627\u0644\u0641-commit {short} "
+                f"({ar_num(total_c)}) \u00b7 \u26d4 \u0648\u0644\u0627 \u064a\u064f\u0642\u0631\u0623 \u0643\u062a\u062d\u0642\u064a\u0642 \u062d\u064a\u0651."
+            )
+        elif counts:
+            total_l, passed_l, failed_l = counts.total, counts.passed, counts.failed
+            skipped_l = counts.skipped
             if total_l != total_c:
                 PROBLEMS.append(
                     f"تعارض أرقام (M85): ال-commit {short} يوثّق {ar_num(total_c)} اختبار · "
@@ -310,10 +348,21 @@ def summary_block(sha: str) -> str:
                     f"والقياس الحيَّ {ar_num(total_l)} ⇒ ⛔ لا يُنشر."
                 )
             else:
-                verdict = "✅ كله ناجح" if failed_l == 0 else f"⛔ {ar_num(failed_l)} فاشل"
+                                # \u2b50\u2b50\u2b50 M93: \u0627\u0644\u0645\u062a\u0637\u0649 \u062a\u062d\u062a\u062c \u0645\u0639 \u0639\u062f\u062f \u0627\u0644\u0645\u062a\u0637\u0649\u0641 \u21d2 \u0648\u0644\u064a\u0633 \u0646\u062c\u0627\u062d\u0627 \u062d\u064a\u0646 \u064a\u064f\u0633\u0628\u0637 \u0627\u0644\u0646\u0645\u062c \u0623\u0635\u064a\u0644.
+                if failed_l == 0 and skipped_l == 0:
+                    verdict = "\u2705 \u0628\u0644\u0627 \u0641\u0634\u0644"
+                elif failed_l == 0:
+                    verdict = "\u2705 \u0628\u0644\u0627 \u0641\u0634\u0644 \u00b7 \u23f3 \u0645\u062a\u062e\u0637\u0651\u0649"
+                else:
+                    verdict = f"\u26d4 {ar_num(failed_l)} \u0641\u0627\u0634\u0644"
+                skip_txt = ""
+                if skipped_l:
+                    skip_txt = f" \u00b7 \u23f3 {ar_num(skipped_l)} \u0645\u062a\u062e\u0637\u0651\u0649 (\u0644\u064a\u0633 \u0646\u062c\u0627\u062d\u0627)"
+                    if counts.skip_reason:
+                        skip_txt += f" \u2014 {counts.skip_reason}"
                 lines.append(
                     f"- ⭐ **الاختبارات (رقم مربوط بال-commit {short})**: {ar_num(total_c)} اختبار · "
-                    f"{ar_num(passed_l)} ناجح · {verdict} · ⭐ التقسيم الموثّق: {expr} · "
+                    f"{ar_num(passed_l)} \u0646\u0627\u062c\u062d \u00b7 {verdict}{skip_txt} \u00b7 \u2b50 \u0627\u0644\u062a\u0642\u0633\u064a\u0645 \u0627\u0644\u0645\u0648\u062b\u0651\u0642: {expr} \u00b7 "
                     "⛔ **نتاج اختبارات محلية — ليست شهادة جاهزية**."
                 )
         else:

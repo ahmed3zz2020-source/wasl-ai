@@ -30,6 +30,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { loginAs, resetSyntheticData, startHarness } from './harness.ts';
 
 const NS = 'sec';
@@ -118,27 +119,147 @@ test('FOUNDATION 4) the independent security matrix (M-86)', async (t) => {
     payload: { ref: ticketRef, customer_id: customerId, subject: 'the fixture of the matrix' },
   });
 
+  // ⭐⭐⭐ M-91: THE FIXTURE OF THE ASSIGNMENT IS ITS OWN CONVERSATION.
+  // ⭐⭐ The main conversation is already assigned to the agent (so the
+  //   agent really reaches it) ⇒ ⭐⭐ the core refuses an assignment
+  //   that does not change anything (`assignment_unchanged` ⇒ 400) ⇒
+  //   ⭐⭐ and the 400 of a business rule must NOT be read as a
+  //   success ⇒ ⭐⭐ the assignment of the matrix gets a fresh
+  //   conversation (moved to `open` first, because `new` accepts only
+  //   `open`).
+  const assignConversationRef = `conv_${NS}_assign`;
+  await harness.client.request({
+    method: 'POST',
+    path: '/api/conversations',
+    token: tokens.owner,
+    payload: {
+      conversation_ref: assignConversationRef,
+      customer_id: customerId,
+      message: { body: 'the fixture of the assignment' },
+    },
+  });
+  await harness.client.request({
+    method: 'POST',
+    path: `/api/inbox/conversations/${assignConversationRef}/state`,
+    token: tokens.owner,
+    payload: { to: 'open', reason: 'the fixture of the assignment' },
+  });
+
+  // ⭐⭐⭐ M-91: THE FIXTURE OF THE STATE IS A CONVERSATION PER ROLE.
+  // ⭐⭐ The state of a conversation moves with the first write ⇒ ⭐⭐
+  //   a shared conversation makes the answer of the second role a 409
+  //   (a business rule, NOT a right) ⇒ ⭐⭐ and the 409 must NOT be
+  //   counted as a success ⇒ ⭐⭐ every role gets its own conversation
+  //   (fresh ⇒ `new` ⇒ the call of the matrix moves it to `open`).
+  const stateConversationRefs: Record<string, string> = {};
+  for (const role of ['owner', 'supervisor', 'agent', 'viewer']) {
+    const refForRole = `conv_${NS}_state_${role}`;
+    await harness.client.request({
+      method: 'POST',
+      path: '/api/conversations',
+      token: tokens.owner,
+      payload: {
+        conversation_ref: refForRole,
+        customer_id: customerId,
+        message: { body: 'the fixture of the state' },
+      },
+    });
+    stateConversationRefs[role] = refForRole;
+  }
+
   await t.test('⭐⭐⭐ every operation answers what the owner decided', async () => {
     for (const [operation, expectations] of Object.entries(MATRIX)) {
-      const [method, template] = operation.split(' ');
-      const path = template
-        .replace(':ref', conversationRef)
-        .replace(':id', customerId);
+      const template = operation.split(' ')[1] ?? '';
       for (const [role, verdict] of Object.entries(expectations)) {
+        // ⭐⭐⭐ M-91: THE FIXTURE FOLLOWS THE ROLE ⇒ ⭐⭐ the write of
+        //   one role does not change the answer of the next one (the
+        //   state and the version move with the first write).
+        const path = template
+          .replace(
+            ':ref',
+            operation === 'PATCH /api/tickets/:ref'
+              ? ticketRef
+              : operation === 'POST /api/inbox/conversations/:ref/assign'
+                ? assignConversationRef
+                : operation === 'POST /api/inbox/conversations/:ref/state'
+                  ? (stateConversationRefs[role] ?? conversationRef)
+                  : conversationRef,
+          )
+          .replace(':id', customerId);
         const token = tokens[role as keyof typeof tokens];
-        const answer = await call(harness, method, path, token);
+        const answer = await call(harness, operation, path, token);
         const status = answer.status;
-        // ⭐⭐ `allow` means "the server did NOT refuse the right" ⇒ the
-        //   refusal of the right is a 403 and nothing else.
-        const refused = status === 403;
-        assert.equal(
-          refused,
-          verdict === 'refuse',
+        const detail = JSON.stringify(answer.body);
+        // ⭐⭐⭐ M-91: FOUR CASES, NOT TWO.
+        // ⭐⭐ The old logic was `refused = (status === 403)` ⇒ ⭐⭐
+        //   every answer that was NOT 403 (a 400, a 404, even a 500)
+        //   counted as a SUCCESS ⇒ ⭐⭐ a false success.
+        // ⭐⭐ Now: a success is a 2xx/3xx and NOTHING else ⇒ ⭐⭐ a
+        //   400/404/409/422 inside an ALLOWED row is a FAILURE ⇒ ⭐⭐
+        //   and a 5xx is ALWAYS a failure (never a success).
+        const classification =
+          status >= 500
+            ? 'internal_error'
+            : status === 403
+              ? 'refused'
+              : status >= 200 && status < 400
+                ? 'success'
+                : 'input_refused';
+        assert.notEqual(
+          classification,
+          'internal_error',
           `the operation ${operation} with the role ${role}: the answer was ${status} ` +
-            `(the decision of the owner is "${verdict}")`,
+            '(an internal error is never a success)',
         );
+        if (verdict === 'refuse') {
+          assert.equal(
+            classification,
+            'refused',
+            `the operation ${operation} with the role ${role}: the answer was ${status} ` +
+              `(the decision of the owner is "refuse" ⇒ the answer must be a 403) — the body: ${detail}`,
+          );
+        } else {
+          assert.equal(
+            classification,
+            'success',
+            `the operation ${operation} with the role ${role}: the answer was ${status} ` +
+              `(the decision of the owner is "allow" ⇒ the answer must be a success) — the body: ${detail}`,
+          );
+        }
       }
     }
+  });
+
+  await t.test('⭐⭐⭐ M-91 — the assignment AT THE CREATION is the right of the owner alone', async () => {
+    // ⭐⭐⭐ M-89: the supervisor may CREATE a ticket but may NOT assign
+    //   one at the creation ⇒ ⭐⭐ the answer is 403 and NOTHING is
+    //   written ⇒ ⭐⭐ this scenario was missing from the matrix and it
+    //   is exactly why the defect lived (the review of #49).
+    const ref = `tkt_${NS}_assign_at_create`;
+    const created = await harness.client.request({
+      method: 'POST',
+      path: '/api/tickets',
+      token: tokens.supervisor,
+      payload: {
+        ref,
+        customer_id: customerId,
+        subject: 'the matrix',
+        assignee_actor_id: `${NS}_usr_alpha_agent`,
+      },
+    });
+    assert.equal(
+      created.status,
+      403,
+      `the supervisor assigned a ticket at the creation: ${created.status}`,
+    );
+    const rows = await UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+      const result = await uow.query<{ count: string }>(
+        `select count(*)::text as count from support_tickets where tenant_id = $1 and ref = $2`,
+        [`${NS}_tnt_alpha`, ref],
+      );
+      return Number(result.rows[0]?.count ?? '0');
+    });
+    assert.equal(rows, 0, 'the refused assignment still wrote a ticket');
   });
 
   await t.test('⭐⭐⭐ the refusal of a right is a 403 and NOT a 404 nor a 500', async () => {
@@ -241,10 +362,11 @@ test('FOUNDATION 4) the independent security matrix (M-86)', async (t) => {
 /** ⭐ The call of one operation (the payload is the one of the fixture). */
 async function call(
   harness: Awaited<ReturnType<typeof startHarness>>,
-  method: string,
+  operation: string,
   path: string,
   token: string,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
+  const [method] = operation.split(' ');
   const payloads: Record<string, Record<string, unknown>> = {
     'POST /api/inbox/conversations/:ref/replies': { body: 'the reply of the matrix' },
     'POST /api/inbox/conversations/:ref/assign': {
@@ -260,20 +382,32 @@ async function call(
     'POST /api/customers': {
       display_name: `عميل ${Math.random().toString(36).slice(2, 8)}`,
     },
-    'PATCH /api/crm/customers/:id': { display_name: 'the matrix', version: 1 },
+    'PATCH /api/crm/customers/:id': { display_name: 'the matrix' },
     'POST /api/tickets': {
       customer_id: `${NS}_cus_alpha_1`,
       subject: 'the matrix',
     },
-    'PATCH /api/tickets/:ref': { version: 1, priority: 'high' },
+    'PATCH /api/tickets/:ref': { priority: 'high' },
     'POST /api/privacy/export': { customer_id: `${NS}_cus_alpha_1` },
     'POST /api/privacy/deletion/preview': { customer_id: `${NS}_cus_alpha_1` },
     'POST /api/retention': { data_class: 'standard', retention_days: 30 },
   };
-  const key = Object.keys(payloads).find((candidate) =>
-    path.startsWith(candidate.split(' ')[1].split('/').slice(0, 4).join('/')),
-  );
-  const payload = key ? payloads[key] : undefined;
+  // ⭐⭐⭐ M-91: the payload is taken from the EXACT operation ⇒ ⭐⭐
+  //   the old prefix match could take the payload of another operation
+  //   (a silent mistake in the test itself).
+  let payload = payloads[operation];
+  // ⭐⭐⭐ M-91: the version is READ AT THE MOMENT of the call ⇒ ⭐⭐
+  //   the write of one role does not break the write of another (the
+  //   optimistic lock moves with the first write) ⇒ ⭐⭐ and then EVERY
+  //   allowed row can really succeed.
+  if (method === 'PATCH' && operation === 'PATCH /api/tickets/:ref') {
+    const ref = path.split('/api/tickets/')[1] ?? '';
+    payload = { ...(payload ?? {}), version: await currentTicketVersion(harness, ref) };
+  }
+  if (method === 'PATCH' && operation === 'PATCH /api/crm/customers/:id') {
+    const id = path.split('/api/crm/customers/')[1] ?? '';
+    payload = { ...(payload ?? {}), version: await currentCustomerVersion(harness, id) };
+  }
   const answer = await harness.client.request({
     method,
     path,
@@ -281,4 +415,32 @@ async function call(
     ...(payload === undefined ? {} : { payload }),
   });
   return { status: answer.status, body: answer.body };
+}
+
+/** ⭐⭐⭐ M-91: the CURRENT version of a ticket (read at the moment of the call). */
+async function currentTicketVersion(
+  harness: Awaited<ReturnType<typeof startHarness>>,
+  ref: string,
+): Promise<number> {
+  return UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+    const result = await uow.query<{ version: number }>(
+      `select version from support_tickets where tenant_id = $1 and ref = $2`,
+      [`${NS}_tnt_alpha`, ref],
+    );
+    return Number(result.rows[0]?.version ?? 1);
+  });
+}
+
+/** ⭐⭐⭐ M-91: the CURRENT version of a customer (read at the moment of the call). */
+async function currentCustomerVersion(
+  harness: Awaited<ReturnType<typeof startHarness>>,
+  id: string,
+): Promise<number> {
+  return UnitOfWork.run(harness.ownerPool, `${NS}_tnt_alpha`, async (uow) => {
+    const result = await uow.query<{ version: number }>(
+      `select version from customers where tenant_id = $1 and id = $2`,
+      [`${NS}_tnt_alpha`, id],
+    );
+    return Number(result.rows[0]?.version ?? 1);
+  });
 }

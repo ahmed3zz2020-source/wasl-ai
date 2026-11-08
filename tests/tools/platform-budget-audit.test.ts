@@ -133,18 +133,46 @@ test('FOUNDATION 4) the audit of the shared platform resources (M-82)', async (t
     );
   });
 
-  await t.test('⭐⭐⭐ the lock is ONE key and ONE helper (no second lock)', async () => {
+  await t.test('⭐⭐⭐ every lock has ONE key and ONE call site (no second lock)', async () => {
     const harness = fs.readFileSync(path.join(ROOT, 'tests', 'server', 'harness.ts'), 'utf8');
-    const keys = harness.match(/pg_advisory_lock\(\$1\)/g) ?? [];
-    assert.equal(keys.length, 1, `⭐⭐⭐ the lock is taken in ${keys.length} places`);
-    const constants = harness.match(/PLATFORM_BUDGET_LOCK_KEY\s*=\s*0x[0-9a-fA-F_]+/g) ?? [];
-    assert.equal(constants.length, 1, `⭐⭐⭐ there are ${constants.length} lock keys`);
+    // ⭐⭐⭐ M-97: THE RULE IS NOT "ONE LOCK IN THE REPO" — ⭐⭐ it is
+    // ⭐⭐ "ONE KEY PER SHARED RESOURCE, ONE CALL SITE PER KEY" ⇒ ⭐⭐ a
+    // ⭐⭐ second shared resource (the trigger of the deletion evidence)
+    // ⭐⭐ gets its own key ⇒ ⭐⭐ and the audit checks the RELATION
+    // ⭐⭐ (keys = call sites), not an absolute number.
+    const keyDefs = [
+      ...harness.matchAll(/export const ([A-Z_]*LOCK_KEY)\s*=\s*0x[0-9a-fA-F_]+/g),
+    ].map((match) => match[1] ?? '');
+    assert.ok(keyDefs.length >= 1, 'there is no lock key in the harness');
+    const callSites = harness.match(/pg_advisory_lock\(\$1\)/g) ?? [];
+    const unlockSites = harness.match(/pg_advisory_unlock\(\$1\)/g) ?? [];
+    assert.equal(
+      callSites.length,
+      keyDefs.length,
+      `⭐⭐⭐ there are ${callSites.length} call sites of the lock and ${keyDefs.length} keys ` +
+        '⇒ a key is shared by two resources or a resource has two keys',
+    );
+    assert.equal(
+      unlockSites.length,
+      keyDefs.length,
+      `⭐⭐⭐ there are ${unlockSites.length} unlocks and ${keyDefs.length} keys ⇒ a lock can stay held`,
+    );
+    // ⭐⭐ each key belongs to ONE resource (the constant + its use).
+    for (const key of keyDefs) {
+      const uses = harness.split(key).length - 1;
+      assert.ok(uses >= 2, `⭐⭐⭐ the key ${key} is never used (a declared lock that does nothing)`);
+    }
     // ⭐⭐ The unlock is in a `finally` ⇒ ⭐⭐ a failure of the drill
     //   does not leave the lock held (that would freeze the suite).
     const helper = harness.slice(harness.indexOf('export async function withPlatformBudgetLock'));
     assert.ok(
       helper.includes('finally') && helper.includes('pg_advisory_unlock'),
       '⭐⭐⭐ the unlock is not in a finally ⇒ a failure freezes the suite',
+    );
+    const purge = harness.slice(harness.indexOf('export async function purgeEvidence'));
+    assert.ok(
+      purge.includes('finally') && purge.includes('pg_advisory_unlock'),
+      '⭐⭐⭐ the purge of the evidence does not unlock in a finally ⇒ a failure freezes the suite',
     );
   });
 

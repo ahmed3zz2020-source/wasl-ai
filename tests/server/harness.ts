@@ -9,6 +9,8 @@
 // ============================================================
 
 import fs from 'node:fs';
+import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { loadConfig, type ServerConfig } from '../../server/config.ts';
 import { createPool, type PgPool } from '../../server/db/pool.ts';
@@ -77,10 +79,10 @@ export async function startHarness(options: HarnessOptions = {}): Promise<Harnes
   //   port would fight, so every process takes its own BLOCK of
   //   ports: the base plus the few the drill opens beside it.
   const blockSize = 30;
-  const basePort = 8791 + (process.pid % 400) * blockSize;
-  const port = Number(process.env['WASL_TEST_PORT'] ?? String(basePort));
-  const testConfig: ServerConfig = { ...config, port, host: '127.0.0.1' };
-
+  // ⭐⭐⭐ M-99: the port is ALLOCATED under a lock (and probed) ⇒ ⭐⭐
+  //   the pid is only a HINT for where to look first ⇒ ⭐⭐ two files
+  //   never share a port ⇒ ⭐⭐ and the extra ports of a drill (the
+  //   base + 1 .. + 16) stay inside the block of the file.
   const ownerPool = createPool(
     `postgresql://wasl_owner:${encodeURIComponent(credentials.owner_password)}@127.0.0.1:5432/${
       config.databaseName
@@ -90,6 +92,12 @@ export async function startHarness(options: HarnessOptions = {}): Promise<Harnes
   await runMigrations(ownerPool);
   // ⭐⭐ M-82: the companies of THIS file (the namespace).
   await seedDatabase(ownerPool, config.testPasscode, options.namespace ?? '');
+  // ⭐⭐⭐ M-99: the block of ports is RESERVED (atomically) ⇒ ⭐⭐ two
+  //   files never share a port ⇒ ⭐⭐ and the extra ports of a drill
+  //   (the base + 1 .. + 16) stay inside the block of the file.
+  const reserved = await reservePortBlock(blockSize);
+  const port = Number(process.env['WASL_TEST_PORT'] ?? String(reserved.base));
+  const testConfig: ServerConfig = { ...config, port, host: '127.0.0.1' };
 
   const appPool = createPool(config.appDatabaseUrl, 6);
   // ⭐ A listener on the pool error: a broken connection must not raise
@@ -110,6 +118,8 @@ export async function startHarness(options: HarnessOptions = {}): Promise<Harnes
       await api.close();
       await appPool.end();
       await ownerPool.end();
+      // ⭐⭐⭐ M-99: the block goes back to the pool.
+      reserved.release();
     },
   };
 }
@@ -262,6 +272,89 @@ export async function createSyntheticCompany(
 export const PLATFORM_BUDGET_LOCK_KEY = 0x5741_534c; // "WASL"
 
 /**
+ * ⭐⭐⭐ M-99: THE PORT OF A FILE IS RESERVED, NOT DERIVED FROM THE PID.
+ *
+ * ⭐⭐⭐ WHY: `pid % 400` is NOT injective over the LIVE processes ⇒
+ *   two files whose pids are 400 apart land on the SAME block ⇒ the
+ *   second one dies with `EADDRINUSE` ⇒ ⭐⭐ a false failure of the
+ *   product that has nothing to do with the product.
+ * ⭐⭐⭐ AND WHY A PROBE ALONE IS NOT ENOUGH: the probe answers "is
+ *   the port free NOW?" ⇒ ⭐⭐ two files can probe the same free port
+ *   at the same moment and then both bind it ⇒ ⭐⭐⇒ so the block is
+ *   RESERVED with an atomic marker (a directory) ⇒ ⭐⭐ and the probe
+ *   stays as the second line of defence (a port taken by something
+ *   that is not a test).
+ * ⭐⭐⭐ The marker is released when the harness stops ⇒ the block goes
+ *   back to the pool.
+ */
+const PORT_BLOCK_DIR = path.join(os.tmpdir(), 'wasl-test-port-blocks');
+
+/** ⭐ Is this port free right now? (bind it and release it). */
+async function portIsFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, '127.0.0.1');
+  });
+}
+
+/** ⭐⭐ Reserve a block of ports (atomic ⇒ two files never share one). */
+export async function reservePortBlock(
+  blockSize = 30,
+): Promise<{ base: number; release: () => void }> {
+  fs.mkdirSync(PORT_BLOCK_DIR, { recursive: true });
+  const first = 8791 + (process.pid % 2000) * blockSize;
+  for (let k = 0; k < 400; k += 1) {
+    const base = first + k * blockSize;
+    if (base + blockSize > 65535) break;
+    const marker = path.join(PORT_BLOCK_DIR, `block-${base}`);
+    try {
+      // ⭐⭐ the reservation is ATOMIC (the directory is created once) ⇒
+      // ⭐⭐ two files can never take the same block.
+      fs.mkdirSync(marker);
+    } catch {
+      continue;
+    }
+    let free = true;
+    for (let offset = 0; offset < blockSize; offset += 1) {
+      if (!(await portIsFree(base + offset))) {
+        free = false;
+        break;
+      }
+    }
+    if (free) {
+      return {
+        base,
+        release: () => {
+          try {
+            fs.rmdirSync(marker);
+          } catch {
+            // ⭐⭐ the marker is already gone ⇒ nothing to release.
+          }
+        },
+      };
+    }
+    try {
+      fs.rmdirSync(marker);
+    } catch {
+      // ⭐⭐ nothing to release.
+    }
+  }
+  throw new Error('no_free_port_block');
+}
+
+/**
+ * ⭐⭐ M-97: the lock of the purge of the deletion evidence.
+ * ⭐⭐ The trigger `tenant_deletion_evidence_immutable` is a GLOBAL
+ *   resource (one table for every company) ⇒ ⭐⭐ it cannot be
+ *   namespaced ⇒ ⭐⭐ so it is measured under an advisory lock.
+ */
+export const EVIDENCE_PURGE_LOCK_KEY = 0x5741_4556; // "WAEV"
+
+/**
  * ⭐⭐ Run a drill that measures the platform login budget, alone.
  * ⭐ The lock is held on ONE connection for the whole drill ⇒ ⭐ the
  *   budget of the installation is not shared with another measurement.
@@ -324,15 +417,34 @@ export async function purgeEvidence(
   ownerPool: PgPool,
   tenantId: string,
 ): Promise<void> {
-  await ownerPool.query(
-    `alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable`,
-  );
+  // ⭐⭐⭐ M-97: THE TRIGGER IS A GLOBAL RESOURCE (the table is shared).
+  // ⭐⭐ `disable trigger` switches it off for the WHOLE table ⇒ ⭐⭐ a
+  //   file that purges while another file proves the immutability of
+  //   the evidence ⇒ the proof fails for a reason that has nothing to
+  //   do with the product ⇒ ⭐⭐ (this is the lesson of M-82 again: the
+  //   resource that cannot be namespaced needs a LOCK, not a
+  //   namespace).
+  // ⭐⭐ The lock is taken on ONE connection and held for the whole
+  //   purge ⇒ ⭐⭐ the trigger is never off while another drill runs.
+  const client = await ownerPool.connect();
   try {
-    await ownerPool.query(`delete from tenant_deletion_evidence where tenant_id = $1`, [tenantId]);
+    await client.query(`select pg_advisory_lock($1)`, [EVIDENCE_PURGE_LOCK_KEY]);
+    try {
+      await client.query(
+        `alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable`,
+      );
+      try {
+        await client.query(`delete from tenant_deletion_evidence where tenant_id = $1`, [tenantId]);
+      } finally {
+        await client.query(
+          `alter table tenant_deletion_evidence enable trigger tenant_deletion_evidence_immutable`,
+        );
+      }
+    } finally {
+      await client.query(`select pg_advisory_unlock($1)`, [EVIDENCE_PURGE_LOCK_KEY]);
+    }
   } finally {
-    await ownerPool.query(
-      `alter table tenant_deletion_evidence enable trigger tenant_deletion_evidence_immutable`,
-    );
+    client.release();
   }
 }
 

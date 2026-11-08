@@ -43,7 +43,25 @@ export interface PgClient extends Queryable {
   release(): void;
 }
 
-export function createPool(connectionString: string, max = 8): PgPool {
+/**
+ * \u2b50\u2b50\u2b50 M-98: the options of the pool.
+ * \u2b50 The timeout of a statement, in milliseconds.
+ * \u2b50 The default (15 seconds) fits a request of the API.
+ * \u2b50 An ADMINISTRATIVE drill (a backup, a restore, the creation
+ *   of a scratch database) is a long operation by nature \u21d2 \u2b50 it
+ *   asks for a longer timeout \u21d2 \u2b50 and the drill is measured
+ *   (the RTO), not killed by the timeout of a request.
+ * \u26d4 The default of the product does not move.
+ */
+export interface PoolOptions {
+  readonly statementTimeoutMs?: number;
+}
+
+export function createPool(
+  connectionString: string,
+  max = 8,
+  options: PoolOptions = {},
+): PgPool {
   if (typeof connectionString !== 'string' || !connectionString.startsWith('postgresql://')) {
     throw new Error('invalid_connection_string');
   }
@@ -52,8 +70,8 @@ export function createPool(connectionString: string, max = 8): PgPool {
     max,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
-    // ⛔ No statement timeout magic: the local database is disposable.
-    statement_timeout: 15_000,
+    // \u26d4 No statement timeout magic: the local database is disposable.
+    statement_timeout: options.statementTimeoutMs ?? 15_000,
   });
   return pool as unknown as PgPool;
 }

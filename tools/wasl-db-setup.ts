@@ -62,7 +62,9 @@ async function main(): Promise<void> {
   const ownerUrl = `postgresql://wasl_owner:${encodeURIComponent(ownerPassword)}@127.0.0.1:${
     process.env['WASL_PG_PORT'] ?? '5432'
   }/${config.databaseName}`;
-  const ownerPool = createPool(ownerUrl, 2);
+  // \u2b50\u2b50\u2b50 M-98: the setup is an ADMINISTRATIVE drill (the DDL of the migrations)
+  // \u21d2 \u2b50 it asks for a longer timeout than a request of the API.
+  const ownerPool = createPool(ownerUrl, 2, { statementTimeoutMs: 120_000 });
   try {
     steps.push(...(await runMigrations(ownerPool)));
     steps.push(...(await seedDatabase(ownerPool, config.testPasscode)));

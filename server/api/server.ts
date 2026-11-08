@@ -1707,6 +1707,27 @@ export class WaslApiServer {
       return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
     }
     const body = asRecord(parseJson(await readBody(req)));
+    // ⭐⭐⭐ M-89: THE RIGHT TO ASSIGN IS NOT THE RIGHT TO CREATE.
+    // ⭐⭐ The policy gives `ticket.assign` to the owner alone ⇒ ⭐⭐ a
+    //   supervisor who may CREATE a ticket may NOT assign one ⇒ ⭐⭐
+    //   the check comes before the validation of the body (the rule of
+    //   the project: the authorization before the input).
+    const wantsAssignee = body['assignee_actor_id'] !== undefined;
+    if (wantsAssignee) {
+      const assign = this.#authorizeTicket(context, 'ticket.assign', SCOPE_REF);
+      if (!assign.allowed) {
+        await this.#audit(
+          context.session.tenantId,
+          context.session.actorId,
+          context.session.sessionId,
+          'ticket.assign',
+          'denied',
+          assign.code,
+          {},
+        );
+        return { status: 403, body: { ok: false, error: { code: assign.code, message: assign.reason } } };
+      }
+    }
     const subject = asString(body['subject']);
     if (!subject || subject.length > 200) {
       return {
@@ -1754,12 +1775,35 @@ export class WaslApiServer {
         // ⭐⭐ The conversation (when there is one) must exist in THIS
         //   company ⇒ ⭐⭐ and it must be one the employee may SEE.
         if (conversationRef) {
-          const conversation = await uow.query<{ ref: string }>(
-            `select ref from conversations where tenant_id = $1 and ref = $2`,
+          const conversation = await uow.query<{ ref: string; customer_id: string | null }>(
+            `select ref, customer_id from conversations where tenant_id = $1 and ref = $2`,
             [context.session.tenantId, conversationRef],
           );
           if (conversation.rowCount === 0) {
             throw new Error('conversation_not_found');
+          }
+          // ⭐⭐⭐ M-90: THE TICKET AND THE CONVERSATION MUST BE OF THE
+          //   SAME CUSTOMER ⇒ ⭐⭐ a ticket that points at the
+          //   conversation of another customer is refused ⇒ ⭐⭐ (the
+          //   relation was not proved by the database ⇒ the server
+          //   proves it).
+          const conversationCustomer = conversation.rows[0]?.customer_id ?? null;
+          if (conversationCustomer !== customerId) {
+            throw new Error('conversation_customer_mismatch');
+          }
+        }
+        // ⭐⭐⭐ M-89: THE ASSIGNEE MUST BE AN ACTIVE MEMBER OF THIS
+        //   COMPANY ⇒ ⭐⭐ (another company, a missing user and a
+        //   suspended member are all refused).
+        if (assignee) {
+          const member = await uow.query<{ id: string }>(
+            `select u.id from users u
+               join memberships m on m.user_id = u.id
+              where m.tenant_id = $1 and u.id = $2 and m.status = 'active'`,
+            [context.session.tenantId, assignee],
+          );
+          if (member.rowCount === 0) {
+            throw new Error('assignee_not_in_tenant');
           }
         }
         // ⭐⭐ The idempotency: the same reference ⇒ the first ticket.
@@ -1831,6 +1875,30 @@ export class WaslApiServer {
         return {
           status: 404,
           body: { ok: false, error: { code: 'conversation_not_found', message: conversationRef } },
+        };
+      }
+      if (message === 'conversation_customer_mismatch') {
+        // ⭐⭐ M-90: the ticket and the conversation are of two
+        //   different customers ⇒ ⭐⭐ the answer is a conflict and
+        //   NOTHING is written.
+        return {
+          status: 409,
+          body: {
+            ok: false,
+            error: {
+              code: 'conversation_customer_mismatch',
+              message: 'the conversation belongs to another customer',
+            },
+          },
+        };
+      }
+      if (message === 'assignee_not_in_tenant') {
+        // ⭐⭐ M-89: the assignee is not an active member of this
+        //   company ⇒ ⭐⭐ the answer is a refusal and NOTHING is
+        //   written.
+        return {
+          status: 404,
+          body: { ok: false, error: { code: 'assignee_not_in_tenant', message: 'the assignee is not an active member of this company' } },
         };
       }
       throw error;
