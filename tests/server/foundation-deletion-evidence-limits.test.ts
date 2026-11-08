@@ -34,7 +34,12 @@ import test from 'node:test';
 import { hashPasscode } from '../../server/auth/sessions.ts';
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
 import { createPool } from '../../server/db/pool.ts';
-import { loginAs, purgeEvidence, startHarness } from './harness.ts';
+import {
+  loginAs,
+  purgeEvidence,
+  startHarness,
+  withEvidenceGuardDisabled,
+} from './harness.ts';
 
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 /**
@@ -227,20 +232,17 @@ test('FOUNDATION 19) the real limits of the deletion evidence (M-74)', async (t)
     //   is left alone. ⭐ The receipt must answer "not verified".
     const admin = createPool(superuserUrl(harness.config.databaseName), 2);
     try {
-      await admin.query(
-        `alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable`,
-      );
-      try {
-        await admin.query(
+      // ⭐⭐⭐ M-100: the guard is off INSIDE ONE TRANSACTION ⇒ ⇒ the
+      // ⭐⭐⭐ table is locked for the whole window ⇒ ⇒ nobody can write
+      // ⭐⭐⭐ to it while the guard is off ⇒ ⇒ and a crash rolls the
+      // ⭐⭐⭐ `disable` back ⇒ ⇒ the guard never stays off.
+      await withEvidenceGuardDisabled(admin, async (client) => {
+        await client.query(
           `update tenant_deletion_evidence set scope = 'tampered_scope'
             where request_id = $1`,
           [requestId],
         );
-      } finally {
-        await admin.query(
-          `alter table tenant_deletion_evidence enable trigger tenant_deletion_evidence_immutable`,
-        );
-      }
+      });
     } finally {
       await admin.end();
     }
@@ -254,13 +256,10 @@ test('FOUNDATION 19) the real limits of the deletion evidence (M-74)', async (t)
     // ⭐⭐ The hash is restored so the drill is repeatable.
     const admin2 = createPool(superuserUrl(harness.config.databaseName), 2);
     try {
-      await admin2.query(
-        `alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable`,
-      );
-      try {
+      await withEvidenceGuardDisabled(admin2, async (client) => {
         // ⭐ The hash is computed with the NEW scope: in an UPDATE the
         //   expressions see the OLD row, so the literal is used.
-        await admin2.query(
+        await client.query(
           `update tenant_deletion_evidence
               set scope = 'tenant_data',
                   content_hash = wasl_deletion_evidence_hash(
@@ -270,11 +269,7 @@ test('FOUNDATION 19) the real limits of the deletion evidence (M-74)', async (t)
             where request_id = $1`,
           [requestId],
         );
-      } finally {
-        await admin2.query(
-          `alter table tenant_deletion_evidence enable trigger tenant_deletion_evidence_immutable`,
-        );
-      }
+      });
     } finally {
       await admin2.end();
     }
@@ -295,18 +290,17 @@ test('FOUNDATION 19) the real limits of the deletion evidence (M-74)', async (t)
         `select count(*)::text as count from tenant_deletion_evidence`,
       );
       assert.ok(Number(rows.rows[0]?.count ?? '0') >= 1, 'the administrator sees nothing');
-      // ⭐ And it can remove the guard itself.
-      await admin.query(
-        `alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable`,
-      );
-      const enabled = await admin.query(
-        `select tgenabled from pg_trigger
-          where tgname = 'tenant_deletion_evidence_immutable'`,
-      );
-      assert.notEqual(enabled.rows[0]?.tgenabled, 'O', 'the guard could not be disabled');
-      await admin.query(
-        `alter table tenant_deletion_evidence enable trigger tenant_deletion_evidence_immutable`,
-      );
+      // ⭐⭐⭐ M-100: the guard is switched off INSIDE ONE TRANSACTION ⇒
+      // ⭐⭐⭐ the state is read in the SAME transaction (so the read sees
+      // ⭐⭐⭐ the disabled state) ⇒ ⇒ and the window is locked ⇒ ⇒ the
+      // ⭐⭐⭐ guard cannot be left off by a crash.
+      await withEvidenceGuardDisabled(admin, async (client) => {
+        const enabled = await client.query(
+          `select tgenabled from pg_trigger
+            where tgname = 'tenant_deletion_evidence_immutable'`,
+        );
+        assert.notEqual(enabled.rows[0]?.tgenabled, 'O', 'the guard could not be disabled');
+      });
     } finally {
       await admin.end();
     }

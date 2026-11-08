@@ -31,6 +31,7 @@ import {
   loginAs,
   purgeEvidence,
   startHarness,
+  withEvidenceGuardDisabled,
   type SyntheticTenant,
 } from './harness.ts';
 
@@ -175,19 +176,16 @@ test('FOUNDATION 14) the integrity of the deletion evidence (M-68)', async (t) =
     // ⭐⭐ The guard is disabled ON PURPOSE (the owner role owns the
     //   table): this is the privileged manipulation the hash is there
     //   to detect.
-    await harness.ownerPool.query(
-      `alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable`,
-    );
-    try {
-      await harness.ownerPool.query(
+    // ⭐⭐⭐ M-100: the guard is switched off INSIDE ONE TRANSACTION ⇒ ⇒
+    // ⭐⭐⭐ the table is locked for the whole window ⇒ ⇒ nobody can
+    // ⭐⭐⭐ write to it while the guard is off ⇒ ⇒ and a crash rolls
+    // ⭐⭐⭐ the `disable` back ⇒ ⇒ the guard never stays off.
+    await withEvidenceGuardDisabled(harness.ownerPool, async (client) => {
+      await client.query(
         `update tenant_deletion_evidence set scope = 'forged_scope' where request_id = $1`,
         [requestId],
       );
-    } finally {
-      await harness.ownerPool.query(
-        `alter table tenant_deletion_evidence enable trigger tenant_deletion_evidence_immutable`,
-      );
-    }
+    });
 
     // ⭐ The receipt reports the manipulation: the hash does not match.
     const receipt = await receiptOf(requestId);

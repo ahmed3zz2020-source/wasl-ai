@@ -47,6 +47,29 @@ const TENANT_SCOPED_RESOURCES = ['login_attempts', 'login_admission_tenant'] as 
 /** ⭐⭐ The mutation verbs (a read is not a mutation). */
 const MUTATION = /\b(delete\s+from|update|insert\s+into|truncate)\b/i;
 
+/**
+ * ⭐⭐⭐ M-100: EVERY file of the repository that can touch the guard
+ * ⭐⭐⭐ (not only the files of the tests) ⇒ ⇒ ⇒ a tool that disables
+ * ⭐⭐⭐ the trigger would open the same window ⇒ ⇒ ⇒ and it must be
+ * ⭐⭐⭐ caught by the audit too.
+ */
+function allFiles(): string[] {
+  const found: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '.git') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.ts')) found.push(full);
+    }
+  };
+  walk(path.join(ROOT, 'tests'));
+  walk(path.join(ROOT, 'server'));
+  walk(path.join(ROOT, 'tools'));
+  walk(path.join(ROOT, 'src'));
+  return found.sort();
+}
+
 function testFiles(): string[] {
   const found: string[] = [];
   const walk = (dir: string): void => {
@@ -169,10 +192,76 @@ test('FOUNDATION 4) the audit of the shared platform resources (M-82)', async (t
       helper.includes('finally') && helper.includes('pg_advisory_unlock'),
       '⭐⭐⭐ the unlock is not in a finally ⇒ a failure freezes the suite',
     );
+    // ⭐⭐⭐ M-100: THE PURGE DOES NOT TAKE AN ADVISORY LOCK ANYMORE ⇒
+    // ⭐⭐⭐ ⇐ it is ATOMIC (the transaction replaces the lock) ⇒ ⭐⭐⭐
+    // ⭐⭐⭐ ⇐ and the audit above (one key, one call site) sees it.
     const purge = harness.slice(harness.indexOf('export async function purgeEvidence'));
     assert.ok(
-      purge.includes('finally') && purge.includes('pg_advisory_unlock'),
-      '⭐⭐⭐ the purge of the evidence does not unlock in a finally ⇒ a failure freezes the suite',
+      !purge.includes('pg_advisory_lock'),
+      '⭐⭐⭐ the purge of the evidence takes an advisory lock ⇒ the key of another resource is used',
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-100: the guard of the evidence is switched off ONLY inside a transaction', async () => {
+    // ⭐⭐⭐ M-100: THE RULE THAT MAKES THE FIX PERMANENT.
+    // ⭐⭐⭐ `alter table ... disable trigger` switches the guard off for
+    // ⭐⭐⭐ the WHOLE table ⇒ ⭐⭐⭐ ⇒ if a drill does it OUTSIDE a
+    // ⭐⭐⭐ ⇒ transaction ⇒ ⇒ ⇒ the guard is off for everybody while
+    // ⭐⭐⭐ ⇒ that drill runs ⇒ ⇒ ⇒ ⇒ and the evidence of EVERY
+    // ⭐⭐⭐ ⇒ company is unprotected ⇒ ⇒ ⇒ ⇒ ⇒ the audit fails.
+    const harness = fs.readFileSync(path.join(ROOT, 'tests', 'server', 'harness.ts'), 'utf8');
+    const offenders: string[] = [];
+    for (const file of allFiles()) {
+      const text = fs.readFileSync(file, 'utf8');
+      if (!text.includes('disable trigger tenant_deletion_evidence_immutable')) continue;
+      const name = relative(file);
+      if (name === 'tests/server/harness.ts') continue; // ⭐⭐ the helper itself.
+      if (name === 'tests/tools/platform-budget-audit.test.ts') continue; // ⭐⭐ this file (the pattern is in a literal).
+      // ⭐⭐⭐ THE RULE: the `disable` must come AFTER a `begin` ⇒ ⇒ ⇒
+      // ⭐⭐⭐ ⇒ it is inside a transaction ⇒ ⇒ ⇒ ⇒ the window is closed
+      // ⭐⭐⭐ ⇒ by the table lock ⇒ ⇒ ⇒ ⇒ and a crash rolls it back.
+      const at = text.indexOf('disable trigger tenant_deletion_evidence_immutable');
+      const before = text.slice(0, at);
+      const opened = before.lastIndexOf("query('begin')") >= 0 || before.lastIndexOf('begin') >= 0;
+      if (!opened) offenders.push(name);
+    }
+    assert.deepEqual(
+      offenders,
+      [],
+      `⭐⭐⭐ these files switch the guard off OUTSIDE a transaction ⇒ the guard is off for the whole table:\n${offenders.join('\n')}`,
+    );
+    // ⭐⭐⭐ AND THE HELPER ITSELF: the `disable` is between a `begin`
+    // ⭐⭐⭐ and a `commit` ⇒ ⇒ ⇒ and a failure rolls it back ⇒ ⇒ ⇒.
+    const helper = harness.slice(
+      harness.indexOf('export async function withEvidenceGuardDisabled'),
+    );
+    const begin = helper.indexOf("query('begin')");
+    const disable = helper.indexOf('disable trigger tenant_deletion_evidence_immutable');
+    const enable = helper.indexOf('enable trigger tenant_deletion_evidence_immutable');
+    const commit = helper.indexOf("query('commit')");
+    const rollback = helper.indexOf("query('rollback')");
+    assert.ok(begin >= 0, '⭐⭐⭐ the helper does not open a transaction');
+    assert.ok(
+      begin < disable && disable < enable && enable < commit,
+      '⭐⭐⭐ the guard is not switched off inside the transaction ⇒ the window is open',
+    );
+    assert.ok(
+      rollback >= 0,
+      '⭐⭐⭐ the helper does not roll back ⇒ a failure leaves the guard off',
+    );
+    // ⭐⭐⭐ AND the purge of the evidence uses the same discipline.
+    const purge = harness.slice(harness.indexOf('export async function purgeEvidence'));
+    const purgeBegin = purge.indexOf("query('begin')");
+    const purgeDisable = purge.indexOf('disable trigger tenant_deletion_evidence_immutable');
+    const purgeCommit = purge.indexOf("query('commit')");
+    const purgeRollback = purge.indexOf("query('rollback')");
+    assert.ok(
+      purgeBegin >= 0 && purgeBegin < purgeDisable && purgeDisable < purgeCommit,
+      '⭐⭐⭐ the purge of the evidence is not atomic ⇒ the guard can stay off',
+    );
+    assert.ok(
+      purgeRollback >= 0,
+      '⭐⭐⭐ the purge of the evidence does not roll back ⇒ a failure leaves the guard off',
     );
   });
 
