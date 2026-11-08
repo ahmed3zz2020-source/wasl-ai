@@ -231,8 +231,8 @@
 
 > ⭐ **تُثبَّت على الـcommit الذي يحمل المحتوى** (قاعدة M85) ⇒ ⇒ ⇒⇒ ⇒ **ولا يُنشر رقم لا يخص الـcommit المُثبَّت**.
 
-⭐ **الرابط الأساسي**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit>/docs/FOUNDATION-BUILD-03-PHASE-04-BIS-REPORT.md`
-⭐ **السجل**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit>/docs/CHATGPT-REVIEW-LOG.md`
-⭐ **القرارات**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit>/DECISIONS.md`
-⭐ **الحالة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit>/CURRENT-STATE.md`
-⭐ **سجل القرارات المعلّقة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit>/docs/OPEN-DECISIONS.md`
+⭐ **الرابط الأساسي**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/8ac4b75c72f7082362c0bd736d9de085a121aa1c/docs/FOUNDATION-BUILD-03-PHASE-04-BIS-REPORT.md`
+⭐ **السجل**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/8ac4b75c72f7082362c0bd736d9de085a121aa1c/docs/CHATGPT-REVIEW-LOG.md`
+⭐ **القرارات**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/8ac4b75c72f7082362c0bd736d9de085a121aa1c/DECISIONS.md`
+⭐ **الحالة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/8ac4b75c72f7082362c0bd736d9de085a121aa1c/CURRENT-STATE.md`
+⭐ **سجل القرارات المعلّقة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/8ac4b75c72f7082362c0bd736d9de085a121aa1c/docs/OPEN-DECISIONS.md`
