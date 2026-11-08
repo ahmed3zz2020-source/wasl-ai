@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { loadConfig } from '../server/config.ts';
-import { createPool } from '../server/db/pool.ts';
+import { createPool, ADMIN_STATEMENT_TIMEOUT_MS } from '../server/db/pool.ts';
 import { ensureDatabase, runMigrations, seedDatabase } from '../server/db/setup.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -39,7 +39,7 @@ export async function rebuildDatabase(root: string = ROOT): Promise<RebuildRepor
 
   // ⭐ The database is dropped: the open connections are stopped first
   //   (a DROP DATABASE waits for them).
-  const admin = createPool(superuserUrl, 2);
+  const admin = createPool(superuserUrl, 2, { statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS });
   try {
     await admin.query(
       `select pg_terminate_backend(pid) from pg_stat_activity
@@ -67,7 +67,7 @@ export async function rebuildDatabase(root: string = ROOT): Promise<RebuildRepor
   const ownerUrl = `postgresql://wasl_owner:${encodeURIComponent(ownerPassword)}@127.0.0.1:${
     process.env['WASL_PG_PORT'] ?? '5432'
   }/${config.databaseName}`;
-  const ownerPool = createPool(ownerUrl, 2);
+  const ownerPool = createPool(ownerUrl, 2, { statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS });
   try {
     steps.push(...(await runMigrations(ownerPool)));
     steps.push(...(await seedDatabase(ownerPool, config.testPasscode)));

@@ -40,7 +40,8 @@ export interface PgPool extends Queryable {
 }
 
 export interface PgClient extends Queryable {
-  release(): void;
+  /** ⭐⭐ Destroy the connection instead of returning it to the pool. */
+  release(destroy?: boolean): void;
 }
 
 /**
@@ -57,6 +58,25 @@ export interface PoolOptions {
   readonly statementTimeoutMs?: number;
 }
 
+/**
+ * ⭐⭐⭐ M-102: THE TIMEOUT OF AN ADMINISTRATIVE CONNECTION.
+ * ⭐⭐⭐ WHY: an administrative operation (a backup, a restore, the
+ * ⭐⭐⭐ creation of a scratch database, a DROP DATABASE) is LONG by
+ * ⭐⭐⭐ nature ⇒ ⭐⭐⭐ and the timeout of a request (15 seconds) kills
+ * ⭐⭐⭐ it in the middle ⇒ ⭐⭐⭐ ⇒ the operation is measured (the RTO),
+ * ⭐⭐⭐ ⇒ it is not killed by the timeout of a request.
+ * ⭐⭐⭐ ⛔ IT IS SCOPED TO THE ADMINISTRATIVE CONNECTIONS ⇐ the pool of
+ * ⭐⭐⭐ ⇐ the API KEEPS THE DEFAULT OF 15 SECONDS ⇒ ⭐⭐⭐ ⇐ a slow
+ * ⭐⭐⭐ ⇐ request of a customer is still cut at 15 seconds.
+ * ⭐⭐⭐ ⭐ ONE CONSTANT, ONE PLACE ⇒ ⭐⭐⭐ ⭐ a pool that forgets it
+ * ⭐⭐⭐ ⭐ cannot silently keep the short timeout ⇒ ⭐⭐⭐ ⭐ (the old
+ * ⭐⭐⭐ ⭐ code had the number copied in three files).
+ */
+export const ADMIN_STATEMENT_TIMEOUT_MS = 120_000;
+
+/** ⭐⭐⭐ M-102: the timeout of the PRODUCT (the API) — it does not move. */
+export const API_STATEMENT_TIMEOUT_MS = 15_000;
+
 export function createPool(
   connectionString: string,
   max = 8,
@@ -71,7 +91,7 @@ export function createPool(
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
     // \u26d4 No statement timeout magic: the local database is disposable.
-    statement_timeout: options.statementTimeoutMs ?? 15_000,
+    statement_timeout: options.statementTimeoutMs ?? API_STATEMENT_TIMEOUT_MS,
   });
   return pool as unknown as PgPool;
 }

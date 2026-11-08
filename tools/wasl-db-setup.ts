@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from '../server/config.ts';
-import { createPool } from '../server/db/pool.ts';
+import { createPool, ADMIN_STATEMENT_TIMEOUT_MS } from '../server/db/pool.ts';
 import { ensureDatabase, runMigrations, seedDatabase } from '../server/db/setup.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
   }/${config.databaseName}`;
   // \u2b50\u2b50\u2b50 M-98: the setup is an ADMINISTRATIVE drill (the DDL of the migrations)
   // \u21d2 \u2b50 it asks for a longer timeout than a request of the API.
-  const ownerPool = createPool(ownerUrl, 2, { statementTimeoutMs: 120_000 });
+  const ownerPool = createPool(ownerUrl, 2, { statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS });
   try {
     steps.push(...(await runMigrations(ownerPool)));
     steps.push(...(await seedDatabase(ownerPool, config.testPasscode)));

@@ -12,7 +12,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { createPool, type PgPool } from './pool.ts';
+import { createPool, ADMIN_STATEMENT_TIMEOUT_MS, type PgPool } from './pool.ts';
 import { UnitOfWork } from './unit-of-work.ts';
 import { hashPasscode } from '../auth/sessions.ts';
 
@@ -45,7 +45,7 @@ function quoteIdent(value: string): string {
 /** ⭐ Create the roles and the database (superuser connection). */
 export async function ensureDatabase(options: SetupOptions): Promise<string[]> {
   const steps: string[] = [];
-  const pool = createPool(options.superuserUrl, 2);
+  const pool = createPool(options.superuserUrl, 2, { statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS });
   try {
     const existing = await pool.query<{ exists: boolean }>(
       `select exists(select 1 from pg_database where datname = $1) as exists`,
@@ -89,7 +89,7 @@ export async function ensureDatabase(options: SetupOptions): Promise<string[]> {
     // The schema grants must target the application database itself:
     // every database has its own `public` schema.
     const targetUrl = options.superuserUrl.replace(/\/[^/?]*(\?.*)?$/, `/${options.databaseName}$1`);
-    const targetPool = createPool(targetUrl, 1);
+    const targetPool = createPool(targetUrl, 1, { statementTimeoutMs: ADMIN_STATEMENT_TIMEOUT_MS });
     try {
       await targetPool.query(`grant usage, create on schema public to wasl_owner`);
       await targetPool.query(`grant usage on schema public to wasl_app`);

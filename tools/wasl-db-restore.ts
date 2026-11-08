@@ -25,7 +25,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { loadConfig } from '../server/config.ts';
-import { createPool, type PgPool } from '../server/db/pool.ts';
+import { createPool, ADMIN_STATEMENT_TIMEOUT_MS, type PgPool } from '../server/db/pool.ts';
 
 /**
  * \u2b50\u2b50\u2b50 M-98: the timeout of the ADMINISTRATIVE drill.
@@ -36,7 +36,6 @@ import { createPool, type PgPool } from '../server/db/pool.ts';
  * \u2b50 The drill asks for two minutes \u21d2 \u2b50 and the drill is
  *   measured (the RTO), not killed by an arbitrary timeout.
  */
-const ADMIN_STATEMENT_TIMEOUT_MS = 120_000;
 import { hashPasscode, verifyPasscode } from '../server/auth/password.ts';
 import {
   assertBackupPermissions,
