@@ -433,8 +433,8 @@ def reply_with_summary(sha: str, link: str) -> str:
     )
 
 
-def print_reply(check: bool, with_summary: bool = False) -> int:
-    sha = latest_commit()
+def print_reply(check: bool, with_summary: bool = False, sha: str = "") -> int:
+    sha = sha or latest_commit()
     if not sha:
         print("⛔ مفيش commit — الـtools/print_gpt_msg.py محتاج git.")
         return 1
@@ -485,10 +485,21 @@ def main() -> int:
     args = [a for a in args if a != "--check"]
     summary = "--summary" in args
     args = [a for a in args if a != "--summary"]
+    # ⭐⭐ M93: the commit can be given EXPLICITLY ⇒ ⭐⭐ (the case of a
+    # ⭐⭐ push that is still pending ⇒ the box must be bound to the
+    # ⭐⭐ commit that carries the content, and the check must SAY that
+    # ⭐⭐ the link is not published yet ⇒ ⭐⭐ no false publication).
+    forced_sha = ""
+    if "--sha" in args:
+        i = args.index("--sha")
+        forced_sha = args[i + 1] if len(args) > i + 1 else ""
+        args = [a for a in args if a != "--sha"]
+        if forced_sha in ("HEAD", "head"):
+            forced_sha = git("rev-parse", "HEAD")
     arg = args[0] if args else "both"
 
     if arg == "--reply":
-        return print_reply(check, summary)
+        return print_reply(check, summary, forced_sha)
     if arg == "--copy-reply":
         sha = latest_commit()
         if not sha:
