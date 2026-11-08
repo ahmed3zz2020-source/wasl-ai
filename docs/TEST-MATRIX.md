@@ -16,8 +16,8 @@
 | Group | Command | Files | What it proves | What it does NOT prove |
 |:-:|---|:-:|---|---|
 | ⭐ **unit** | `npm run test:unit` | 23 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
-| ⭐ **integration** | `npm run test:integration` | 19 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image, **the customer CRM on the real backend (D-071)**, **the refresh and the lost answer on two instances (D-071)** | nothing about a load that a machine of the production size would see |
-| ⭐ **security** | `npm run test:security` | 11 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)**, **the scope of the access of an agent (M-76)** | nothing about a penetration test of a third party |
+| ⭐ **integration** | `npm run test:integration` | 21 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image, **the customer CRM on the real backend (D-071)**, **the refresh and the lost answer on two instances (D-071)** | nothing about a load that a machine of the production size would see |
+| ⭐ **security** | `npm run test:security` | 13 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)**, **the scope of the access of an agent (M-76)** | nothing about a penetration test of a third party |
 | ⭐ **recovery** | `npm run test:recovery` | 3 | the backup really restores, encrypted, verified and measured, **and never writes a clear text dump on the disk (M-72)** | nothing about a restore on the hardware of the production |
 | ⭐ **e2e** | `npm run e2e` | 1 | the journey of a customer service works from the login to the conversation and the privacy | nothing about a channel other than the local web one |
 | ⭐ **all** | `npm run test:all` | — | every group above plus the journey | — |
@@ -30,13 +30,13 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 580 + 182 + 113 + 16 = 891 -->
+<!-- wasl:current-partition 581 + 194 + 125 + 16 = 916 -->
 
-> ⭐⭐ **CURRENT (PHASE 04 bis)**: the partition is checked by a TOOL
+> ⭐⭐ **CURRENT (PHASE 04 bis 2)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **580 + 182 + 113 + 16 = 891** = the number of `npm test` exactly
-> (890 of the 891 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **581 + 194 + 125 + 16 = 916** = the number of `npm test` exactly
+> (915 of the 916 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
 > ⭐⭐ **The tool fails when a published number is not the measured one**
 > ⇒ ⇒ ⇒ a number can no longer drift silently.
@@ -291,6 +291,28 @@ python3 tools/test_count_audit.py --log <run.log> --docs \
 > ⇒ ⭐⭐ and all three were fixed with the M-82 pattern (a lock or a
 > reservation on the shared resource itself) ⇒ ⭐⭐ **the parallelism
 > was never disabled to hide them.**
+
+### The measured results of PHASE 04 bis 2 (BUILD 03) — ٨ نوفمبر ۲۰۲۶
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline of this round (PHASE 04 bis) | **891** · 890 pass · 0 fail · 1 skipped | the run of PHASE 04 bis |
+| ⭐ 1 | `npm test` | **916** · 915 pass · 0 fail · 1 skipped | the run of the session |
+| ⭐ 2 | `npm run test:unit` | **581/581** | the run of the session |
+| ⭐ 3 | `npm run test:integration` | **194** · 193 pass · 0 fail · 1 skipped (the Docker drill) | the run of the session |
+| ⭐ 4 | `npm run test:security` | **125/125** | the run of the session |
+| ⭐ 5 | `npm run test:recovery` | **16/16** | the run of the session |
+| ⭐ 6 | the four groups, two consecutive parallel rounds | **581 + 194 + 125 + 16 = 916** · identical in the two rounds | the run of the session |
+| ⭐ 7 | `npm run e2e` | **JOURNEY OK** (15/15) | the run of the session |
+
+> ⭐⭐ **Why 891 became 916 (and it is not a drift)**: the round
+> added **24 permanent regression tests** (M100 · 6 + M101 · 6 +
+> M102 · 6 + M104 · 6) and **one sub-test** inside the shared
+> resource audit (the rule that forbids disabling the trigger outside a
+> transaction) ⇒ ⇒ ⇒ **891 + 24 + 1 = 916** ⇒ ⇒ ⇒ and
+> every one of the 24 is a test that FAILS on the old code ⇒ ⇒ ⇒ so
+> the number grew because the coverage grew, not because a file was
+> counted twice.
 
 ### The measured results of PHASE 02 (BUILD 03) — ٧ نوفمبر ٢٠٢٦
 
