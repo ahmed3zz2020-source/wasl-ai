@@ -292,6 +292,24 @@ export const PLATFORM_BUDGET_LOCK_KEY = 0x5741_534c; // "WASL"
  */
 const PORT_BLOCK_DIR = path.join(os.tmpdir(), 'wasl-test-port-blocks');
 const PORT_OWNER_DIR = path.join(PORT_BLOCK_DIR, 'owners');
+/**
+ * ⭐⭐⭐ M-105: THE CLAIM IS A DIRECTORY ⇒ ⇒ ⇒ and its identity is the
+ * ⭐⭐⭐ file `owner` inside it ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ the two facts that make
+ * ⭐⭐⭐ the protocol safe:
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ① the DIRECTORY never disappears while a claim is being
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ reclaimed ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ so no other
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ process can claim the block meanwhile ⇒ ⇒ ⇒
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ (the old file could be unlinked ⇒
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ and the name was free ⇒ ⇒ ⇒ ⇒ ⇒).
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ② the OWNERSHIP is decided by ONE atomic `link()` onto
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ the fixed name `owner` ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ exactly one winner ⇒ ⇒ ⇒.
+ */
+const CLAIM_OWNER_FILE = 'owner';
+
+function claimOwnerPath(claim: string): string {
+  return path.join(claim, CLAIM_OWNER_FILE);
+}
 
 /** ⭐ Is this port free right now? (bind it and release it). */
 async function portIsFree(port: number): Promise<boolean> {
@@ -316,7 +334,7 @@ async function portIsFree(port: number): Promise<boolean> {
  * ⭐⭐⭐ for a given process ⇐ and a NEW process with a REUSED pid has a
  * ⭐⭐⭐ DIFFERENT start time ⇒ ⇒ ⇒ the reuse is detected.
  */
-interface PortOwner {
+export interface PortOwner {
   readonly token: string;
   readonly pid: number;
   readonly start: string;
@@ -415,81 +433,209 @@ function unlinkQuietly(file: string): void {
  * ⭐⭐⭐ replaced it ⇒ ⇒ ⇒ we give it back and try again ⇒ ⇒ ⇒ ⇒ the
  * ⭐⭐⭐ ⇒ ⇒ steal of a live claim is IMPOSSIBLE.
  */
-export function takeMarker(marker: string, owner: PortOwner, ownerFile: string): boolean {
+/**
+ * ⭐⭐⭐ M-105: THE SEAM — a hook that the test uses to freeze the two
+ * ⭐⭐⭐ processes at the SAME point of the protocol ⇒ ⇒ ⇒ so the race is
+ * ⭐⭐⭐ DETERMINISTIC (not a race that happens by luck) ⇒ ⇒ ⇒ ⇒ and it
+ * ⭐⭐⭐ is the SAME point in every version of this file ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ so ONE test can prove the defect AND the fix.
+ */
+export interface PortSeam {
+  /** ⭐⭐ called right after the decision and BEFORE the destructive act. */
+  afterDecision?: () => void;
+}
+
+/**
+ * ⭐⭐⭐ M-105: the helpers of the claim — they hide whether the claim is
+ * ⭐⭐⭐ a file or a directory ⇒ ⇒ ⇒ so the test of the race is written
+ * ⭐⭐⭐ ONCE ⇒ ⇒ ⇒ and it does not know the representation.
+ */
+export function writeStaleClaim(claim: string, ownerFile: string): void {
+  fs.rmSync(claim, { force: true, recursive: true });
+  fs.mkdirSync(claim, { recursive: true });
+  fs.linkSync(ownerFile, claimOwnerPath(claim));
+}
+
+export function readClaimOwner(claim: string): PortOwner | null {
+  return readOwner(claimOwnerPath(claim));
+}
+
+export function replaceClaimOwner(claim: string, ownerFile: string): void {
+  fs.rmSync(claimOwnerPath(claim), { force: true });
+  fs.linkSync(ownerFile, claimOwnerPath(claim));
+}
+
+export function takeMarker(
+  marker: string,
+  owner: PortOwner,
+  ownerFile: string,
+  seam?: PortSeam,
+): boolean {
+  const ownerPath = claimOwnerPath(marker);
+  fs.mkdirSync(path.dirname(marker), { recursive: true });
   for (let attempt = 0; attempt < 64; attempt += 1) {
-    // ⭐⭐ Is the marker there at all?
-    let exists = true;
+    // (1) THE CLAIM IS A DIRECTORY: mkdir() is atomic and it fails with
+    //     EEXIST when the name is taken, so a block is never shared.
+    let created = false;
     try {
-      fs.statSync(marker);
-    } catch {
-      exists = false;
+      fs.mkdirSync(marker);
+      created = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') return false;
     }
-    if (!exists) {
+    if (created) {
+      // The ownership is ONE atomic link() onto the fixed name `owner`.
       try {
-        fs.linkSync(ownerFile, marker);
+        fs.linkSync(ownerFile, ownerPath);
         return true;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-          // ⭐⭐ somebody took it between the check and the link ⇒ ⇒ retry.
-          continue;
+      } catch {
+        try {
+          fs.rmdirSync(marker);
+        } catch {
+          // it is not empty: somebody owns it. Leave it alone.
         }
         return false;
       }
     }
-    const existing = readOwner(marker);
+    // (2) IS THERE AN IDENTITY IN THE CLAIM?
+    let hasIdentity = true;
+    try {
+      fs.statSync(ownerPath);
+    } catch {
+      hasIdentity = false;
+    }
+    if (!hasIdentity) {
+      // The claim has NO identity: it is broken or abandoned. Take it with
+      // ONE atomic link(): the name is free, so exactly one process wins.
+      try {
+        fs.linkSync(ownerFile, ownerPath);
+        return true;
+      } catch {
+        continue; // somebody else won the race: look again.
+      }
+    }
+    const existing = readOwner(ownerPath);
     if (existing && ownerAlive(existing)) {
-      // ⭐⭐ the owner is alive ⇒ ⇒ the block is really taken ⇒ ⇒ it is
-      // ⭐⭐ never reclaimed from a live owner.
+      // The owner is alive: the block is really taken. Never take it.
       return false;
     }
-    // ⭐⭐⭐ THE STALE MARKER: take it over, atomically.
-    const quarantine = `${marker}.take.${owner.token}.${attempt}`;
+    // (3) THE RECLAIM: the identity is MOVED OUT of the claim, so the
+    //     CLAIM ITSELF NEVER DISAPPEARS and no other process can claim
+    //     the block while we are here.
+    seam?.afterDecision?.();
+    const moved = `${ownerPath}.take.${owner.token}.${attempt}`;
     try {
-      fs.linkSync(marker, quarantine);
+      fs.renameSync(ownerPath, moved);
     } catch {
-      // ⭐⭐ it is gone (somebody else took it) ⇒ ⇒ retry.
-      continue;
+      continue; // somebody else moved it first: look again.
     }
-    const quarantined = readOwner(quarantine);
-    const sameClaim =
+    const quarantined = readOwner(moved);
+    const sameIdentity =
       existing !== null &&
       quarantined !== null &&
       quarantined.token === existing.token &&
       quarantined.pid === existing.pid &&
       quarantined.start === existing.start;
-    if (!sameClaim) {
-      // ⭐⭐⭐ THE MARKER WAS REPLACED between our read and our link ⇒ ⇒
-      // ⭐⭐⭐ somebody else owns it now ⇒ ⇒ we must not touch it.
-      // ⭐⭐⭐ (the unreadable marker is the exception: its content was
-      // ⭐⭐⭐ written BEFORE the link ⇒ ⇒ an unreadable one is a broken
-      // ⭐⭐⭐ one ⇒ ⇒ it belongs to nobody.)
-      const broken = existing === null && quarantined === null;
-      if (!broken) {
-        unlinkQuietly(quarantine);
-        continue;
+    const broken = existing === null && quarantined === null;
+    if (!sameIdentity && !broken) {
+      // It is NOT the stale identity we judged: give it back, never delete
+      // it. If the name is taken now we keep our private copy (it is not
+      // ours to delete).
+      try {
+        fs.linkSync(moved, ownerPath);
+        fs.unlinkSync(moved);
+      } catch {
+        // keep the private copy.
       }
-    }
-    // ⭐⭐ it is the same stale claim (or a broken one) ⇒ ⇒ remove it
-    // ⭐⭐ and claim it.
-    try {
-      fs.unlinkSync(marker);
-    } catch {
-      // ⭐⭐ somebody else removed it between our link and our unlink ⇒
-      // ⭐⭐ ⇒ we do NOT touch it ⇒ ⇒ retry (the other one wins).
-      unlinkQuietly(quarantine);
       continue;
     }
+    // (4) THE CLAIM IS OURS: ONE atomic link() onto the fixed name.
     try {
-      fs.linkSync(ownerFile, marker);
+      fs.linkSync(ownerFile, ownerPath);
     } catch {
-      // ⭐⭐ somebody else won the race ⇒ ⇒ retry the whole block.
-      unlinkQuietly(quarantine);
-      continue;
+      unlinkQuietly(moved);
+      return false; // somebody else won the race.
     }
-    unlinkQuietly(quarantine);
+    unlinkQuietly(moved);
     return true;
   }
   return false;
+}
+
+/**
+ * M-105: give a claim back WITHOUT releasing the identity file of the
+ * owner (the owner still needs it for the next block).
+ */
+export function dropClaim(claim: string, owner: PortOwner): void {
+  const ownerPath = claimOwnerPath(claim);
+  const moved = `${ownerPath}.drop.${owner.token}.${Date.now()}`;
+  try {
+    fs.renameSync(ownerPath, moved);
+  } catch {
+    return;
+  }
+  const held = readOwner(moved);
+  if (held && held.token !== owner.token) {
+    // it is not ours: give it back
+    try {
+      fs.linkSync(moved, ownerPath);
+      fs.unlinkSync(moved);
+    } catch {
+      // keep the private copy.
+    }
+    return;
+  }
+  unlinkQuietly(moved);
+  try {
+    fs.rmdirSync(claim);
+  } catch {
+    // not empty: somebody owns it now.
+  }
+}
+
+/**
+ * M-105: THE RELEASE. It must NEVER delete the claim of another process.
+ * The identity is MOVED to a private name first (an atomic step), then it
+ * is checked, and only the PRIVATE copy is deleted: the canonical name is
+ * never touched by the release, so a claim that another process took in
+ * the meantime survives it.
+ */
+export function releaseMarker(
+  claim: string,
+  owner: PortOwner,
+  ownerFile: string,
+  seam?: PortSeam,
+): void {
+  const ownerPath = claimOwnerPath(claim);
+  const moved = `${ownerPath}.release.${owner.token}.${Date.now()}`;
+  try {
+    fs.renameSync(ownerPath, moved);
+  } catch {
+    // there is no identity: nothing of ours is there.
+    unlinkQuietly(ownerFile);
+    return;
+  }
+  const held = readOwner(moved);
+  if (held && held.token !== owner.token) {
+    // It is NOT ours: give it back and never delete it.
+    try {
+      fs.linkSync(moved, ownerPath);
+      fs.unlinkSync(moved);
+    } catch {
+      // keep the private copy.
+    }
+    unlinkQuietly(ownerFile);
+    return;
+  }
+  seam?.afterDecision?.();
+  // Only OUR private copy is deleted.
+  unlinkQuietly(moved);
+  try {
+    fs.rmdirSync(claim);
+  } catch {
+    // not empty: somebody owns the claim now.
+  }
+  unlinkQuietly(ownerFile);
 }
 
 /** ⭐⭐ Reserve a block of ports (atomic ⇒ two files never share one). */
@@ -531,22 +677,12 @@ export async function reservePortBlock(
         return {
           base,
           release: () => {
-            // ⭐⭐⭐ M-101: the release only removes OUR marker ⇒ ⇒ it
-            // ⭐⭐⭐ can NEVER release the reservation of another
-            // ⭐⭐⭐ process ⇒ ⇒ (the old code removed it blindly).
-            const current = readOwner(marker);
-            if (current && current.token === owner.token) {
-              unlinkQuietly(marker);
-            }
-            unlinkQuietly(ownerFile);
+            releaseMarker(marker, owner, ownerFile);
           },
         };
       }
       // ⭐⭐ the block is taken by something else ⇒ ⇒ give it back.
-      const current = readOwner(marker);
-      if (current && current.token === owner.token) {
-        unlinkQuietly(marker);
-      }
+      dropClaim(marker, owner);
     }
   } finally {
     unlinkQuietly(ownerFile);

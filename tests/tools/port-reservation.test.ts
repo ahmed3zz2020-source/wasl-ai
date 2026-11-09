@@ -208,7 +208,8 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
     // ⭐⭐⭐ The drill is at the level of the MARKER ⇒ ⇒ ⇒ (the
     // ⭐⭐⭐ directory of the blocks is shared with the other files ⇒ ⇒
     // ⭐⭐⭐ ⇒ ⇒ ⇒ and a block of another file must never be touched).
-    const { takeMarker, currentPortOwner, writePortOwnerFile } = await import(HARNESS);
+    const { takeMarker, currentPortOwner, writePortOwnerFile, writeStaleClaim, readClaimOwner } =
+      await import(HARNESS);
     const owners = path.join(PORT_BLOCK_DIR, 'owners');
     fs.mkdirSync(owners, { recursive: true });
     const start = fs.readFileSync('/proc/self/stat', 'utf8');
@@ -221,18 +222,16 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
     const fakeOwnerFile = path.join(owners, `reused-pid-${Date.now()}`);
     fs.writeFileSync(fakeOwnerFile, `reused-pid|${process.pid}|${Number(realStart) + 999999}`);
     const staleMarker = path.join(PORT_BLOCK_DIR, `probe-reused-pid-${Date.now()}`);
-    fs.linkSync(fakeOwnerFile, staleMarker);
+    writeStaleClaim(staleMarker, fakeOwnerFile);
 
     const mine = currentPortOwner();
     const myFile = writePortOwnerFile(mine);
     const taken = takeMarker(staleMarker, mine, myFile);
     assert.ok(taken, 'the stale marker of a reused pid was NOT reclaimed');
-    const content = fs.readFileSync(staleMarker, 'utf8');
-    assert.ok(
-      content.includes(mine.token),
-      `the marker does not carry our identity: ${content}`,
-    );
-    fs.rmSync(staleMarker, { force: true });
+    const owner = readClaimOwner(staleMarker);
+    assert.ok(owner, 'the reclaimed claim has no owner');
+    assert.equal(owner.token, mine.token, 'the marker does not carry our identity');
+    fs.rmSync(staleMarker, { force: true, recursive: true });
     fs.rmSync(fakeOwnerFile, { force: true });
     fs.rmSync(myFile, { force: true });
 
@@ -241,7 +240,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
     const liveOwner = currentPortOwner();
     const liveFile = writePortOwnerFile(liveOwner);
     const liveMarker = path.join(PORT_BLOCK_DIR, `probe-live-${Date.now()}`);
-    fs.linkSync(liveFile, liveMarker);
+    writeStaleClaim(liveMarker, liveFile);
     const other = currentPortOwner();
     const otherFile = writePortOwnerFile(other);
     assert.equal(
@@ -250,7 +249,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
       'the claim of a LIVE owner was taken',
     );
     assert.ok(fs.existsSync(liveMarker), 'the claim of a LIVE owner was removed');
-    fs.rmSync(liveMarker, { force: true });
+    fs.rmSync(liveMarker, { force: true, recursive: true });
     fs.rmSync(liveFile, { force: true });
     fs.rmSync(otherFile, { force: true });
   });
