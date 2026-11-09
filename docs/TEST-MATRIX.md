@@ -30,13 +30,13 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 581 + 194 + 125 + 16 = 916 -->
+<!-- wasl:current-partition 582 + 198 + 127 + 16 = 923 -->
 
-> ⭐⭐ **CURRENT (PHASE 04 bis 2)**: the partition is checked by a TOOL
+> ⭐⭐ **CURRENT (round #53)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **581 + 194 + 125 + 16 = 916** = the number of `npm test` exactly
-> (915 of the 916 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **582 + 198 + 127 + 16 = 923** = the number of `npm test` exactly
+> (922 of the 923 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
 > ⭐⭐ **The tool fails when a published number is not the measured one**
 > ⇒ ⇒ ⇒ a number can no longer drift silently.
@@ -292,7 +292,28 @@ python3 tools/test_count_audit.py --log <run.log> --docs \
 > reservation on the shared resource itself) ⇒ ⭐⭐ **the parallelism
 > was never disabled to hide them.**
 
+### The measured results of round #53 (M105 · M106 · M107 · M108) — ٩ نوفمبر ۲۰۲۶
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | the baseline of this round (PHASE 04 bis 2) | **916** · 915 pass · 0 fail · 1 skipped | the run of PHASE 04 bis 2 |
+| ⭐ 1 | `npm test` | **923** · 922 pass · 0 fail · 1 skipped | the run of the session |
+| ⭐ 2 | `npm run test:unit` | **582/582** | the run of the session |
+| ⭐ 3 | `npm run test:integration` | **198** · 197 pass · 0 fail · 1 skipped (the Docker drill) | the run of the session |
+| ⭐ 4 | `npm run test:security` | **127/127** | the run of the session |
+| ⭐ 5 | `npm run test:recovery` | **16/16** | the run of the session |
+| ⭐ 6 | the four groups, two consecutive parallel rounds | **582 + 198 + 127 + 16 = 923** · identical in the two rounds | the run of the session |
+| ⭐ 7 | `npm run e2e` | **JOURNEY OK** (15/15) | the run of the session |
+
+> ⭐⭐ **Why 916 became 923 (and it is not a drift)**: the round
+> added **7 permanent regression tests** (M105 · 4 · M106 · +2 rows of
+> the rights matrix · M107 · +1 rule of the evidence guard) ⇒ ⇒ ⇒
+> **916 + 7 = 923** ⇒ ⇒ ⇒ and every one of them is a test that FAILS
+> on the old code ⇒ ⇒ ⇒ so the number grew because the coverage grew,
+> not because a file was counted twice.
+
 ### The measured results of PHASE 04 bis 2 (BUILD 03) — ٨ نوفمبر ۲۰۲۶
+
 
 | # | Run | Result | Log |
 |:-:|---|---|---|
