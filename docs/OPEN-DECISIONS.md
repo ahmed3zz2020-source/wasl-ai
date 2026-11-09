@@ -91,6 +91,7 @@
 | ⭐ **PHASE 03** (M81–M84) | ⭐ `D-072` | ⭐ `docs/FOUNDATION-BUILD-03-PHASE-03-REPORT.md` | ⭐ منفَّذة |
 | ⭐ **PHASE 04** (M85–M86 + التذاكر) | ⭐ `D-073` | ⭐ `docs/FOUNDATION-BUILD-03-PHASE-04-REPORT.md` | ⭐ منفَّذة |
 | ⭐ **PHASE 04 bis** (M89–M96 · حزمة الإصلاح) | ⭐ `D-074` | ⭐ `docs/FOUNDATION-BUILD-03-PHASE-04-BIS-REPORT.md` | ⭐ منفَّذة |
+| ⭐ **PHASE 04 bis 2** (M100–M104 · حزمة الأدوات والاختبارات) | ⭐ `D-075` | ⭐ `docs/FOUNDATION-BUILD-03-PHASE-04-BIS2-REPORT.md` | ⭐ منفَّذة |
 <!-- wasl:open-decisions:end -->
 
 ---
