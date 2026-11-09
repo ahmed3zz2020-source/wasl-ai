@@ -208,7 +208,7 @@
 ### ٣.٨ ⭐⭐⭐ الروابط المثبَّتة (raw على الـcommit المنشور)
 
 | ⭐ **نصّ الردّ #٥٦** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/docs/GPT-REVIEW-056-REQUEST.md` |
-| ⭐ **سجل الردود (§٣ = ردّ #٥٦)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit-B>/docs/CHATGPT-REVIEW-LOG.md` |
+| ⭐ **سجل الردود (§٣ = ردّ #٥٦)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/371e12911520e1cb6d7721ca80437523f2f5466e/docs/CHATGPT-REVIEW-LOG.md` |
 | ⭐ **الاختبار المُصلَح (M115)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/tests/tools/published-numbers.test.ts` |
 | ⭐ **حارس الأرقام المنشورة (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/tools/published_numbers_audit.py` |
 | ⭐ **مصفوفة الاختبارات** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/docs/TEST-MATRIX.md` |
