@@ -30,13 +30,14 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 587 + 203 + 127 + 16 = 933 -->
+<!-- wasl:current-partition 595 + 211 + 127 + 16 = 949 -->
+<!-- wasl:current-total 949 = 948 pass + 0 fail + 1 skipped -->
 
-> ⭐⭐ **CURRENT (round #54)**: the partition is checked by a TOOL
+> ⭐⭐ **CURRENT (round #55)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **587 + 203 + 127 + 16 = 933** = the number of `npm test` exactly
-> (932 of the 933 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **595 + 211 + 127 + 16 = 949** = the number of `npm test` exactly
+> (948 of the 949 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
 > ⭐⭐ **The tool fails when a published number is not the measured one**
 > ⇒ ⇒ ⇒ a number can no longer drift silently.

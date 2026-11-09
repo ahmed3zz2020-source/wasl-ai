@@ -973,3 +973,83 @@ li.activity .meta {
     align-items: stretch;
   }
 }
+
+/* ============================================================
+   M-114 — the package of the experience on the mobile
+   ------------------------------------------------------------
+   ⭐⭐ the list and the detail: ONE of them at a time on the
+   ⭐⭐ small screen (the other one is behind the button of the
+   ⭐⭐ back) ⇒ ⇒ ⇒ the user never loses the place of the list.
+   ============================================================ */
+
+/* ⭐⭐⭐ the banner of the loss of the connection. */
+.notice.offline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--warn-soft, #fff4e5);
+  border: 1px solid var(--warn-line, #f0c987);
+  color: var(--text);
+}
+
+.notice.offline button {
+  margin-inline-start: auto;
+}
+
+/* ⭐⭐⭐ the note of the rights (the server decides). */
+.rights-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ⭐⭐⭐ the small "the list is refreshing" (the list stays). */
+.refreshing {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ⭐⭐⭐ the buttons of the states (a retry and a clear). */
+.state-box .ghost {
+  margin-top: 10px;
+}
+
+/* ⭐⭐⭐ the touch of the small screen: the buttons are big enough. */
+@media (max-width: 860px) {
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
+  .toolbar input,
+  .toolbar select,
+  .toolbar button {
+    min-height: 44px;
+  }
+
+  li.ticket {
+    padding: 14px;
+  }
+
+  button.back {
+    position: sticky;
+    top: 8px;
+  }
+}
+
+/* ⭐⭐⭐ THE SMALL SCREEN: the detail takes the place of the list. */
+@media (max-width: 860px) {
+  body.view-detail .pane.list {
+    display: none;
+  }
+
+  body.view-detail .pane.detail {
+    display: block;
+  }
+}

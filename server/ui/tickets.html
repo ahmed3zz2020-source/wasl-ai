@@ -55,6 +55,13 @@
 
     <p class="notice" id="login-notice" hidden></p>
 
+    <!-- ⭐⭐ M-114: the banner of the loss of the connection. -->
+    <p class="notice offline" id="offline-banner" hidden role="status" aria-live="polite">
+      <strong>لا يوجد اتصال بالخادم.</strong>
+      <span id="offline-text">الاتصال بالخادم مقطوع دلوقتي — البيانات المحفوظة زي ما هي، وأول ما الاتصال يرجع دوس «أعد المحاولة».</span>
+      <button class="ghost" id="btn-retry-offline" type="button">أعد المحاولة</button>
+    </p>
+
     <main class="workspace" id="workspace" hidden>
       <section class="toolbar" aria-label="أدوات البحث والتصفية">
         <label class="field grow">
@@ -93,19 +100,26 @@
         <button class="primary" id="btn-new" type="button" hidden>تذكرة جديدة</button>
       </section>
 
-      <div class="panes">
+      <p class="rights-note" id="rights-note" hidden></p>
+
+      <div class="panes" id="panes">
         <section class="pane list" aria-label="قائمة التذاكر">
           <header class="pane-head">
             <h2>التذاكر</h2>
             <span class="counter" id="list-counter"></span>
+            <span class="refreshing" id="list-refreshing" hidden>جارٍ التحديث…</span>
           </header>
           <div class="state-box" id="list-loading" hidden>
             <span class="spinner" aria-hidden="true"></span> جارٍ تحميل التذاكر…
           </div>
-          <div class="state-box error" id="list-error" hidden></div>
+          <div class="state-box error" id="list-error" hidden>
+            <span id="list-error-text"></span>
+            <button class="ghost" id="btn-retry" type="button">أعد المحاولة</button>
+          </div>
           <div class="state-box" id="list-empty" hidden>
-            <strong>لا توجد تذاكر.</strong>
-            <span>غيّر البحث أو الفلتر لترى المزيد.</span>
+            <strong id="list-empty-title">لا توجد تذاكر.</strong>
+            <span id="list-empty-text">غيّر البحث أو الفلتر لترى المزيد.</span>
+            <button class="ghost" id="btn-clear-filters" type="button" hidden>امسح البحث والفلتر</button>
           </div>
           <ul class="tickets" id="ticket-list"></ul>
           <nav class="pagination" id="pagination" aria-label="صفحات التذاكر" hidden>
@@ -131,6 +145,8 @@
             </header>
 
             <div class="state-box error" id="detail-error" hidden></div>
+
+            <p class="rights-note" id="detail-rights-note" hidden></p>
 
             <dl class="facts" id="detail-facts"></dl>
 

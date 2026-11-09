@@ -63,6 +63,9 @@ const ERROR_LABELS = {
 
 const SESSION_KEY = 'wasl_session_v1';
 
+/** ⭐⭐ M-114: how long the page waits before it asks the server. */
+const SEARCH_DEBOUNCE_MS = 320;
+
 const state = {
   token: null,
   role: '',
@@ -80,6 +83,14 @@ const state = {
   sort: 'recent',
   agents: [],
   customers: [],
+  /** ⭐⭐⭐ M-114: the number of the last request of the list. */
+  listSeq: 0,
+  /** ⭐⭐⭐ M-114: the number of the last request of the detail. */
+  detailSeq: 0,
+  /** ⭐⭐⭐ M-114: the state of the list before the detail (to come back to it). */
+  listView: { query: '', state: '', priority: '', sort: 'recent', page: 0, scroll: 0 },
+  /** ⭐⭐⭐ M-114: the page is on the detail now (the small screen). */
+  detailView: false,
 };
 
 /** ⭐⭐ The session of the tab (the same key the inbox and the CRM use). */
@@ -218,11 +229,48 @@ function rowsOf(body, key) {
 }
 
 // ------------------------------------------------------------ the list
+/**
+ * ⭐⭐⭐ M-114: the call to the server waits for the user to stop typing.
+ * ⭐⭐⭐ The old timer is cancelled every time ⇒ ⇒ ⇒ one call for the
+ * ⭐⭐⭐ whole word and NOT one call for every letter.
+ */
+function debounce(fn, wait) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn(...args);
+    }, wait);
+  };
+}
+
+/** ⭐⭐⭐ M-114: the request of the search (debounced). */
+const searchTickets = debounce(() => {
+  void loadTickets({ resetPage: true });
+}, SEARCH_DEBOUNCE_MS);
+
+/** ⭐⭐ M-114: is the screen of the small size? */
+function isSmallScreen() {
+  return window.matchMedia('(max-width: 860px)').matches;
+}
+
+/** ⭐⭐ M-114: the connection with the server is gone? */
+function setOffline(offline) {
+  state.offline = offline;
+  $('offline-banner').hidden = !offline;
+}
+
 async function loadTickets(options = {}) {
   if (options.resetPage) state.page = 0;
-  $('list-loading').hidden = false;
+  // ⭐⭐⭐ M-114: the number of this request ⇒ ⇒ ⇒ a reply that arrives
+  // ⭐⭐⭐ late (after a newer request) is DROPPED ⇒ ⇒ ⇒ the list never
+  // ⭐⭐⭐ shows the results of an old search.
+  const seq = ++state.listSeq;
+  const firstLoad = state.tickets.length === 0 && state.total === 0;
+  $('list-loading').hidden = !firstLoad;
+  $('list-refreshing').hidden = firstLoad;
   $('list-error').hidden = true;
-  $('list-empty').hidden = true;
 
   const params = new URLSearchParams();
   const query = $('filter-query').value.trim();
@@ -236,30 +284,72 @@ async function loadTickets(options = {}) {
   params.set('offset', String(state.page * state.pageSize));
 
   const answer = await api('GET', `/api/tickets?${params.toString()}`);
+  // ⭐⭐⭐ M-114: a late reply of an old request ⇒ ⇒ ⇒ it is dropped.
+  if (seq !== state.listSeq) return;
   $('list-loading').hidden = true;
+  $('list-refreshing').hidden = true;
   if (!answer.ok) {
-    $('list-error').textContent = errorMessage(answer.body, 'تعذّر تحميل التذاكر.');
+    // ⭐⭐ M-114: the connection with the server is gone.
+    if (answer.status === 0) setOffline(true);
+    $('list-error-text').textContent = errorMessage(answer.body, 'تعذّر تحميل التذاكر.');
     $('list-error').hidden = false;
+    $('list-empty').hidden = true;
     return;
   }
+  setOffline(false);
   state.tickets = rowsOf(answer.body, 'tickets');
   state.total = Number(answer.body.total ?? 0);
   state.mayWrite = answer.body.may_write === true;
   state.mayAssign = answer.body.may_assign === true;
   renderTickets();
   renderPagination();
+  renderEmptyState();
   $('list-counter').textContent = `${state.total} تذكرة`;
   // ⭐⭐ The rights of the server decide what the page shows.
   $('btn-new').hidden = !state.mayWrite;
+  renderRightsNote();
+}
+
+/** ⭐⭐ M-114: the empty state says WHY the list is empty. */
+function renderEmptyState() {
+  const box = $('list-empty');
+  if (state.tickets.length > 0) {
+    box.hidden = true;
+    return;
+  }
+  const filtered =
+    $('filter-query').value.trim() !== '' ||
+    $('filter-state').value !== '' ||
+    $('filter-priority').value !== '';
+  $('list-empty-title').textContent = filtered ? 'لا توجد نتائج للبحث ده.' : 'لا توجد تذاكر بعد.';
+  $('list-empty-text').textContent = filtered
+    ? 'جرّب كلمة تانية أو امسح الفلتر.'
+    : 'أول ما حد يبعت تذكرة هتظهر هنا.';
+  $('btn-clear-filters').hidden = !filtered;
+  box.hidden = false;
+}
+
+/** ⭐⭐ M-114: the note of the rights (the server decides). */
+function renderRightsNote() {
+  const note = $('rights-note');
+  if (state.mayWrite) {
+    note.hidden = true;
+    return;
+  }
+  note.textContent = '⛔ ما عندك صلاحية إنشاء تذاكر — زر «تذكرة جديدة» مخفي لأن الخادم مش هيسمح.';
+  note.hidden = false;
 }
 
 function renderTickets() {
   const list = $('ticket-list');
   list.textContent = '';
   if (state.tickets.length === 0) {
-    $('list-empty').hidden = false;
+    // ⭐⭐ M-114: the empty state explains WHY (the search or the filter).
+    renderEmptyState();
     return;
   }
+  // ⭐⭐ M-114: when the list has rows ⇒ the empty box goes away.
+  $('list-empty').hidden = true;
   for (const ticket of state.tickets) {
     const item = document.createElement('li');
     item.className = 'ticket';
@@ -312,7 +402,46 @@ function renderPagination() {
 }
 
 // ------------------------------------------------------------ the detail
+/**
+ * ⭐⭐ M-114: the page remembers the state of the list before it opens
+ * ⭐⭐ a ticket ⇒ ⇒ ⇒ the way back returns to the SAME place.
+ */
+function rememberListView() {
+  state.listView = {
+    query: $('filter-query').value,
+    state: $('filter-state').value,
+    priority: $('filter-priority').value,
+    sort: state.sort,
+    page: state.page,
+    scroll: window.scrollY,
+  };
+}
+
+/** ⭐⭐ M-114: the state of the list comes back as it was. */
+function restoreListView() {
+  $('filter-query').value = state.listView.query;
+  $('filter-state').value = state.listView.state;
+  $('filter-priority').value = state.listView.priority;
+  $('filter-sort').value = state.listView.sort;
+  state.sort = state.listView.sort;
+  state.page = state.listView.page;
+  renderPagination();
+}
+
+/** ⭐⭐ M-114: the small screen shows EITHER the list OR the detail. */
+function setDetailView(on) {
+  state.detailView = on;
+  document.body.classList.toggle('view-detail', on);
+  const list = document.querySelector('.pane.list');
+  const detail = document.getElementById('detail-pane');
+  if (list) list.hidden = on;
+  if (detail) detail.hidden = !on;
+}
+
 async function openTicket(ref) {
+  // ⭐⭐ M-114: the state of the list is remembered before the detail.
+  if (!state.detailView) rememberListView();
+  const seq = ++state.detailSeq;
   state.selected = { ref };
   $('detail-placeholder').hidden = true;
   $('detail').hidden = false;
@@ -320,6 +449,9 @@ async function openTicket(ref) {
   $('detail-subject').textContent = '…';
 
   const answer = await api('GET', `/api/tickets/${encodeURIComponent(ref)}`);
+  // ⭐⭐⭐ M-114: a late reply of an old ticket ⇒ ⇒ ⇒ it is dropped
+  // ⭐⭐⭐ (the screen shows the ticket that was asked for LAST).
+  if (seq !== state.detailSeq) return;
   if (!answer.ok) {
     $('detail-error').textContent = errorMessage(answer.body, 'تعذّر فتح التذكرة.');
     $('detail-error').hidden = false;
@@ -338,10 +470,49 @@ async function openTicket(ref) {
   renderEdit(ticket);
   renderChanges(rowsOf(answer.body, 'changes'));
   renderTickets();
+  renderDetailRightsNote();
 
-  if (window.matchMedia('(max-width: 860px)').matches) {
+  if (isSmallScreen()) {
+    // ⭐⭐ M-114: the small screen swaps the list for the detail ⇒ ⇒ ⇒
+    // ⭐⭐ M-114 and the button of the browser comes back to the list.
+    setDetailView(true);
+    if (!window.location.hash.startsWith('#ticket=')) {
+      window.history.pushState({ waslTicket: ref }, '', `#ticket=${encodeURIComponent(ref)}`);
+    }
     $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+}
+
+/** ⭐⭐ M-114: the note of the rights inside the detail. */
+function renderDetailRightsNote() {
+  const note = $('detail-rights-note');
+  if (state.mayWrite) {
+    note.hidden = true;
+    return;
+  }
+  note.textContent = '⛔ ما عندك صلاحية تعديل التذاكر — نموذج التعديل مخفي لأن الخادم مش هيسمح.';
+  note.hidden = false;
+}
+
+/**
+ * ⭐⭐ M-114: THE WAY BACK ⇒ ⇒ ⇒ the list comes back with the state it
+ * ⭐⭐ M-114 had (the search, the filters, the page and the place of the
+ * ⭐⭐ M-114 screen).
+ */
+function closeDetail() {
+  state.detailSeq += 1;
+  $('detail').hidden = true;
+  $('detail-placeholder').hidden = false;
+  state.detailTicket = null;
+  restoreListView();
+  if (state.detailView) {
+    setDetailView(false);
+    if (window.location.hash.startsWith('#ticket=')) {
+      window.history.back();
+    }
+    window.scrollTo({ top: state.listView.scroll, behavior: 'auto' });
+  }
+  renderTickets();
 }
 
 function renderFacts(ticket) {
@@ -590,6 +761,10 @@ async function logout() {
   state.token = null;
   state.selected = null;
   state.detailTicket = null;
+  state.listSeq += 1;
+  state.detailSeq += 1;
+  setOffline(false);
+  setDetailView(false);
   $('login-row').hidden = false;
   $('who').hidden = true;
   $('workspace').hidden = true;
@@ -619,8 +794,10 @@ $('btn-next').addEventListener('click', () => {
   void loadTickets();
 });
 $('filter-query').addEventListener('input', () => {
+  // ⭐⭐⭐ M-114: the page does NOT ask the server on every letter ⇒ ⇒ ⇒
+  // ⭐⭐⭐ it waits until the user stops typing.
   state.page = 0;
-  void loadTickets({ resetPage: true });
+  searchTickets();
 });
 $('filter-state').addEventListener('change', () => {
   void loadTickets({ resetPage: true });
@@ -633,8 +810,33 @@ $('filter-sort').addEventListener('change', () => {
   void loadTickets({ resetPage: true });
 });
 $('btn-back').addEventListener('click', () => {
-  $('detail').hidden = true;
-  $('detail-placeholder').hidden = false;
+  // ⭐⭐ M-114: the way back keeps the state of the list.
+  closeDetail();
+});
+$('btn-retry').addEventListener('click', () => {
+  void loadTickets();
+});
+$('btn-retry-offline').addEventListener('click', () => {
+  setOffline(false);
+  void loadTickets();
+});
+$('btn-clear-filters').addEventListener('click', () => {
+  $('filter-query').value = '';
+  $('filter-state').value = '';
+  $('filter-priority').value = '';
+  void loadTickets({ resetPage: true });
+});
+// ⭐⭐ M-114: the browser says that the connection is gone (or back).
+window.addEventListener('offline', () => {
+  setOffline(true);
+});
+window.addEventListener('online', () => {
+  setOffline(false);
+  void loadTickets();
+});
+// ⭐⭐ M-114: the button of the browser comes back to the list.
+window.addEventListener('popstate', () => {
+  if (state.detailView) closeDetail();
 });
 $('edit-form').addEventListener('submit', (event) => {
   void saveTicket(event);

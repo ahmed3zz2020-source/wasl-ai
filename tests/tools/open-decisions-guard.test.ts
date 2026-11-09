@@ -77,16 +77,24 @@ const REQUIRED_OPEN_ITEMS: readonly string[] = [
   'حقول تعديل العميل',
   'إظهار التصنيف',
   'حدّ الطرد على المزامنة',
-  'تصديق جسر صلاحيات التذاكر',
   'سياسة الحفظ والتجديد',
   'التوقيع الخارجي للدليل',
 ];
+
+/**
+ * ⭐⭐⭐ THE ITEMS THAT ARE APPROVED LOCALLY (they are CLOSED, not open).
+ * ⭐⭐ The ticket-permissions bridge was ratified for the LOCAL MVP by
+ * ⭐⭐ the owner in D-078 (٩ نوفمبر ٢٠٢٦) ⇒ ⭐⭐ it must NOT be an open
+ * ⭐⭐ item any more ⇒ ⭐⭐ and it must stay in the approved section.
+ */
+const REQUIRED_APPROVED_ITEMS: readonly string[] = ['تصديق جسر صلاحيات التذاكر'];
 
 /** ⭐⭐⭐ THE PRODUCTION PARTS THAT ARE NOT APPROVED (M94). */
 const REQUIRED_PRODUCTION_ITEMS: readonly string[] = [
   'مزوّد الاستضافة',
   'المدد الرقمية للاحتفاظ',
   'آلية الدخول الإنتاجية',
+  'صلاحيات التذاكر في الإنتاج',
 ];
 
 /** ⭐⭐⭐ THE DECISIONS THAT D-066 DECIDED (they are CLOSED locally). */
@@ -133,6 +141,34 @@ test('FOUNDATION 4 bis) the guard of the open decisions register (M-92 · M-94)'
         `the row "${cells[1] ?? ''}" is in the open section but its state is not "مفتوح"`,
       );
     }
+  });
+
+  await t.test('⭐⭐⭐ the ratified ticket bridge is CLOSED locally (D-078)', () => {
+    for (const item of REQUIRED_APPROVED_ITEMS) {
+      const approved = section('approved');
+      assert.ok(
+        approved.includes(item),
+        `the item "${item}" was ratified by the owner (D-078) but it is not in the approved section`,
+      );
+      for (const cells of rows(section('open'))) {
+        assert.ok(
+          !(cells[1] ?? '').includes(item),
+          `the item "${item}" is ratified (D-078) but it is still an OPEN row`,
+        );
+      }
+    }
+  });
+
+  await t.test('⭐⭐⭐ the production permissions of the tickets stay a SEPARATE item', () => {
+    const production = section('production');
+    assert.ok(
+      production.includes('صلاحيات التذاكر في الإنتاج'),
+      'the production permissions of the tickets must stay their own (open) production item',
+    );
+    assert.ok(
+      !section('open').includes('صلاحيات التذاكر في الإنتاج'),
+      'the production permissions of the tickets are not a local open item',
+    );
   });
 
   await t.test('⭐⭐⭐ the register does NOT contradict DECISIONS.md (the scope of D-066)', () => {

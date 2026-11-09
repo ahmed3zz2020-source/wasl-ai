@@ -42,6 +42,7 @@ const RUN = Math.random().toString(36).slice(2, 10);
 
 interface RouteLike {
   abort(): Promise<void>;
+  continue(options?: Record<string, unknown>): Promise<void>;
   fulfill(options: Record<string, unknown>): Promise<void>;
   fetch(): Promise<unknown>;
 }
@@ -108,6 +109,27 @@ async function countOf(page: PageLike, selector: string): Promise<number> {
     `(document.querySelectorAll(${JSON.stringify(selector)}).length)`,
   );
   return Number(value ?? 0);
+}
+
+/** ⭐⭐ M-114: the number of the calls that the page made to the API. */
+async function countApiCalls(page: PageLike, needle: string): Promise<number> {
+  const value = await page.evaluate(
+    `performance.getEntriesByType('resource').filter((entry) => entry.name.includes(${JSON.stringify(
+      needle,
+    )})).length`,
+  );
+  return Number(value ?? 0);
+}
+
+/** ⭐⭐ M-114: the typing of a word (the events that the page hears). */
+async function typeIn(page: PageLike, selector: string, value: string): Promise<void> {
+  await page.evaluate(
+    `(() => {
+      const input = document.querySelector(${JSON.stringify(selector)});
+      input.value = ${JSON.stringify(value)};
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    })()`,
+  );
 }
 
 async function resolvePlaywright(): Promise<PlaywrightLike | null> {
@@ -447,5 +469,171 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
       path: path.join(SHOT_DIR, 'tickets-mobile.png'),
       fullPage: true,
     });
+  });
+
+  // ============================================================
+  // M-114 — the package of the experience on the mobile
+  // ============================================================
+
+  await t.test('⭐⭐⭐ M-114-1: the search is NOT a call for every letter', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    const before = await countApiCalls(page, '/api/tickets');
+    // ⭐⭐ FIVE letters ⇒ ⭐⭐ FIVE events of "input" ⇒ ⭐⭐ the page waits
+    // ⭐⭐ until the user stops typing (ONE call for the whole word).
+    await page.evaluate(
+      `(() => {
+        const input = document.getElementById('filter-query');
+        for (const letter of ['ت','ذ','ك','ر','ة']) {
+          input.value = input.value + letter;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      })()`,
+    );
+    await page.waitForTimeout(1600);
+    const after = await countApiCalls(page, '/api/tickets');
+    const calls = after - before;
+    assert.ok(
+      calls <= 2,
+      `⭐⭐⭐ the search called the server ${calls} time(s) instead of ONE (the letters are not debounced)`,
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-114-2: a LATE reply of an old search is dropped', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    // ⭐⭐⭐ the FIRST search is slow (1400ms) and the second one is fast
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ the reply of the first one arrives LAST.
+    let seen = 0;
+    await page.route('**/api/tickets?*', async (route) => {
+      seen += 1;
+      if (seen === 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1400));
+      }
+      await route.continue();
+    });
+    await typeIn(page, '#filter-query', 'المالك');
+    await page.waitForTimeout(500);
+    await typeIn(page, '#filter-query', 'لا-يوجد-كذا');
+    await page.waitForTimeout(2600);
+    await page.unroute('**/api/tickets?*');
+    const rows = await countOf(page, '#ticket-list .ticket');
+    assert.equal(
+      rows,
+      0,
+      `⭐⭐⭐ the list shows ${rows} row(s) ⇒ the LATE reply of the old search won (the stale guard is missing)`,
+    );
+    const empty = await page.isVisible('#list-empty');
+    assert.equal(empty, true, '⭐⭐⭐ the empty state is not shown for the newest search');
+    const title = await page.innerText('#list-empty-title');
+    assert.match(title, /لا توجد نتائج/, `⭐⭐⭐ the empty state does not explain itself: ${title}`);
+  });
+
+  await t.test('⭐⭐⭐ M-114-3: the way back keeps the state of the list', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    await typeIn(page, '#filter-query', 'الموظف');
+    await page.waitForTimeout(900);
+    const rowsBefore = await countOf(page, '#ticket-list .ticket');
+    assert.equal(rowsBefore, 1, `⭐⭐⭐ the search shows ${rowsBefore} row(s) instead of 1`);
+    await page.evaluate(`document.querySelector('#ticket-list .ticket').click()`);
+    await page.waitForTimeout(900);
+    assert.equal(await page.isVisible('#detail'), true, '⭐⭐⭐ the detail did not open');
+    await page.click('#btn-back');
+    await page.waitForTimeout(800);
+    assert.equal(
+      await page.isVisible('#detail'),
+      false,
+      '⭐⭐⭐ the detail did not close',
+    );
+    const query = await page.inputValue('#filter-query');
+    assert.equal(query, 'الموظف', `⭐⭐⭐ the search was lost on the way back: "${query}"`);
+    const rowsAfter = await countOf(page, '#ticket-list .ticket');
+    assert.equal(
+      rowsAfter,
+      rowsBefore,
+      `⭐⭐⭐ the list changed on the way back: ${rowsBefore} ⇒ ${rowsAfter}`,
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-114-4: the small screen shows the list OR the detail', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    const listHiddenAtStart = await page.isVisible('.pane.list');
+    assert.equal(listHiddenAtStart, true, '⭐⭐⭐ the list is not visible at the start');
+    await page.evaluate(`document.querySelector('#ticket-list .ticket').click()`);
+    await page.waitForTimeout(900);
+    const onDetail = await page.evaluate(`document.body.classList.contains('view-detail')`);
+    assert.equal(onDetail, true, '⭐⭐⭐ the page did not swap to the detail on the small screen');
+    const listHidden = await page.isVisible('.pane.list');
+    assert.equal(listHidden, false, '⭐⭐⭐ the list is still visible behind the detail');
+    await page.screenshot({
+      path: path.join(SHOT_DIR, 'tickets-mobile-detail.png'),
+      fullPage: true,
+    });
+    await page.click('#btn-back');
+    await page.waitForTimeout(700);
+    const backToList = await page.evaluate(`document.body.classList.contains('view-detail')`);
+    assert.equal(backToList, false, '⭐⭐⭐ the page did not come back to the list');
+    const listBack = await page.isVisible('.pane.list');
+    assert.equal(listBack, true, '⭐⭐⭐ the list is not visible after the way back');
+  });
+
+  await t.test('⭐⭐⭐ M-114-5: the loss of the connection is said out loud', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    await page.route('**/api/tickets?*', async (route) => {
+      await route.abort();
+    });
+    await page.click('#btn-refresh');
+    await page.waitForTimeout(900);
+    await page.unroute('**/api/tickets?*');
+    const offline = await page.isVisible('#offline-banner');
+    assert.equal(offline, true, '⭐⭐⭐ the page did not say that the connection is gone');
+    const error = await page.isVisible('#list-error');
+    assert.equal(error, true, '⭐⭐⭐ the page did not show the error of the list');
+    await page.screenshot({
+      path: path.join(SHOT_DIR, 'tickets-mobile-offline.png'),
+      fullPage: true,
+    });
+    // ⭐⭐ the retry brings the list back.
+    await page.click('#btn-retry-offline');
+    await page.waitForTimeout(1200);
+    const offlineAfter = await page.isVisible('#offline-banner');
+    assert.equal(offlineAfter, false, '⭐⭐⭐ the banner of the connection is still there');
+    const rows = await countOf(page, '#ticket-list .ticket');
+    assert.ok(rows > 0, `⭐⭐⭐ the list did not come back after the retry: ${rows} row(s)`);
+  });
+
+  await t.test('⭐⭐⭐ M-114-6: the note of the rights comes from the server', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(600);
+    await offerDrillAccounts(page, tenantId, [
+      [ownerId, 'UI owner'],
+      [agentId, 'UI agent'],
+      [viewerId, 'UI viewer'],
+    ]);
+    await page.click('#btn-logout');
+    await page.waitForTimeout(500);
+    await page.selectOption('#login-tenant', tenantId);
+    await page.selectOption('#login-user', agentId);
+    await page.click('#btn-login');
+    await page.waitForTimeout(1200);
+    const note = await page.isVisible('#rights-note');
+    assert.equal(note, true, '⭐⭐⭐ the employee does not see the note of the rights');
+    const text = await page.innerText('#rights-note');
+    assert.match(text, /صلاحية/, `⭐⭐⭐ the note of the rights is not clear: ${text}`);
+    assert.equal(
+      await page.isVisible('#btn-new'),
+      false,
+      '⭐⭐⭐ the employee sees the button of the creation (the server refuses it)',
+    );
+    assert.equal(
+      await page.isVisible('#edit-block'),
+      false,
+      '⭐⭐⭐ the employee sees the form of the edit (the server refuses it)',
+    );
   });
 });
