@@ -44,10 +44,12 @@ interface RouteLike {
 
 interface PageLike {
   goto(url: string): Promise<unknown>;
+  goBack(): Promise<unknown>;
   click(selector: string): Promise<void>;
   fill(selector: string, value: string): Promise<void>;
   selectOption(selector: string, value: string): Promise<void>;
   textContent(selector: string): Promise<string | null>;
+  getAttribute(selector: string, name: string): Promise<string | null>;
   inputValue(selector: string): Promise<string>;
   innerText(selector: string): Promise<string>;
   isVisible(selector: string): Promise<boolean>;
@@ -74,6 +76,27 @@ async function countOf(page: PageLike, selector: string): Promise<number> {
     `(document.querySelectorAll(${JSON.stringify(selector)}).length)`,
   );
   return Number(value ?? 0);
+}
+
+/** ⭐⭐⭐ M-120: the URLs of the calls that the page made to the API. */
+async function apiCallUrls(page: PageLike, needle: string): Promise<string[]> {
+  const value = await page.evaluate(
+    `performance.getEntriesByType('resource')
+       .map((entry) => entry.name)
+       .filter((name) => name.includes(${JSON.stringify(needle)}))`,
+  );
+  return Array.isArray(value) ? value.map((item) => String(item)) : [];
+}
+
+/** ⭐⭐⭐ M-120: the typing of a word (the events that the page hears). */
+async function typeIn(page: PageLike, selector: string, value: string): Promise<void> {
+  await page.evaluate(
+    `(() => {
+      const input = document.querySelector(${JSON.stringify(selector)});
+      input.value = ${JSON.stringify(value)};
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    })()`,
+  );
 }
 
 async function resolvePlaywright(): Promise<PlaywrightLike | null> {
@@ -505,6 +528,227 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     await page.screenshot({ path: path.join(SHOT_DIR, 'crm-mobile.png'), fullPage: false });
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.waitForTimeout(300);
+  });
+
+  // ============================================================
+  // M-120 — the experience of the CRM on the mobile
+  // ============================================================
+
+  await t.test('⭐⭐⭐ M-120-1: the search waits (ONE request for the whole word)', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    const before = await apiCallUrls(page, '/api/crm/customers?');
+    const word = 'عميل 1';
+    await page.evaluate(
+      `(() => {
+        const input = document.getElementById('filter-query');
+        input.value = '';
+        for (const letter of ${JSON.stringify([...word])}) {
+          input.value = input.value + letter;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      })()`,
+    );
+    await page.waitForTimeout(1600);
+    const fresh = (await apiCallUrls(page, '/api/crm/customers?')).slice(before.length);
+    assert.equal(
+      fresh.length,
+      1,
+      `⭐⭐⭐ the search sent ${fresh.length} request(s) instead of ONE: ${JSON.stringify(fresh)}`,
+    );
+    const params = new URL(fresh[0]).searchParams;
+    assert.equal(params.get('q'), word, `⭐⭐⭐ the request did not carry the whole word: ${fresh[0]}`);
+    const partial = fresh.filter((url) => {
+      const q = new URL(url).searchParams.get('q');
+      return q !== null && q !== word;
+    });
+    assert.equal(partial.length, 0, `⭐⭐⭐ a partial word reached the server: ${JSON.stringify(partial)}`);
+  });
+
+  await t.test('⭐⭐⭐ M-120-2: an OLD reply inside the debounce window is dropped', async () => {
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(800);
+    let held: RouteLike | null = null;
+    let deferredStarted = false;
+    await page.route('**/api/crm/customers?*', async (route) => {
+      if (held === null) {
+        held = route;
+        return;
+      }
+      deferredStarted = true;
+      await route.continue();
+    });
+    await page.click('#btn-refresh');
+    await page.waitForTimeout(300);
+    await typeIn(page, '#filter-query', 'عميل 7');
+    await page.waitForTimeout(40);
+    await (held as RouteLike).fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        customers: [
+          {
+            id: 'cus_old_reply',
+            display_name: 'عميل قديم',
+            email: 'old@example.invalid',
+            conversation_count: 0,
+            last_interaction_at: null,
+          },
+        ],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        may_manage: false,
+      }),
+    });
+    await page.waitForTimeout(140);
+    const text = await page.innerText('#customer-list');
+    const firedAlready = deferredStarted;
+    await page.unroute('**/api/crm/customers?*');
+    assert.equal(
+      firedAlready,
+      false,
+      '⭐⭐⭐ the premise of the test broke: the deferred request started before the old reply landed',
+    );
+    assert.ok(
+      !text.includes('عميل قديم'),
+      `⭐⭐⭐ the OLD reply was written over the new search: ${text}`,
+    );
+    await page.waitForTimeout(1400);
+    const rowsAfter = await countOf(page, '#customer-list .customer');
+    assert.ok(rowsAfter > 0, `⭐⭐⭐ the new search did not land: ${rowsAfter} row(s)`);
+  });
+
+  await t.test('⭐⭐⭐ M-120-3: the mobile swaps the list for the profile, and the way back keeps the state', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    await typeIn(page, '#filter-query', 'عميل 1');
+    await page.waitForTimeout(1000);
+    await page.click('#btn-next');
+    await page.waitForTimeout(900);
+    const labelBefore = await page.innerText('#page-label');
+    assert.match(labelBefore, /صفحة 2/, `⭐⭐⭐ the user did not reach the second page: ${labelBefore}`);
+    const overflow = await page.evaluate(
+      `document.documentElement.scrollWidth - document.documentElement.clientWidth`,
+    );
+    assert.ok(Number(overflow) <= 2, `⭐⭐⭐ the page overflows horizontally: ${overflow}px`);
+    await page.screenshot({ path: path.join(SHOT_DIR, 'crm-mobile-list.png'), fullPage: true });
+
+    await page.evaluate(`document.querySelector('#customer-list .customer').click()`);
+    await page.waitForTimeout(1000);
+    assert.equal(await page.isVisible('#profile'), true, '⭐⭐⭐ the profile did not open');
+    const onProfile = await page.evaluate(`document.body.classList.contains('view-profile')`);
+    assert.equal(onProfile, true, '⭐⭐⭐ the small screen did not swap to the profile');
+    const listHidden = await page.isVisible('.pane.list');
+    assert.equal(listHidden, false, '⭐⭐⭐ the list is still on the screen behind the profile');
+    await page.screenshot({ path: path.join(SHOT_DIR, 'crm-mobile-profile.png'), fullPage: true });
+
+    await page.click('#btn-back');
+    await page.waitForTimeout(1000);
+    assert.equal(
+      await page.isVisible('.pane.list'),
+      true,
+      '⭐⭐⭐ the list did not come back after the way back',
+    );
+    assert.equal(
+      await page.inputValue('#filter-query'),
+      'عميل 1',
+      '⭐⭐⭐ the search was lost on the way back',
+    );
+    const labelAfter = await page.innerText('#page-label');
+    assert.equal(labelAfter, labelBefore, `⭐⭐⭐ the page was lost: ${labelBefore} ⇒ ${labelAfter}`);
+  });
+
+  await t.test('⭐⭐⭐ M-120-4: the button of the BROWSER comes back to the list', async () => {
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    await page.evaluate(`document.querySelector('#customer-list .customer').click()`);
+    await page.waitForTimeout(1000);
+    assert.equal(await page.isVisible('#profile'), true, '⭐⭐⭐ the profile did not open');
+    await page.goBack();
+    await page.waitForTimeout(1000);
+    assert.equal(
+      await page.isVisible('#profile'),
+      false,
+      '⭐⭐⭐ the button of the browser did not close the profile',
+    );
+    assert.equal(
+      await page.isVisible('.pane.list'),
+      true,
+      '⭐⭐⭐ the list is not visible after the way back of the browser',
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-120-5: the empty state explains itself', async () => {
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    await typeIn(page, '#filter-query', 'لا-يوجد-عميل-بهذا-الاسم');
+    await page.waitForTimeout(1200);
+    assert.equal(await page.isVisible('#list-empty'), true, '⭐⭐⭐ the empty state is not shown');
+    const title = await page.innerText('#list-empty-title');
+    assert.match(title, /لا توجد نتائج/, `⭐⭐⭐ the empty state does not explain itself: ${title}`);
+    const text = await page.innerText('#list-empty-text');
+    assert.match(text, /امسح/, `⭐⭐⭐ the empty state does not offer a way out: ${text}`);
+    assert.equal(
+      await page.isVisible('#btn-clear-filters'),
+      true,
+      '⭐⭐⭐ the button of the clear search is hidden',
+    );
+    await page.click('#btn-clear-filters');
+    await page.waitForTimeout(1000);
+    const rows = await countOf(page, '#customer-list .customer');
+    assert.ok(rows > 0, `⭐⭐⭐ the clear of the search did not bring the list back: ${rows} row(s)`);
+  });
+
+  await t.test('⭐⭐⭐ M-120-6: the loss of the connection is said out loud', async () => {
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    await page.route('**/api/crm/customers?*', async (route) => {
+      await route.abort();
+    });
+    await page.click('#btn-refresh');
+    await page.waitForTimeout(1000);
+    await page.unroute('**/api/crm/customers?*');
+    assert.equal(
+      await page.isVisible('#offline-banner'),
+      true,
+      '⭐⭐⭐ the page did not say that the connection is gone',
+    );
+    assert.equal(await page.isVisible('#list-error'), true, '⭐⭐⭐ the page did not show the error');
+    await page.screenshot({ path: path.join(SHOT_DIR, 'crm-mobile-offline.png'), fullPage: true });
+    await page.click('#btn-retry-offline');
+    await page.waitForTimeout(1200);
+    assert.equal(
+      await page.isVisible('#offline-banner'),
+      false,
+      '⭐⭐⭐ the banner of the connection is still there',
+    );
+    const rows = await countOf(page, '#customer-list .customer');
+    assert.ok(rows > 0, `⭐⭐⭐ the list did not come back after the retry: ${rows} row(s)`);
+  });
+
+  await t.test('⭐⭐⭐ M-120-7: the rights and the isolation of the CRM on the mobile', async () => {
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    // ⭐⭐⭐ THE ISOLATION: the customers of ANOTHER company are not here.
+    const wholeList = await page.innerText('#customer-list');
+    assert.ok(
+      !wholeList.includes('Customer Alpha') && !wholeList.includes('Customer Beta'),
+      '⭐⭐⭐ a customer of another company is in the list',
+    );
+    const counter = await page.innerText('#list-counter');
+    assert.match(counter, /^120/, `⭐⭐⭐ the counter counts foreign customers: ${counter}`);
+    // ⭐⭐⭐ THE RIGHTS: the owner may edit (the server announces it).
+    await page.evaluate(`document.querySelector('#customer-list .customer').click()`);
+    await page.waitForTimeout(1000);
+    assert.equal(
+      await page.isVisible('#edit-block'),
+      true,
+      '⭐⭐⭐ the owner does not see the edit of the customer',
+    );
   });
 
   await t.test('⭐⭐⭐ M-79 (UI-13b): the refresh stops when the session is over', async () => {

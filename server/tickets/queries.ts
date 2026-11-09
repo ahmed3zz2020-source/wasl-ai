@@ -30,6 +30,15 @@ export interface TicketFilters {
   readonly assignee?: string;
   readonly customerId?: string;
   readonly conversationRef?: string;
+  /**
+   * ⭐⭐⭐ M-119: the queue of the tickets that have NO assignee.
+   *   ⭐⭐⭐ It is a FILTER of the list (not a scope) ⇒ ⭐⭐⭐ the
+   *   ⭐⭐⭐ scope of the role is still applied on top of it ⇒ ⭐⭐⭐ so
+   *   ⭐⭐⭐ an employee sees an empty queue (their scope is the
+   *   ⭐⭐⭐ tickets that are assigned to THEM) ⇒ ⭐⭐⭐ and never the
+   *   ⭐⭐⭐ tickets of another employee (the lesson of M-83).
+   */
+  readonly unassigned?: boolean;
   readonly sort: 'recent' | 'priority' | 'state';
   readonly limit: number;
   readonly offset: number;
@@ -70,19 +79,20 @@ function scopeClause(scope: TicketScope, add: (value: unknown) => string): Ticke
   };
 }
 
-/** ⭐⭐ The list of the tickets of a company (a real pagination). */
-export async function listTickets(
-  uow: UnitOfWork,
-  tenantId: string,
+/**
+ * ⭐⭐⭐ M-119: ⭐⭐⭐ THE CONDITIONS OF THE TICKETS — ⭐⭐⭐ ONE builder
+ *   ⭐⭐⭐ for the list AND for the counters ⇒ ⭐⭐⭐ the scope of the
+ *   ⭐⭐⭐ role can NEVER differ between them ⇒ ⭐⭐⭐ (the lesson of
+ *   ⭐⭐⭐ M-83: the count and the list are the SAME question).
+ *   ⭐⭐⭐ The `add` pushes the value and returns its placeholder ⇒ ⭐⭐⭐
+ *   ⭐⭐⭐ nothing of the client reaches SQL.
+ */
+function ticketConditions(
   scope: TicketScope,
   filters: TicketFilters,
-): Promise<{ readonly rows: TicketRow[]; readonly total: number }> {
+  add: (value: unknown) => string,
+): string[] {
   const conditions: string[] = ['t.tenant_id = $1'];
-  const values: unknown[] = [tenantId];
-  const add = (value: unknown): string => {
-    values.push(value);
-    return `$${values.length}`;
-  };
 
   const scoped = scopeClause(scope, add);
   if (scoped.where) {
@@ -115,8 +125,28 @@ export async function listTickets(
     //   agent cannot widen their scope with a filter.
     conditions.push(`t.assignee_actor_id = ${add(filters.assignee)}`);
   }
+  // ⭐⭐⭐ M-119: the queue of the unassigned tickets.
+  if (filters.unassigned === true) {
+    conditions.push('t.assignee_actor_id is null');
+  }
 
-  const where = conditions.join(' and ');
+  return conditions;
+}
+
+/** ⭐⭐ The list of the tickets of a company (a real pagination). */
+export async function listTickets(
+  uow: UnitOfWork,
+  tenantId: string,
+  scope: TicketScope,
+  filters: TicketFilters,
+): Promise<{ readonly rows: TicketRow[]; readonly total: number }> {
+  const values: unknown[] = [tenantId];
+  const add = (value: unknown): string => {
+    values.push(value);
+    return `$${values.length}`;
+  };
+
+  const where = ticketConditions(scope, filters, add).join(' and ');
   const limit = add(Math.max(1, Math.min(filters.limit, 200)));
   const offset = add(Math.max(0, filters.offset));
 
@@ -157,6 +187,34 @@ export async function listTickets(
   );
 
   return { rows: result.rows, total: Number(countResult.rows[0]?.count ?? '0') };
+}
+
+/**
+ * ⭐⭐⭐ M-119: ⭐⭐⭐ HOW MANY TICKETS ARE WAITING FOR AN ASSIGNMENT.
+ *   ⭐⭐⭐ The counter answers the SAME question as the list ⇒ ⭐⭐⭐ the
+ *   ⭐⭐⭐ same scope of the role ⇒ ⭐⭐⭐ the same filters ⇒ ⭐⭐⭐ and
+ *   ⭐⭐⭐ (only) the predicate of the assignment is added ⇒ ⭐⭐⭐ so
+ *   ⭐⭐⭐ the badge and the queue always agree.
+ */
+export async function countUnassignedTickets(
+  uow: UnitOfWork,
+  tenantId: string,
+  scope: TicketScope,
+  filters: TicketFilters,
+): Promise<number> {
+  const values: unknown[] = [tenantId];
+  const add = (value: unknown): string => {
+    values.push(value);
+    return `$${values.length}`;
+  };
+  const conditions = ticketConditions(scope, { ...filters, unassigned: false }, add);
+  conditions.push('t.assignee_actor_id is null');
+  const where = conditions.join(' and ');
+  const result = await uow.query<{ count: string }>(
+    `select count(*)::text as count from support_tickets t where ${where}`,
+    values,
+  );
+  return Number(result.rows[0]?.count ?? '0');
 }
 
 /** ⭐⭐ The detail of one ticket (with its scope). */

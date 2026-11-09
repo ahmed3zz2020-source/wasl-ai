@@ -87,6 +87,7 @@ import {
   readCustomerTickets,
   readTicketForUpdate,
   readTicketByRef,
+  countUnassignedTickets,
   type TicketFilters,
   type TicketScope,
 } from '../tickets/queries.ts';
@@ -1588,6 +1589,12 @@ export class WaslApiServer {
     }
     const state = url.searchParams.get('state');
     const priority = url.searchParams.get('priority');
+    // ⭐⭐⭐ M-119: ⭐⭐⭐ the queue of the tickets that have no assignee
+    // ⭐⭐⭐ M-119 (a FILTER of the list — ⭐⭐⭐ the scope of the role
+    // ⭐⭐⭐ M-119 is still applied on top of it ⇒ ⭐⭐⭐ an employee
+    // ⭐⭐⭐ M-119 sees an empty queue ⇒ ⭐⭐⭐ and never the tickets of
+    // ⭐⭐⭐ M-119 another employee).
+    const unassigned = url.searchParams.get('unassigned') === '1';
     const filters: TicketFilters = {
       ...(url.searchParams.get('q') !== null ? { query: url.searchParams.get('q') as string } : {}),
       ...(state !== null ? { state } : {}),
@@ -1601,6 +1608,7 @@ export class WaslApiServer {
       ...(url.searchParams.get('conversation_ref') !== null
         ? { conversationRef: url.searchParams.get('conversation_ref') as string }
         : {}),
+      ...(unassigned ? { unassigned: true } : {}),
       // ⭐ The order is a closed list: an unknown value falls back to
       //   the recent one, and nothing of the client reaches SQL.
       sort: ['recent', 'priority', 'state'].includes(url.searchParams.get('sort') ?? '')
@@ -1609,9 +1617,18 @@ export class WaslApiServer {
       limit: Number(url.searchParams.get('limit') ?? '25'),
       offset: Number(url.searchParams.get('offset') ?? '0'),
     };
-    const page = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
-      listTickets(uow, context.session.tenantId, this.#ticketScope(context), filters),
-    );
+    const page = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
+      const rows = await listTickets(uow, context.session.tenantId, this.#ticketScope(context), filters);
+      // ⭐⭐⭐ M-119: the counter of the queue ⇒ ⭐⭐⭐ the SAME scope and
+      // ⭐⭐⭐ the SAME filters ⇒ ⭐⭐⭐ (the lesson of M-83).
+      const unassignedCount = await countUnassignedTickets(
+        uow,
+        context.session.tenantId,
+        this.#ticketScope(context),
+        filters,
+      );
+      return { rows, unassignedCount };
+    });
     await this.#audit(
       context.session.tenantId,
       context.session.actorId,
@@ -1625,10 +1642,12 @@ export class WaslApiServer {
       status: 200,
       body: {
         ok: true,
-        tickets: page.rows,
-        total: page.total,
+        tickets: page.rows.rows,
+        total: page.rows.total,
         limit: filters.limit,
         offset: filters.offset,
+        // ⭐⭐⭐ M-119: how many tickets are waiting for an assignment.
+        unassigned_count: page.unassignedCount,
         // ⭐⭐ M-86: the rights come from the AUTHORIZATION of the core
         //   ⇒ ⭐⭐ and not from a table of permissions beside it.
         may_write: this.#mayWriteTickets(context),

@@ -97,6 +97,11 @@
           </select>
         </label>
         <button class="ghost" id="btn-refresh" type="button">تحديث</button>
+        <!-- ⭐⭐⭐ M-119: the queue of the tickets that have no assignee. -->
+        <button class="ghost toggle" id="btn-unassigned" type="button" aria-pressed="false">
+          غير مُسندة
+          <span class="counter" id="unassigned-counter">—</span>
+        </button>
         <button class="primary" id="btn-new" type="button" hidden>تذكرة جديدة</button>
       </section>
 

@@ -33,12 +33,25 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
+import type { PgPool } from '../../server/db/pool.ts';
 import { loginAs, startHarness } from '../server/harness.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..', '..');
 const SHOT_DIR = path.join(ROOT, 'docs', 'previews');
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 const RUN = Math.random().toString(36).slice(2, 10);
+
+/**
+ * ⭐⭐⭐ M-116: ⭐⭐⭐ the identifiers of the drill are at the TOP level
+ *   ⭐⭐⭐ because the helpers of the round (the login, the bulk of the
+ *   ⭐⭐⭐ tickets) need them too ⇒ ⭐⭐⭐ and a helper that cannot see
+ *   ⭐⭐⭐ the company of the drill is a helper that measures nothing.
+ */
+const TENANT_ID = 'tnt_b04_ui';
+const OWNER_ID = 'usr_b04_ui_owner';
+const AGENT_ID = 'usr_b04_ui_agent';
+const VIEWER_ID = 'usr_b04_ui_viewer';
+const CUSTOMER_ID = 'cus_b04_ui_1';
 
 interface RouteLike {
   abort(): Promise<void>;
@@ -49,10 +62,12 @@ interface RouteLike {
 
 interface PageLike {
   goto(url: string): Promise<unknown>;
+  goBack(): Promise<unknown>;
   click(selector: string): Promise<void>;
   fill(selector: string, value: string): Promise<void>;
   selectOption(selector: string, value: string): Promise<void>;
   textContent(selector: string): Promise<string | null>;
+  getAttribute(selector: string, name: string): Promise<string | null>;
   inputValue(selector: string): Promise<string>;
   innerText(selector: string): Promise<string>;
   isVisible(selector: string): Promise<boolean>;
@@ -132,6 +147,93 @@ async function typeIn(page: PageLike, selector: string, value: string): Promise<
   );
 }
 
+/**
+ * ⭐⭐⭐ M-116: the URLs of the calls that the page made to the API.
+ *   ⭐⭐ NOT only the number ⇒ ⭐⭐ the number alone cannot tell WHICH
+ *   ⭐⭐ request was sent ⇒ ⭐⭐ and the whole point of M-116 is to
+ *   ⭐⭐ prove that the request that was sent is the INTENDED one.
+ */
+async function apiCallUrls(page: PageLike, needle: string): Promise<string[]> {
+  const value = await page.evaluate(
+    `performance.getEntriesByType('resource')
+       .map((entry) => entry.name)
+       .filter((name) => name.includes(${JSON.stringify(needle)}))`,
+  );
+  return Array.isArray(value) ? value.map((item) => String(item)) : [];
+}
+
+/** ⭐⭐⭐ M-116: the parameters of a call of the list (of the API). */
+function paramsOf(url: string): URLSearchParams {
+  return new URL(url).searchParams;
+}
+
+/**
+ * ⭐⭐⭐ M-116: the version of a ticket in the database (the lock of the
+ *   ⭐⭐⭐ concurrent edit) ⇒ ⭐⭐ it is the PROOF that a write really
+ *   ⭐⭐⭐ landed (and that a write did NOT land).
+ */
+async function ticketVersion(pool: PgPool, tenantId: string, ref: string): Promise<number> {
+  return UnitOfWork.run(pool, tenantId, async (uow) => {
+    const result = await uow.query<{ version: string }>(
+      `select version::text as version from support_tickets where tenant_id = $1 and ref = $2`,
+      [tenantId, ref],
+    );
+    return Number(result.rows[0]?.version ?? '0');
+  });
+}
+
+/**
+ * ⭐⭐⭐ M-116: the login of the OWNER.
+ *   ⭐⭐ The drill of M-114-6 ends with the EMPLOYEE logged in ⇒ ⭐⭐
+ *   ⭐⭐ and the employee sees ONE ticket (their own) ⇒ ⭐⭐ so a page
+ *   ⭐⭐ with two pages can never exist for them ⇒ ⭐⭐ the tests of
+ *   ⭐⭐ the list MUST say who they are.
+ */
+async function loginAsOwner(page: PageLike, base: string): Promise<void> {
+  await page.goto(`${base}/ui/tickets.html`);
+  await page.waitForTimeout(500);
+  await offerDrillAccounts(page, TENANT_ID, [
+    [OWNER_ID, 'UI owner'],
+    [AGENT_ID, 'UI agent'],
+    [VIEWER_ID, 'UI viewer'],
+  ]);
+  if (await page.isVisible('#btn-logout')) {
+    await page.click('#btn-logout');
+    await page.waitForTimeout(600);
+  }
+  await page.selectOption('#login-tenant', TENANT_ID);
+  await page.selectOption('#login-user', OWNER_ID);
+  await page.fill('#login-passcode', PASSCODE);
+  await page.click('#btn-login');
+  await page.waitForTimeout(1300);
+}
+
+/**
+ * ⭐⭐⭐ M-116: the bulk of the tickets (a REAL second page).
+ *   ⭐⭐ A list of one page can never prove that a deferred request
+ *   ⭐⭐ did NOT throw the user back to the first page ⇒ ⭐⭐ so the
+ *   ⭐⭐ bulk is created here (and wiped right after the drill).
+ */
+async function seedBulkTickets(pool: PgPool, count: number): Promise<void> {
+  await UnitOfWork.run(pool, TENANT_ID, async (uow) => {
+    await uow.query(
+      `insert into support_tickets (tenant_id, ref, customer_id, subject, description, state, priority, version)
+       select $1, 'tkt_b04_ui_bulk_' || g, $2, 'تذكرة الطابور ' || g, 'وصف', 'open', 'normal', 1
+         from generate_series(1, $3) as g
+       on conflict (tenant_id, ref) do nothing`,
+      [TENANT_ID, CUSTOMER_ID, count],
+    );
+  });
+}
+
+async function wipeBulkTickets(pool: PgPool): Promise<void> {
+  await UnitOfWork.run(pool, TENANT_ID, async (uow) => {
+    await uow.query(`delete from support_tickets where tenant_id = $1 and ref like 'tkt_b04_ui_bulk_%'`, [
+      TENANT_ID,
+    ]);
+  });
+}
+
 async function resolvePlaywright(): Promise<PlaywrightLike | null> {
   const candidates: string[] = [];
   if (process.env.PLAYWRIGHT_MODULE) candidates.push(process.env.PLAYWRIGHT_MODULE);
@@ -185,11 +287,11 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
 
-  const tenantId = 'tnt_b04_ui';
-  const ownerId = 'usr_b04_ui_owner';
-  const agentId = 'usr_b04_ui_agent';
-  const viewerId = 'usr_b04_ui_viewer';
-  const customerId = 'cus_b04_ui_1';
+  const tenantId = TENANT_ID;
+  const ownerId = OWNER_ID;
+  const agentId = AGENT_ID;
+  const viewerId = VIEWER_ID;
+  const customerId = CUSTOMER_ID;
   t.after(async () => {
     await browser.close();
     await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
@@ -634,6 +736,468 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
       await page.isVisible('#edit-block'),
       false,
       '⭐⭐⭐ the employee sees the form of the edit (the server refuses it)',
+    );
+  });
+
+  // ============================================================
+  // M-116 + M-117 — the strictness of the search and the proof
+  //                  of the way back
+  // ============================================================
+
+  await t.test('⭐⭐⭐ M-116-1: the debounce sends THE INTENDED request (not "calls <= 2")', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAsOwner(page, base);
+    const before = await apiCallUrls(page, '/api/tickets?');
+    // ⭐⭐⭐ FIVE letters ⇒ ⭐⭐⭐ FIVE events of "input" ⇒ ⭐⭐⭐ the page
+    // ⭐⭐⭐ waits until the user stops typing.
+    const word = 'تذكرة';
+    await page.evaluate(
+      `(() => {
+        const input = document.getElementById('filter-query');
+        input.value = '';
+        for (const letter of ${JSON.stringify([...word])}) {
+          input.value = input.value + letter;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      })()`,
+    );
+    await page.waitForTimeout(1600);
+    const fresh = (await apiCallUrls(page, '/api/tickets?')).slice(before.length);
+    // ⭐⭐⭐ THE COUNT IS NOT THE PROOF ⇒ ⭐⭐⭐ the proof is WHICH request.
+    assert.equal(
+      fresh.length,
+      1,
+      `⭐⭐⭐ the search sent ${fresh.length} request(s) instead of ONE: ${JSON.stringify(fresh)}`,
+    );
+    const params = paramsOf(fresh[0]);
+    assert.equal(
+      params.get('q'),
+      word,
+      `⭐⭐⭐ the request did not carry the whole word: ${JSON.stringify(fresh[0])}`,
+    );
+    // ⭐⭐⭐ and NO request carried a PREFIX of the word ⇒ ⭐⭐⭐ the
+    // ⭐⭐⭐ letters did not leak to the server one by one.
+    const prefixes = fresh.filter((url) => {
+      const q = paramsOf(url).get('q');
+      return q !== null && q !== word;
+    });
+    assert.equal(
+      prefixes.length,
+      0,
+      `⭐⭐⭐ a partial word reached the server: ${JSON.stringify(prefixes)}`,
+    );
+    // ⭐⭐⭐ and the list shows the RESULT of that one request.
+    const rows = await countOf(page, '#ticket-list .ticket');
+    assert.ok(rows > 0, `⭐⭐⭐ the list is empty after the intended request: ${rows} row(s)`);
+  });
+
+  await t.test('⭐⭐⭐ M-116-2: an OLD reply that lands inside the debounce window is dropped', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(800);
+    // ⭐⭐⭐ the NEXT list request is HELD ⇒ ⇒ ⇒ it will land while the
+    // ⭐⭐⭐ next search is still waiting for its timeout ⇒ ⭐⭐⭐ and it
+    // ⭐⭐⭐ carries a body that can NEVER be the result of a search.
+    let held: RouteLike | null = null;
+    let deferredStarted = false;
+    await page.route('**/api/tickets?*', async (route) => {
+      if (held === null) {
+        held = route;
+        return;
+      }
+      deferredStarted = true;
+      await route.continue();
+    });
+    await page.click('#btn-refresh');
+    await page.waitForTimeout(300);
+    // ⭐⭐ the user types ⇒ ⭐⭐ the page waits (320ms) before it asks.
+    await typeIn(page, '#filter-query', 'المالك');
+    await page.waitForTimeout(40);
+    // ⭐⭐⭐ THE OLD REPLY LEAVES NOW ⇒ ⭐⭐⭐ it is INSIDE the window of
+    // ⭐⭐⭐ the new search ⇒ ⭐⭐⭐ it must NOT be written on the screen.
+    await (held as RouteLike).fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        tickets: [
+          {
+            ref: 'tkt_old_reply',
+            customer_id: customerId,
+            customer_name: 'عميل',
+            subject: 'رد قديم',
+            description: '',
+            state: 'open',
+            priority: 'normal',
+            assignee_actor_id: null,
+            version: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        may_write: true,
+        may_assign: true,
+      }),
+    });
+    await page.waitForTimeout(140);
+    const stale = await countOf(page, '#ticket-list .ticket');
+    const staleText = await page.innerText('#ticket-list');
+    const firedAlready = deferredStarted;
+    await page.unroute('**/api/tickets?*');
+    assert.equal(
+      firedAlready,
+      false,
+      '⭐⭐⭐ the premise of the test broke: the deferred request started before the old reply landed',
+    );
+    assert.ok(
+      !staleText.includes('رد قديم'),
+      `⭐⭐⭐ the OLD reply was written over the new search (the stale guard is too late): ${stale} row(s)`,
+    );
+    // ⭐⭐⭐ and the NEW search still lands ⇒ ⭐⭐⭐ the list is not stuck.
+    await page.waitForTimeout(1400);
+    const rowsAfter = await countOf(page, '#ticket-list .ticket');
+    assert.equal(rowsAfter, 1, `⭐⭐⭐ the new search did not land: ${rowsAfter} row(s)`);
+    const textAfter = await page.innerText('#ticket-list');
+    assert.ok(textAfter.includes('تذكرة المالك'), `⭐⭐⭐ the wrong result is on the screen: ${textAfter}`);
+  });
+
+  await t.test('⭐⭐⭐ M-116-3: a change of the filter during a deferred search ⇒ NO deferred request comes back', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    const before = await apiCallUrls(page, '/api/tickets?');
+    await typeIn(page, '#filter-query', 'تذكرة');
+    await page.waitForTimeout(40);
+    // ⭐⭐⭐ the user changes the ORDER while the search is waiting.
+    await page.selectOption('#filter-sort', 'priority');
+    await page.waitForTimeout(1400);
+    const fresh = (await apiCallUrls(page, '/api/tickets?')).slice(before.length);
+    assert.equal(
+      fresh.length,
+      1,
+      `⭐⭐⭐ the deferred search came back after the change of the order: ${fresh.length} request(s) ${JSON.stringify(
+        fresh,
+      )}`,
+    );
+    const params = paramsOf(fresh[0]);
+    assert.equal(params.get('q'), 'تذكرة', `⭐⭐⭐ the request lost the text: ${fresh[0]}`);
+    assert.equal(params.get('sort'), 'priority', `⭐⭐⭐ the request lost the new order: ${fresh[0]}`);
+    assert.equal(params.get('offset'), '0', `⭐⭐⭐ the request did not start at the first page: ${fresh[0]}`);
+  });
+
+  await t.test('⭐⭐⭐ M-116-4: a deferred search does NOT throw the user back to the first page', async () => {
+    // ⭐⭐⭐ the bulk of the tickets ⇒ ⭐⭐⭐ a REAL second page ⇒ ⭐⭐⭐
+    // ⭐⭐⭐ (a list of one page can never prove this).
+    await seedBulkTickets(harness.ownerPool, 60);
+    try {
+      await page.goto(`${base}/ui/tickets.html`);
+      await page.waitForTimeout(1200);
+      await typeIn(page, '#filter-query', 'تذكرة');
+      await page.waitForTimeout(1000);
+      const label = await page.innerText('#page-label');
+      assert.match(label, /صفحة 1 من [2-9]/, `⭐⭐⭐ the list has no second page: ${label}`);
+      // ⭐⭐⭐ the user goes to the second page.
+      await page.click('#btn-next');
+      await page.waitForTimeout(700);
+      assert.match(
+        await page.innerText('#page-label'),
+        /صفحة 2/,
+        '⭐⭐⭐ the user did not reach the second page',
+      );
+      const before = await apiCallUrls(page, '/api/tickets?');
+      // ⭐⭐⭐ the user types (the search is deferred) and then changes
+      // ⭐⭐⭐ the order and goes to the next page ⇒ ⭐⭐⭐ the deferred
+      // ⭐⭐⭐ search must not reset the page behind his back.
+      await typeIn(page, '#filter-query', 'تذكرة الطابور');
+      await page.waitForTimeout(30);
+      await page.evaluate(
+        `(() => {
+          const sort = document.getElementById('filter-sort');
+          sort.value = 'priority';
+          sort.dispatchEvent(new Event('change', { bubbles: true }));
+        })()`,
+      );
+      await page.waitForTimeout(30);
+      await page.click('#btn-next');
+      await page.waitForTimeout(1800);
+      const fresh = (await apiCallUrls(page, '/api/tickets?')).slice(before.length);
+      // ⭐⭐⭐ the page the user asked for must be the LAST page asked for.
+      const offsets = fresh.map((url) => paramsOf(url).get('offset'));
+      assert.equal(
+        offsets[offsets.length - 1],
+        '25',
+        `⭐⭐⭐ the deferred search threw the user back to the first page: the offsets were ${JSON.stringify(
+          offsets,
+        )}`,
+      );
+      assert.match(
+        await page.innerText('#page-label'),
+        /صفحة 2/,
+        '⭐⭐⭐ the label of the page does not match the page the user asked for',
+      );
+    } finally {
+      await wipeBulkTickets(harness.ownerPool);
+    }
+  });
+
+  await t.test('⭐⭐⭐ M-117-1: the way back keeps the SEARCH, the FILTERS and the ORDER', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    await typeIn(page, '#filter-query', 'تذكرة');
+    await page.waitForTimeout(1000);
+    await page.selectOption('#filter-state', 'open');
+    await page.waitForTimeout(700);
+    await page.selectOption('#filter-priority', 'normal');
+    await page.waitForTimeout(700);
+    await page.selectOption('#filter-sort', 'priority');
+    await page.waitForTimeout(700);
+    await page.evaluate(`document.querySelector('#ticket-list .ticket').click()`);
+    await page.waitForTimeout(900);
+    assert.equal(await page.isVisible('#detail'), true, '⭐⭐⭐ the detail did not open');
+    await page.click('#btn-back');
+    await page.waitForTimeout(800);
+    assert.equal(await page.inputValue('#filter-query'), 'تذكرة', '⭐⭐⭐ the search was lost');
+    assert.equal(await page.inputValue('#filter-state'), 'open', '⭐⭐⭐ the state filter was lost');
+    assert.equal(await page.inputValue('#filter-priority'), 'normal', '⭐⭐⭐ the priority filter was lost');
+    assert.equal(await page.inputValue('#filter-sort'), 'priority', '⭐⭐⭐ the order was lost');
+  });
+
+  await t.test('⭐⭐⭐ M-117-2: the button of the BROWSER comes back to the list', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    await page.evaluate(`document.querySelector('#ticket-list .ticket').click()`);
+    await page.waitForTimeout(900);
+    assert.equal(await page.isVisible('#detail'), true, '⭐⭐⭐ the detail did not open');
+    // ⭐⭐⭐ the button of the browser (the history goes back).
+    await page.goBack();
+    await page.waitForTimeout(900);
+    assert.equal(
+      await page.isVisible('#detail'),
+      false,
+      '⭐⭐⭐ the button of the browser did not close the detail',
+    );
+    assert.equal(
+      await page.isVisible('.pane.list'),
+      true,
+      '⭐⭐⭐ the list is not visible after the way back of the browser',
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-117-3: the PAGE and the PLACE of the screen survive the way back', async () => {
+    await seedBulkTickets(harness.ownerPool, 60);
+    try {
+      await page.goto(`${base}/ui/tickets.html`);
+      await page.waitForTimeout(1200);
+      await typeIn(page, '#filter-query', 'تذكرة الطابور');
+      await page.waitForTimeout(1000);
+      await page.click('#btn-next');
+      await page.waitForTimeout(800);
+      const labelBefore = await page.innerText('#page-label');
+      assert.match(labelBefore, /صفحة 2/, `⭐⭐⭐ the user did not reach the second page: ${labelBefore}`);
+      // ⭐⭐⭐ the user scrolls down inside the list.
+      await page.evaluate(`window.scrollTo(0, 400)`);
+      await page.waitForTimeout(250);
+      const scrollBefore = await page.evaluate(`window.scrollY`);
+      assert.ok(Number(scrollBefore) > 0, '⭐⭐⭐ the page did not scroll (the premise of the test)');
+      await page.evaluate(`document.querySelector('#ticket-list .ticket').click()`);
+      await page.waitForTimeout(900);
+      await page.click('#btn-back');
+      await page.waitForTimeout(900);
+      const labelAfter = await page.innerText('#page-label');
+      assert.equal(labelAfter, labelBefore, `⭐⭐⭐ the page was lost: ${labelBefore} ⇒ ${labelAfter}`);
+      const scrollAfter = await page.evaluate(`window.scrollY`);
+      assert.equal(
+        Number(scrollAfter),
+        Number(scrollBefore),
+        `⭐⭐⭐ the place of the screen was lost: ${scrollBefore} ⇒ ${scrollAfter}`,
+      );
+    } finally {
+      await wipeBulkTickets(harness.ownerPool);
+    }
+  });
+
+  await t.test('⭐⭐⭐ M-117-4: a FAST switch between two tickets shows NO old details', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(1200);
+    // ⭐⭐⭐ the first ticket is opened and it loads.
+    await page.evaluate(
+      `(() => {
+        const rows = Array.from(document.querySelectorAll('#ticket-list .ticket'));
+        const row = rows.find((node) => node.textContent.includes('تذكرة المالك'));
+        (row ?? rows[0]).click();
+      })()`,
+    );
+    await page.waitForTimeout(900);
+    const subjectA = await page.innerText('#detail-subject');
+    assert.equal(subjectA, 'تذكرة المالك', `⭐⭐⭐ the wrong ticket is open: ${subjectA}`);
+    const versionBefore = await ticketVersion(harness.ownerPool, tenantId, ticketRef);
+    // ⭐⭐⭐ the SECOND ticket is slow ⇒ ⭐⭐⭐ the window of the old
+    // ⭐⭐⭐ details is open while it loads.
+    await page.route(`**/api/tickets/${ticketRef}*`, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
+    await page.evaluate(
+      `(() => {
+        const rows = Array.from(document.querySelectorAll('#ticket-list .ticket'));
+        const row = rows.find((node) => node.textContent.includes('تذكرة الموظف'));
+        (row ?? rows[0]).click();
+      })()`,
+    );
+    await page.waitForTimeout(250);
+    // ⭐⭐⭐ the form still shows the FIRST ticket ⇒ ⭐⭐⭐ saving NOW
+    // ⭐⭐⭐ would write the WRONG ticket ⇒ ⭐⭐⭐ it must not write.
+    await page.click('#btn-save');
+    await page.waitForTimeout(700);
+    await page.unroute(`**/api/tickets/${ticketRef}*`);
+    const versionAfter = await ticketVersion(harness.ownerPool, tenantId, ticketRef);
+    assert.equal(
+      versionAfter,
+      versionBefore,
+      `⭐⭐⭐ the save wrote the OLD ticket (its version went ${versionBefore} ⇒ ${versionAfter})`,
+    );
+    // ⭐⭐⭐ and the new ticket lands clean.
+    await page.waitForTimeout(1600);
+    const subjectB = await page.innerText('#detail-subject');
+    assert.equal(subjectB, 'تذكرة الموظف', `⭐⭐⭐ the detail shows an old ticket: ${subjectB}`);
+    const editSubject = await page.inputValue('#edit-subject');
+    assert.equal(editSubject, 'تذكرة الموظف', `⭐⭐⭐ the form shows an old ticket: ${editSubject}`);
+  });
+
+  // ============================================================
+  // M-119 — the queue of the tickets that have no assignee
+  // ============================================================
+
+  await t.test('⭐⭐⭐ M-119-1: the whole trip of the queue on the mobile (create ⇒ assign ⇒ gone)', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAsOwner(page, base);
+    const subject = 'تذكرة الطابور الجديدة';
+    // ⭐⭐⭐ ① the owner creates an UNASSIGNED ticket (the real form).
+    await page.click('#btn-new');
+    await page.waitForTimeout(800);
+    await page.selectOption('#create-customer', customerId);
+    await page.fill('#create-subject', subject);
+    await page.fill('#create-description', 'تذكرة في طابور العمل');
+    await page.click('#btn-create');
+    await page.waitForTimeout(1400);
+    const createdRef = await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+      const result = await uow.query<{ ref: string }>(
+        `select ref from support_tickets where tenant_id = $1 and subject = $2`,
+        [tenantId, subject],
+      );
+      return result.rows[0]?.ref ?? '';
+    });
+    assert.ok(createdRef, '⭐⭐⭐ the ticket was not written in the database');
+    const assigneeBefore = await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+      const result = await uow.query<{ assignee_actor_id: string | null }>(
+        `select assignee_actor_id from support_tickets where tenant_id = $1 and ref = $2`,
+        [tenantId, createdRef],
+      );
+      return result.rows[0]?.assignee_actor_id ?? null;
+    });
+    assert.equal(assigneeBefore, null, '⭐⭐⭐ the new ticket was born assigned');
+    // ⭐⭐⭐ ② the queue is open ⇒ ⭐⭐⭐ the ticket is IN it.
+    await page.click('#btn-unassigned');
+    await page.waitForTimeout(1200);
+    assert.equal(
+      await page.getAttribute('#btn-unassigned', 'aria-pressed'),
+      'true',
+      '⭐⭐⭐ the queue did not open',
+    );
+    const queueText = await page.innerText('#ticket-list');
+    assert.ok(queueText.includes(subject), `⭐⭐⭐ the new ticket is not in the queue: ${queueText}`);
+    const counter = await page.innerText('#unassigned-counter');
+    assert.ok(Number(counter) >= 1, `⭐⭐⭐ the counter of the queue is wrong: ${counter}`);
+    await page.screenshot({
+      path: path.join(SHOT_DIR, 'tickets-mobile-unassigned-queue.png'),
+      fullPage: true,
+    });
+    // ⭐⭐⭐ ③ the owner assigns it (the existing path of the assignment).
+    await page.evaluate(
+      `(() => {
+        const rows = Array.from(document.querySelectorAll('#ticket-list .ticket'));
+        const row = rows.find((node) => node.textContent.includes(${JSON.stringify(subject)}));
+        (row ?? rows[0]).click();
+      })()`,
+    );
+    await page.waitForTimeout(1000);
+    assert.equal(await page.isVisible('#edit-block'), true, '⭐⭐⭐ the form of the edit is not visible');
+    assert.equal(
+      await page.isVisible('#assignee-field'),
+      true,
+      '⭐⭐⭐ the field of the assignment is not visible (the owner may assign)',
+    );
+    await page.selectOption('#edit-assignee', agentId);
+    await page.click('#btn-save');
+    await page.waitForTimeout(1500);
+    const assigneeAfter = await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+      const result = await uow.query<{ assignee_actor_id: string | null }>(
+        `select assignee_actor_id from support_tickets where tenant_id = $1 and ref = $2`,
+        [tenantId, createdRef],
+      );
+      return result.rows[0]?.assignee_actor_id ?? null;
+    });
+    assert.equal(assigneeAfter, agentId, `⭐⭐⭐ the assignment did not land: ${assigneeAfter}`);
+    // ⭐⭐⭐ ④ the ticket LEFT the queue ⇒ ⭐⭐⭐ and the counter dropped.
+    await page.click('#btn-back');
+    await page.waitForTimeout(900);
+    await page.click('#btn-unassigned');
+    await page.waitForTimeout(1200);
+    const queueAfter = await page.innerText('#ticket-list');
+    assert.ok(
+      !queueAfter.includes(subject),
+      `⭐⭐⭐ the assigned ticket is still in the queue: ${queueAfter}`,
+    );
+    const counterAfter = await page.innerText('#unassigned-counter');
+    assert.ok(
+      Number(counterAfter) < Number(counter),
+      `⭐⭐⭐ the counter did not drop: ${counter} ⇒ ${counterAfter}`,
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-119-2: the queue keeps the RIGHTS of the role (the employee never assigns)', async () => {
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(600);
+    await offerDrillAccounts(page, TENANT_ID, [
+      [OWNER_ID, 'UI owner'],
+      [AGENT_ID, 'UI agent'],
+      [VIEWER_ID, 'UI viewer'],
+    ]);
+    if (await page.isVisible('#btn-logout')) {
+      await page.click('#btn-logout');
+      await page.waitForTimeout(600);
+    }
+    await page.selectOption('#login-tenant', TENANT_ID);
+    await page.selectOption('#login-user', AGENT_ID);
+    await page.click('#btn-login');
+    await page.waitForTimeout(1300);
+    await page.click('#btn-unassigned');
+    await page.waitForTimeout(1200);
+    // ⭐⭐⭐ the queue of the employee is EMPTY (their scope).
+    const rows = await countOf(page, '#ticket-list .ticket');
+    assert.equal(rows, 0, `⭐⭐⭐ the employee sees ${rows} ticket(s) in the queue`);
+    const counter = await page.innerText('#unassigned-counter');
+    assert.equal(Number(counter), 0, `⭐⭐⭐ the counter of the employee is ${counter}`);
+    // ⭐⭐⭐ and there is NO button of the assignment for them.
+    const assignButtons = await countOf(page, '#ticket-list .assign-button');
+    assert.equal(assignButtons, 0, '⭐⭐⭐ the employee sees the button of the assignment');
+    // ⭐⭐⭐ and the server refuses the write even when the page is asked
+    // ⭐⭐⭐ directly (the button is NEVER an authorization).
+    const direct = await page.evaluate(
+      `fetch('/api/tickets/tkt_${TENANT_ID}_does_not_exist', {
+         method: 'PATCH',
+         headers: {
+           'content-type': 'application/json',
+           authorization: 'Bearer ' + JSON.parse(sessionStorage.getItem('wasl_session_v1')).token,
+         },
+         body: JSON.stringify({ version: 1, assignee_actor_id: ${JSON.stringify(OWNER_ID)} }),
+       }).then((answer) => answer.status)`,
+    );
+    assert.equal(
+      Number(direct),
+      403,
+      `⭐⭐⭐ the server accepted the assignment of the employee: ${direct}`,
     );
   });
 });

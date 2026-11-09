@@ -83,12 +83,16 @@ const state = {
   sort: 'recent',
   agents: [],
   customers: [],
+  /** ⭐⭐⭐ M-119: the queue of the tickets that have no assignee. */
+  unassignedOnly: false,
+  /** ⭐⭐⭐ M-119: how many tickets are waiting for an assignment. */
+  unassignedCount: 0,
   /** ⭐⭐⭐ M-114: the number of the last request of the list. */
   listSeq: 0,
   /** ⭐⭐⭐ M-114: the number of the last request of the detail. */
   detailSeq: 0,
   /** ⭐⭐⭐ M-114: the state of the list before the detail (to come back to it). */
-  listView: { query: '', state: '', priority: '', sort: 'recent', page: 0, scroll: 0 },
+  listView: { query: '', state: '', priority: '', sort: 'recent', page: 0, scroll: 0, unassigned: false },
   /** ⭐⭐⭐ M-114: the page is on the detail now (the small screen). */
   detailView: false,
 };
@@ -233,16 +237,27 @@ function rowsOf(body, key) {
  * ⭐⭐⭐ M-114: the call to the server waits for the user to stop typing.
  * ⭐⭐⭐ The old timer is cancelled every time ⇒ ⇒ ⇒ one call for the
  * ⭐⭐⭐ whole word and NOT one call for every letter.
+ * ⭐⭐⭐ M-116: ⭐⭐⭐ the timer can also be cancelled FROM THE OUTSIDE
+ * ⭐⭐⭐ (⇒ ⇒ ⇒ a change of the filter or of the order cancels the
+ * ⭐⭐⭐ deferred search ⇒ ⇒ ⇒ the deferred request never comes back
+ * ⭐⭐⭐ to reset the page behind the back of the user).
  */
 function debounce(fn, wait) {
   let timer = null;
-  return (...args) => {
+  const wrapped = (...args) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       timer = null;
       fn(...args);
     }, wait);
   };
+  wrapped.cancel = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return wrapped;
 }
 
 /** ⭐⭐⭐ M-114: the request of the search (debounced). */
@@ -279,6 +294,8 @@ async function loadTickets(options = {}) {
   if (query) params.set('q', query);
   if (ticketState) params.set('state', ticketState);
   if (priority) params.set('priority', priority);
+  // ⭐⭐⭐ M-119: the queue of the unassigned tickets.
+  if (state.unassignedOnly) params.set('unassigned', '1');
   params.set('sort', state.sort);
   params.set('limit', String(state.pageSize));
   params.set('offset', String(state.page * state.pageSize));
@@ -301,13 +318,33 @@ async function loadTickets(options = {}) {
   state.total = Number(answer.body.total ?? 0);
   state.mayWrite = answer.body.may_write === true;
   state.mayAssign = answer.body.may_assign === true;
+  // ⭐⭐⭐ M-119: the counter of the queue (it comes from the server ⇒
+  // ⭐⭐⭐ M-119 it follows the scope of the role and the filters).
+  state.unassignedCount = Number(answer.body.unassigned_count ?? 0);
   renderTickets();
   renderPagination();
   renderEmptyState();
+  renderUnassignedBadge();
   $('list-counter').textContent = `${state.total} تذكرة`;
   // ⭐⭐ The rights of the server decide what the page shows.
   $('btn-new').hidden = !state.mayWrite;
   renderRightsNote();
+}
+
+/**
+ * ⭐⭐⭐ M-119: ⭐⭐⭐ the badge of the queue ⇒ ⭐⭐⭐ the number comes
+ *   ⭐⭐⭐ from the server (never from the page) ⇒ ⭐⭐⭐ and the button
+ *   ⭐⭐⭐ says whether the queue is open.
+ */
+function renderUnassignedBadge() {
+  const badge = $('unassigned-counter');
+  if (badge) badge.textContent = String(state.unassignedCount);
+  const button = $('btn-unassigned');
+  if (!button) return;
+  button.setAttribute('aria-pressed', state.unassignedOnly ? 'true' : 'false');
+  button.title = state.unassignedOnly
+    ? 'الطابور مفتوح — دوس تاني عشان تشوف كل التذاكر.'
+    : 'اعرض التذاكر اللي لسه ما اتأسندتش.';
 }
 
 /** ⭐⭐ M-114: the empty state says WHY the list is empty. */
@@ -321,6 +358,16 @@ function renderEmptyState() {
     $('filter-query').value.trim() !== '' ||
     $('filter-state').value !== '' ||
     $('filter-priority').value !== '';
+  // ⭐⭐⭐ M-119: the queue has its OWN empty state (the queue is empty
+  // ⭐⭐⭐ M-119 ⇐ ⇒ the work is done ⇒ ⭐⭐⭐ it is not a failure).
+  if (state.unassignedOnly) {
+    $('list-empty-title').textContent = 'مفيش تذاكر غير مُسندة.';
+    $('list-empty-text').textContent =
+      'كل التذاكر في نطاقك اتأسندت. دوس «غير مُسندة» تاني عشان تشوف كل التذاكر.';
+    $('btn-clear-filters').hidden = false;
+    box.hidden = false;
+    return;
+  }
   $('list-empty-title').textContent = filtered ? 'لا توجد نتائج للبحث ده.' : 'لا توجد تذاكر بعد.';
   $('list-empty-text').textContent = filtered
     ? 'جرّب كلمة تانية أو امسح الفلتر.'
@@ -387,6 +434,30 @@ function renderTickets() {
     }
     item.appendChild(meta);
 
+    // ⭐⭐⭐ M-119: ⭐⭐⭐ the button of the assignment ⇒ ⭐⭐⭐ it appears
+    // ⭐⭐⭐ M-119 ONLY when the server announces the right
+    // ⭐⭐⭐ M-119 (`may_assign`) ⇒ ⭐⭐⭐ and it uses the EXISTING path
+    // ⭐⭐⭐ M-119 of the assignment (the form of the ticket) ⇒ ⭐⭐⭐ no
+    // ⭐⭐⭐ M-119 new capability and no new rule of rights.
+    if (state.unassignedOnly && state.mayAssign) {
+      const assign = document.createElement('button');
+      assign.className = 'ghost small assign-button';
+      assign.type = 'button';
+      assign.dataset.assign = ticket.ref;
+      assign.textContent = 'إسناد…';
+      assign.addEventListener('click', (event) => {
+        event.stopPropagation();
+        void openTicket(ticket.ref).then(() => {
+          const field = $('assignee-field');
+          if (field) field.hidden = false;
+          const select = $('edit-assignee');
+          if (select) select.focus();
+          $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+      item.appendChild(assign);
+    }
+
     item.addEventListener('click', () => openTicket(ticket.ref));
     list.appendChild(item);
   }
@@ -414,6 +485,8 @@ function rememberListView() {
     sort: state.sort,
     page: state.page,
     scroll: window.scrollY,
+    // ⭐⭐⭐ M-119: the queue comes back as it was.
+    unassigned: state.unassignedOnly,
   };
 }
 
@@ -425,6 +498,9 @@ function restoreListView() {
   $('filter-sort').value = state.listView.sort;
   state.sort = state.listView.sort;
   state.page = state.listView.page;
+  // ⭐⭐⭐ M-119: the queue comes back as it was.
+  state.unassignedOnly = state.listView.unassigned === true;
+  renderUnassignedBadge();
   renderPagination();
 }
 
@@ -443,6 +519,15 @@ async function openTicket(ref) {
   if (!state.detailView) rememberListView();
   const seq = ++state.detailSeq;
   state.selected = { ref };
+  // ⭐⭐⭐ M-116: ⭐⭐⭐ the ticket of the PREVIOUS open is dropped ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-116 the form of the edit is emptied ⇒ ⇒ ⇒ and the save
+  // ⭐⭐⭐ M-116 button can NEVER write the old ticket while the new
+  // ⭐⭐⭐ M-116 one is still loading (the proof: the version of the
+  // ⭐⭐⭐ M-116 old ticket in the database does NOT move).
+  state.detailTicket = null;
+  $('edit-subject').value = '';
+  $('edit-description').value = '';
+  $('edit-note').textContent = '';
   $('detail-placeholder').hidden = true;
   $('detail').hidden = false;
   $('detail-error').hidden = true;
@@ -627,7 +712,15 @@ const OPERATION_LABELS = {
 async function saveTicket(event) {
   event.preventDefault();
   const ticket = state.detailTicket;
-  if (!ticket) return;
+  if (!ticket) {
+    // ⭐⭐⭐ M-116: the ticket is still loading ⇒ ⇒ ⇒ there is nothing
+    // ⭐⭐⭐ M-116 to save ⇒ ⇒ ⇒ and the page says so out loud (it
+    // ⭐⭐⭐ M-116 never writes a ticket that is not on the screen).
+    const note = $('edit-note');
+    note.textContent = 'التذكرة لسه بتتحمّل — استنى ثانية وحاول تاني.';
+    toast('التذكرة لسه بتتحمّل — استنى ثانية وحاول تاني.', true);
+    return;
+  }
   const subject = $('edit-subject').value.trim();
   if (subject.length === 0) {
     toast(ERROR_LABELS.subject_invalid, true);
@@ -763,6 +856,10 @@ async function logout() {
   state.detailTicket = null;
   state.listSeq += 1;
   state.detailSeq += 1;
+  // ⭐⭐⭐ M-119: the queue of another company never stays on the screen.
+  state.unassignedOnly = false;
+  state.unassignedCount = 0;
+  renderUnassignedBadge();
   setOffline(false);
   setDetailView(false);
   $('login-row').hidden = false;
@@ -784,28 +881,51 @@ $('btn-logout').addEventListener('click', () => {
 $('btn-refresh').addEventListener('click', () => {
   void loadTickets({ resetPage: true });
 });
+// ⭐⭐⭐ M-119: the toggle of the queue of the unassigned tickets.
+$('btn-unassigned').addEventListener('click', () => {
+  searchTickets.cancel();
+  state.unassignedOnly = !state.unassignedOnly;
+  renderUnassignedBadge();
+  void loadTickets({ resetPage: true });
+});
 $('btn-prev').addEventListener('click', () => {
   if (state.page <= 0) return;
+  // ⭐⭐⭐ M-116: the deferred search is cancelled ⇒ ⇒ ⇒ it cannot
+  // ⭐⭐⭐ M-116 throw the user back to the first page.
+  searchTickets.cancel();
   state.page -= 1;
   void loadTickets();
 });
 $('btn-next').addEventListener('click', () => {
+  // ⭐⭐⭐ M-116: the same (the page the user chose is HIS page).
+  searchTickets.cancel();
   state.page += 1;
   void loadTickets();
 });
 $('filter-query').addEventListener('input', () => {
   // ⭐⭐⭐ M-114: the page does NOT ask the server on every letter ⇒ ⇒ ⇒
   // ⭐⭐⭐ it waits until the user stops typing.
+  // ⭐⭐⭐ M-116: ⭐⭐⭐ the request that is ALREADY on its way belongs
+  // ⭐⭐⭐ M-116 to the OLD text ⇒ ⇒ ⇒ it is invalidated HERE (not
+  // ⭐⭐⭐ M-116 when the next request starts) ⇒ ⇒ ⇒ the old rows never
+  // ⭐⭐⭐ M-116 appear under the new text ⇒ ⇒ ⇒ (the guard of the
+  // ⭐⭐⭐ M-116 sequence alone was TOO LATE).
+  state.listSeq += 1;
   state.page = 0;
   searchTickets();
 });
 $('filter-state').addEventListener('change', () => {
+  // ⭐⭐⭐ M-116: the deferred search is cancelled ⇒ ⇒ ⇒ it does not
+  // ⭐⭐⭐ M-116 come back and reset the page that the user chose.
+  searchTickets.cancel();
   void loadTickets({ resetPage: true });
 });
 $('filter-priority').addEventListener('change', () => {
+  searchTickets.cancel();
   void loadTickets({ resetPage: true });
 });
 $('filter-sort').addEventListener('change', () => {
+  searchTickets.cancel();
   state.sort = $('filter-sort').value;
   void loadTickets({ resetPage: true });
 });
@@ -821,6 +941,7 @@ $('btn-retry-offline').addEventListener('click', () => {
   void loadTickets();
 });
 $('btn-clear-filters').addEventListener('click', () => {
+  searchTickets.cancel();
   $('filter-query').value = '';
   $('filter-state').value = '';
   $('filter-priority').value = '';

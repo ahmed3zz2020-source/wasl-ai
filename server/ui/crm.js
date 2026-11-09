@@ -63,6 +63,9 @@ const ERROR_LABELS = {
 
 const SESSION_KEY = 'wasl_session_v1';
 
+/** ⭐⭐ M-120: how long the page waits before it asks the server. */
+const SEARCH_DEBOUNCE_MS = 320;
+
 const state = {
   token: null,
   role: '',
@@ -77,6 +80,16 @@ const state = {
   pageSize: 25,
   total: 0,
   sort: 'name',
+  /** ⭐⭐⭐ M-120: the number of the last request of the list. */
+  listSeq: 0,
+  /** ⭐⭐⭐ M-120: the number of the last request of the profile. */
+  profileSeq: 0,
+  /** ⭐⭐⭐ M-120: the state of the list before the profile (to come back). */
+  listView: { query: '', sort: 'name', page: 0, scroll: 0 },
+  /** ⭐⭐⭐ M-120: the page is on the profile now (the small screen). */
+  profileView: false,
+  /** ⭐⭐⭐ M-120: the connection with the server is gone? */
+  offline: false,
 };
 
 /** ⭐⭐ The session of the tab (the same key the inbox uses). */
@@ -207,11 +220,55 @@ function rowsOf(body, key) {
 }
 
 // ------------------------------------------------------------ the list
+/**
+ * ⭐⭐⭐ M-120: ⭐⭐⭐ the search waits until the user stops typing ⇒ ⇒ ⇒
+ *   ⭐⭐⭐ one call for the whole word and NOT one call for every letter
+ *   ⭐⭐⭐ ⇒ ⇒ ⇒ (the same rule as the page of the tickets).
+ */
+function debounce(fn, wait) {
+  let timer = null;
+  const wrapped = (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn(...args);
+    }, wait);
+  };
+  wrapped.cancel = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return wrapped;
+}
+
+/** ⭐⭐⭐ M-120: the request of the search (debounced). */
+const searchCustomers = debounce(() => {
+  void loadCustomers({ resetPage: true });
+}, SEARCH_DEBOUNCE_MS);
+
+/** ⭐⭐⭐ M-120: is the screen of the small size? */
+function isSmallScreen() {
+  return window.matchMedia('(max-width: 860px)').matches;
+}
+
+/** ⭐⭐⭐ M-120: the connection with the server is gone? */
+function setOffline(offline) {
+  state.offline = offline;
+  const banner = $('offline-banner');
+  if (banner) banner.hidden = !offline;
+}
+
 async function loadCustomers(options = {}) {
   if (options.resetPage) state.page = 0;
-  $('list-loading').hidden = false;
+  // ⭐⭐⭐ M-120: the number of this request ⇒ ⇒ ⇒ a reply that arrives
+  // ⭐⭐⭐ M-120 late (after a newer request) is DROPPED ⇒ ⇒ ⇒ the list
+  // ⭐⭐⭐ M-120 never shows the results of an old search.
+  const seq = ++state.listSeq;
+  const firstLoad = state.customers.length === 0 && state.total === 0;
+  $('list-loading').hidden = !firstLoad;
   $('list-error').hidden = true;
-  $('list-empty').hidden = true;
 
   const params = new URLSearchParams();
   const query = $('filter-query').value.trim();
@@ -221,18 +278,41 @@ async function loadCustomers(options = {}) {
   params.set('offset', String(state.page * state.pageSize));
 
   const answer = await api('GET', `/api/crm/customers?${params.toString()}`);
+  // ⭐⭐⭐ M-120: a late reply of an old request ⇒ ⇒ ⇒ it is dropped.
+  if (seq !== state.listSeq) return;
   $('list-loading').hidden = true;
   if (!answer.ok) {
-    $('list-error').textContent = errorMessage(answer.body, 'تعذّر تحميل العملاء.');
+    // ⭐⭐⭐ M-120: the connection with the server is gone.
+    if (answer.status === 0) setOffline(true);
+    $('list-error-text').textContent = errorMessage(answer.body, 'تعذّر تحميل العملاء.');
     $('list-error').hidden = false;
+    $('list-empty').hidden = true;
     return;
   }
+  setOffline(false);
   state.customers = rowsOf(answer.body, 'customers');
   state.total = Number(answer.body.total ?? 0);
   state.mayManage = answer.body.may_manage === true;
   renderCustomers();
   renderPagination();
+  renderEmptyState();
   $('list-counter').textContent = `${state.total} عميل`;
+}
+
+/** ⭐⭐⭐ M-120: the empty state says WHY the list is empty. */
+function renderEmptyState() {
+  const box = $('list-empty');
+  if (state.customers.length > 0) {
+    box.hidden = true;
+    return;
+  }
+  const filtered = $('filter-query').value.trim() !== '';
+  $('list-empty-title').textContent = filtered ? 'لا توجد نتائج للبحث ده.' : 'لا يوجد عملاء بعد.';
+  $('list-empty-text').textContent = filtered
+    ? 'جرّب كلمة تانية أو امسح البحث.'
+    : 'أول ما يتسجل عميل هيظهر هنا.';
+  $('btn-clear-filters').hidden = !filtered;
+  box.hidden = false;
 }
 
 function renderCustomers() {
@@ -289,20 +369,70 @@ function renderPagination() {
 }
 
 // ------------------------------------------------------------ the profile
+/**
+ * ⭐⭐⭐ M-120: ⭐⭐⭐ the page remembers the state of the list before it
+ *   ⭐⭐⭐ opens a customer ⇒ ⇒ ⇒ the way back returns to the SAME
+ *   ⭐⭐⭐ place (the search, the order, the page and the screen).
+ */
+function rememberListView() {
+  state.listView = {
+    query: $('filter-query').value,
+    sort: state.sort,
+    page: state.page,
+    scroll: window.scrollY,
+  };
+}
+
+/** ⭐⭐⭐ M-120: the state of the list comes back as it was. */
+function restoreListView() {
+  $('filter-query').value = state.listView.query;
+  $('filter-sort').value = state.listView.sort;
+  state.sort = state.listView.sort;
+  state.page = state.listView.page;
+  renderPagination();
+}
+
+/**
+ * ⭐⭐⭐ M-120: ⭐⭐⭐ the small screen shows EITHER the list OR the
+ *   ⭐⭐⭐ profile ⇒ ⇒ ⇒ the customer opens at once (and the button of
+ *   ⭐⭐⭐ the browser comes back to the list).
+ */
+function setProfileView(on) {
+  state.profileView = on;
+  document.body.classList.toggle('view-profile', on);
+  const list = document.querySelector('.pane.list');
+  const profile = document.getElementById('profile-pane');
+  if (list) list.hidden = on;
+  if (profile) profile.hidden = !on;
+}
+
 async function openCustomer(customerId) {
+  // ⭐⭐⭐ M-120: the state of the list is remembered before the profile.
+  if (!state.profileView) rememberListView();
+  // ⭐⭐⭐ M-120: the number of this request ⇒ ⇒ ⇒ a late reply of an
+  // ⭐⭐⭐ M-120 old customer is DROPPED (the screen shows the customer
+  // ⭐⭐⭐ M-120 that was asked for LAST).
+  const seq = ++state.profileSeq;
   state.selected = { id: customerId };
+  // ⭐⭐⭐ M-120: the customer of the PREVIOUS open is dropped ⇒ ⇒ ⇒ the
+  // ⭐⭐⭐ M-120 form of the edit can never write the old customer.
+  state.profileCustomer = null;
   $('profile-placeholder').hidden = true;
   $('profile').hidden = false;
   $('profile-error').hidden = true;
   $('profile-name').textContent = '…';
 
   const answer = await api('GET', `/api/crm/customers/${encodeURIComponent(customerId)}`);
+  // ⭐⭐⭐ M-120: a late reply of an old customer ⇒ ⇒ ⇒ it is dropped.
+  if (seq !== state.profileSeq) return;
   if (!answer.ok) {
+    if (answer.status === 0) setOffline(true);
     $('profile-error').textContent = errorMessage(answer.body, 'تعذّر فتح ملف العميل.');
     $('profile-error').hidden = false;
     $('profile-name').textContent = '—';
     return;
   }
+  setOffline(false);
   const customer = answer.body.customer ?? {};
   state.profileCustomer = customer;
   state.mayManage = answer.body.may_manage === true;
@@ -318,8 +448,34 @@ async function openCustomer(customerId) {
   renderEdit(customer);
   renderCustomers();
 
-  if (window.matchMedia('(max-width: 860px)').matches) {
+  if (isSmallScreen()) {
+    // ⭐⭐⭐ M-120: the small screen swaps the list for the profile ⇒ ⇒ ⇒
+    // ⭐⭐⭐ M-120 and the button of the browser comes back to the list.
+    setProfileView(true);
+    if (!window.location.hash.startsWith('#customer=')) {
+      window.history.pushState({ waslCustomer: customerId }, '', `#customer=${encodeURIComponent(customerId)}`);
+    }
     $('profile').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+/**
+ * ⭐⭐⭐ M-120: THE WAY BACK ⇒ ⇒ ⇒ the list comes back with the state it
+ *   ⭐⭐⭐ had (the search, the order, the page and the place of the
+ *   ⭐⭐⭐ screen).
+ */
+function closeProfile() {
+  state.profileSeq += 1;
+  $('profile').hidden = true;
+  $('profile-placeholder').hidden = false;
+  state.profileCustomer = null;
+  restoreListView();
+  if (state.profileView) {
+    setProfileView(false);
+    if (window.location.hash.startsWith('#customer=')) {
+      window.history.back();
+    }
+    window.scrollTo({ top: state.listView.scroll, behavior: 'auto' });
   }
 }
 
@@ -469,7 +625,14 @@ async function saveCustomer(event) {
   const selected = state.selected;
   if (!selected) return;
   const customer = state.profileCustomer;
-  if (!customer) return;
+  if (!customer) {
+    // ⭐⭐⭐ M-120: the customer is still loading ⇒ ⇒ ⇒ there is nothing
+    // ⭐⭐⭐ M-120 to save ⇒ ⇒ ⇒ (and the page NEVER writes a customer
+    // ⭐⭐⭐ M-120 that is not on the screen).
+    $('edit-note').textContent = 'ملف العميل لسه بيتحمّل — استنى ثانية وحاول تاني.';
+    toast('ملف العميل لسه بيتحمّل — استنى ثانية وحاول تاني.', true);
+    return;
+  }
 
   const displayName = $('edit-name').value.trim();
   const email = $('edit-email').value.trim();
@@ -551,6 +714,11 @@ async function logout() {
   await api('DELETE', '/api/session');
   state.token = null;
   state.selected = null;
+  state.profileCustomer = null;
+  state.listSeq += 1;
+  state.profileSeq += 1;
+  setProfileView(false);
+  setOffline(false);
   $('login-row').hidden = false;
   $('who').hidden = true;
   $('workspace').hidden = true;
@@ -571,24 +739,59 @@ $('btn-refresh').addEventListener('click', () => {
 });
 $('btn-prev').addEventListener('click', () => {
   if (state.page <= 0) return;
+  // ⭐⭐⭐ M-120: the deferred search is cancelled ⇒ ⇒ ⇒ it cannot
+  // ⭐⭐⭐ M-120 throw the user back to the first page.
+  searchCustomers.cancel();
   state.page -= 1;
   void loadCustomers();
 });
 $('btn-next').addEventListener('click', () => {
+  searchCustomers.cancel();
   state.page += 1;
   void loadCustomers();
 });
 $('filter-query').addEventListener('input', () => {
+  // ⭐⭐⭐ M-120: ⭐⭐⭐ the page does NOT ask the server on every letter
+  // ⭐⭐⭐ M-120 ⇒ ⇒ ⇒ it waits until the user stops typing.
+  // ⭐⭐⭐ M-120: ⭐⭐⭐ the request that is ALREADY on its way belongs
+  // ⭐⭐⭐ M-120 to the OLD text ⇒ ⇒ ⇒ it is invalidated HERE ⇒ ⇒ ⇒ the
+  // ⭐⭐⭐ M-120 old rows never appear under the new text.
+  state.listSeq += 1;
   state.page = 0;
-  void loadCustomers({ resetPage: true });
+  searchCustomers();
 });
 $('filter-sort').addEventListener('change', () => {
+  searchCustomers.cancel();
   state.sort = $('filter-sort').value;
   void loadCustomers({ resetPage: true });
 });
 $('btn-back').addEventListener('click', () => {
-  $('profile').hidden = true;
-  $('profile-placeholder').hidden = false;
+  // ⭐⭐⭐ M-120: the way back keeps the state of the list.
+  closeProfile();
+});
+$('btn-clear-filters').addEventListener('click', () => {
+  searchCustomers.cancel();
+  $('filter-query').value = '';
+  void loadCustomers({ resetPage: true });
+});
+$('btn-retry').addEventListener('click', () => {
+  void loadCustomers();
+});
+$('btn-retry-offline').addEventListener('click', () => {
+  setOffline(false);
+  void loadCustomers();
+});
+// ⭐⭐⭐ M-120: the browser says that the connection is gone (or back).
+window.addEventListener('offline', () => {
+  setOffline(true);
+});
+window.addEventListener('online', () => {
+  setOffline(false);
+  void loadCustomers();
+});
+// ⭐⭐⭐ M-120: the button of the browser comes back to the list.
+window.addEventListener('popstate', () => {
+  if (state.profileView) closeProfile();
 });
 $('edit-form').addEventListener('submit', (event) => {
   void saveCustomer(event);

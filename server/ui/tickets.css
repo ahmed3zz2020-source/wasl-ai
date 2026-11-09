@@ -227,6 +227,36 @@ button.ghost:hover:not(:disabled) {
   background: var(--surface-2);
 }
 
+/* ⭐⭐⭐ M-119: the toggle of the queue of the unassigned tickets. */
+button.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+button.toggle[aria-pressed='true'] {
+  background: var(--accent-soft, var(--surface-2));
+  border-color: var(--accent, var(--line-strong));
+  color: var(--accent-ink, var(--text));
+  font-weight: 700;
+}
+
+button.toggle .counter {
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-weight: 700;
+}
+
+button.toggle[aria-pressed='true'] .counter {
+  background: var(--surface);
+}
+
+/* ⭐⭐⭐ M-119: the button of the assignment inside the row. */
+.assign-button {
+  margin-top: 6px;
+}
+
 /* ------------------------------------------------------------ notices */
 .notice {
   margin: 12px 20px 0;

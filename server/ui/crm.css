@@ -501,6 +501,68 @@ button.ghost:hover:not(:disabled) {
   padding: 60px 18px;
 }
 
+/* ============================================================
+   M-120 — the experience of the CRM on the mobile
+   ============================================================ */
+
+/* ⭐⭐⭐ M-120: the banner of the loss of the connection. */
+.notice.offline {
+  background: var(--danger-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.notice.offline strong {
+  color: var(--danger);
+}
+
+.notice.offline button {
+  margin-inline-start: auto;
+}
+
+/* ⭐⭐⭐ M-120: the small screen shows EITHER the list OR the profile. */
+@media (max-width: 860px) {
+  body.view-profile .pane.list {
+    display: none;
+  }
+
+  body.view-profile .pane.profile {
+    display: block;
+  }
+
+  .pane.profile {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .toolbar {
+    gap: 8px;
+  }
+
+  .toolbar .field.grow {
+    flex: 1 1 100%;
+  }
+
+  ul.customers li.customer {
+    padding: 12px;
+  }
+
+  /* ⭐⭐⭐ M-120: no nested scroll on the mobile ⇒ ⇒ ⇒ the page itself
+     ⭐⭐⭐ M-120 scrolls (a scroll inside a scroll is a bad thing on a
+     ⭐⭐⭐ M-120 phone). */
+  .customers {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .state-box {
+    padding: 20px 14px;
+  }
+}
+
 .spinner {
   width: 18px;
   height: 18px;

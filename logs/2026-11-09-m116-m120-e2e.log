@@ -1,0 +1,6 @@
+PASS 13. another company cannot read the conversation (expected 404/403 and no leak, got 0) - status=404 conversation_not_found
+PASS 14. the tenant can export its own data (expected 200 + messages, got 200) - messages=4
+PASS 15. the deletion preview shows the impact without deleting (expected 200 + counts, got 200) - messages=4
+
+JOURNEY OK
+EXIT=0
