@@ -170,18 +170,18 @@
 
 #### ٣.٤.١ ⭐⭐⭐ الروابط المثبَّتة (raw على الـcommit المنشور)
 
-| ⭐ **نصّ الردّ #٥٥** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAdocs/GPT-REVIEW-055-REQUEST.md` |
-| ⭐ **سجل الردود (§٣ = ردّ #٥٥)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAdocs/CHATGPT-REVIEW-LOG.md` |
-| ⭐ **تقرير الجولة (bis 3)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAdocs/FOUNDATION-BUILD-03-PHASE-04-BIS3-REPORT.md` |
-| ⭐ **حارس الأرقام المنشورة (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAtools/published_numbers_audit.py` |
-| ⭐ **اختبار حارس الأرقام (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAtests/tools/published-numbers.test.ts` |
-| ⭐ **اختبار تدقيق M109 (٧/٧)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAtests/tools/port-reservation-m109.test.ts` |
-| ⭐ **الحارس المربوط بالمالك (M109)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAtests/server/harness.ts` |
-| ⭐ **اختبارات الموبايل (M114)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAtests/ui/tickets-ui.test.ts` |
-| ⭐ **صفحة التذاكر (M114)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAserver/ui/tickets.js` |
-| ⭐ **مصفوفة الاختبارات** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAdocs/TEST-MATRIX.md` |
-| ⭐ **القرارات المعلّقة** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHAdocs/OPEN-DECISIONS.md` |
-| ⭐ **القرارات** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/PINSHADECISIONS.md` |
+| ⭐ **نصّ الردّ #٥٥** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/GPT-REVIEW-055-REQUEST.md` |
+| ⭐ **سجل الردود (§٣ = ردّ #٥٥)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/CHATGPT-REVIEW-LOG.md` |
+| ⭐ **تقرير الجولة (bis 3)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/FOUNDATION-BUILD-03-PHASE-04-BIS3-REPORT.md` |
+| ⭐ **حارس الأرقام المنشورة (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/tools/published_numbers_audit.py` |
+| ⭐ **اختبار حارس الأرقام (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/tests/tools/published-numbers.test.ts` |
+| ⭐ **اختبار تدقيق M109 (٧/٧)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/tests/tools/port-reservation-m109.test.ts` |
+| ⭐ **الحارس المربوط بالمالك (M109)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/tests/server/harness.ts` |
+| ⭐ **اختبارات الموبايل (M114)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/tests/ui/tickets-ui.test.ts` |
+| ⭐ **صفحة التذاكر (M114)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/server/ui/tickets.js` |
+| ⭐ **مصفوفة الاختبارات** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/TEST-MATRIX.md` |
+| ⭐ **القرارات المعلّقة** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/OPEN-DECISIONS.md` |
+| ⭐ **القرارات** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/DECISIONS.md` |
 
 ## ٤. ⭐⭐⭐ آخر رد — تفصيل كامل (ردّ #٥٤ · ٩ نوفمبر ٢٠٢٦ · جولة M109..M112 · D-077)
 <!-- wasl:current-total 933 = 932 pass + 0 fail + 1 skipped -->
