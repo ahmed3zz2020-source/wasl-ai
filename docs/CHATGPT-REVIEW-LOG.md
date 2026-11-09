@@ -207,12 +207,12 @@
 
 ### ٣.٨ ⭐⭐⭐ الروابط المثبَّتة (raw على الـcommit المنشور)
 
-| ⭐ **نصّ الردّ #٥٦** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit-A>/docs/GPT-REVIEW-056-REQUEST.md` |
+| ⭐ **نصّ الردّ #٥٦** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/docs/GPT-REVIEW-056-REQUEST.md` |
 | ⭐ **سجل الردود (§٣ = ردّ #٥٦)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit-B>/docs/CHATGPT-REVIEW-LOG.md` |
-| ⭐ **الاختبار المُصلَح (M115)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit-A>/tests/tools/published-numbers.test.ts` |
-| ⭐ **حارس الأرقام المنشورة (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit-A>/tools/published_numbers_audit.py` |
-| ⭐ **مصفوفة الاختبارات** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit-A>/docs/TEST-MATRIX.md` |
-| ⭐ **القرارات المعلّقة** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<commit-A>/docs/OPEN-DECISIONS.md` |
+| ⭐ **الاختبار المُصلَح (M115)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/tests/tools/published-numbers.test.ts` |
+| ⭐ **حارس الأرقام المنشورة (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/tools/published_numbers_audit.py` |
+| ⭐ **مصفوفة الاختبارات** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/docs/TEST-MATRIX.md` |
+| ⭐ **القرارات المعلّقة** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/09bc1e70dab20f63e4ccf83f884978ebb5f7b874/docs/OPEN-DECISIONS.md` |
 
 > ⭐ **والروابط تُثبَّت على الـcommit المنشور لحظة النشر** ⇒ ⭐ **والأداة `tools/print_gpt_msg.py --reply --check` بتولّد الروابط المثبَّتة آلياً ⇒ ⇒ ⇒ فمفيش رابط مكتوب بإيده**.
 
