@@ -30,13 +30,13 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 586 + 203 + 127 + 16 = 932 -->
+<!-- wasl:current-partition 587 + 203 + 127 + 16 = 933 -->
 
 > ⭐⭐ **CURRENT (round #54)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **586 + 203 + 127 + 16 = 932** = the number of `npm test` exactly
-> (931 of the 932 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **587 + 203 + 127 + 16 = 933** = the number of `npm test` exactly
+> (932 of the 933 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
 > ⭐⭐ **The tool fails when a published number is not the measured one**
 > ⇒ ⇒ ⇒ a number can no longer drift silently.
@@ -297,17 +297,17 @@ python3 tools/test_count_audit.py --log <run.log> --docs \
 | # | Run | Result | Log |
 |:-:|---|---|---|
 | ⭐ 0 | the baseline of this round (round #53) | **923** · 922 pass · 0 fail · 1 skipped | the run of round #53 |
-| ⭐ 1 | `npm test` | **932** · 931 pass · 0 fail · 1 skipped | `/workspace/r54-full.log` |
-| ⭐ 2 | `npm run test:unit` | **586/586** | `/workspace/r54-g-unit-1.log` |
+| ⭐ 1 | `npm test` | **933** · 932 pass · 0 fail · 1 skipped | `/workspace/r54-full.log` |
+| ⭐ 2 | `npm run test:unit` | **587/587** | `/workspace/r54-g-unit-1.log` |
 | ⭐ 3 | `npm run test:integration` | **203** · 202 pass · 0 fail · 1 skipped (the Docker drill) | `/workspace/r54-g-integration-1.log` |
 | ⭐ 4 | `npm run test:security` | **127/127** | `/workspace/r54-g-security-1.log` |
 | ⭐ 5 | `npm run test:recovery` | **16/16** | `/workspace/r54-g-recovery-1.log` |
-| ⭐ 6 | the four groups, two consecutive parallel rounds | **586 + 203 + 127 + 16 = 932** · identical in the two rounds | `/workspace/r54-g-*-1.log` and `-2.log` |
+| ⭐ 6 | the four groups, two consecutive parallel rounds | **587 + 203 + 127 + 16 = 933** · identical in the two rounds | `/workspace/r54-g-*-1.log` and `-2.log` |
 | ⭐ 7 | `npm run e2e` | **JOURNEY OK** (15/15) | `/workspace/r54-e2e.log` |
 
-> ⭐⭐ **Why 923 became 932 (and it is not a drift)**: the round
-> added **9 permanent regression tests** (M109 · 5 · M110 · 3 · M112 ·
-> +1 negative proof of the evidence guard) ⇒ ⇒ ⇒ **923 + 9 = 932**
+> ⭐⭐ **Why 923 became 933 (and it is not a drift)**: the round
+> added **10 permanent regression tests** (M109 · 5 · M110 · 4 · M112 ·
+> +1 negative proof of the evidence guard) ⇒ ⇒ ⇒ **923 + 10 = 933**
 > ⇒ ⇒ ⇒ and every one of them is a test that FAILS on the old code
 > ⇒ ⇒ ⇒ so the number grew because the coverage grew, not because a
 > file was counted twice.
