@@ -92,6 +92,8 @@
 | ⭐ **PHASE 04** (M85–M86 + التذاكر) | ⭐ `D-073` | ⭐ `docs/FOUNDATION-BUILD-03-PHASE-04-REPORT.md` | ⭐ منفَّذة |
 | ⭐ **PHASE 04 bis** (M89–M96 · حزمة الإصلاح) | ⭐ `D-074` | ⭐ `docs/FOUNDATION-BUILD-03-PHASE-04-BIS-REPORT.md` | ⭐ منفَّذة |
 | ⭐ **PHASE 04 bis 2** (M100–M104 · حزمة الأدوات والاختبارات) | ⭐ `D-075` | ⭐ `docs/FOUNDATION-BUILD-03-PHASE-04-BIS2-REPORT.md` | ⭐ منفَّذة |
+| ⭐ **جولة M105..M108** (حزمة إصلاح الردّ #٥٢ · سباق الحجز · مصفوفة الحقوق · حارس الدليل) | ⭐ `D-076` | ⭐ `docs/GPT-REVIEW-053-REQUEST.md` | ⭐ منفَّذة |
+| ⭐ **جولة M109..M112** (حزمة إصلاح الردّ #٥٣ · نافذة الحجز · جدول المصفوفة · الأرقام والروابط · حدّ الحارس) | ⭐ `D-077` | ⭐ `docs/GPT-REVIEW-054-REQUEST.md` | ⭐ منفَّذة |
 <!-- wasl:open-decisions:end -->
 
 ---
