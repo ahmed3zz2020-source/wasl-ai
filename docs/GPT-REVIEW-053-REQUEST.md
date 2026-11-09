@@ -75,9 +75,9 @@
 
 ### 📎 الروابط (مثبَّتة على الـcommit المنشور)
 
-- ⭐ **سجل الردود (ردّ #٥٣)**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<SHA>/docs/CHATGPT-REVIEW-LOG.md`
-- ⭐ **هذه الرسالة كاملة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<SHA>/docs/GPT-REVIEW-053-REQUEST.md`
-- ⭐ **الحالة الحالية**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<SHA>/CURRENT-STATE.md`
-- ⭐ **مصفوفة الاختبارات**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<SHA>/docs/TEST-MATRIX.md`
-- ⭐ **القرارات**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<SHA>/DECISIONS.md`
-- ⭐ **القرارات المفتوحة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/<SHA>/docs/OPEN-DECISIONS.md`
+- ⭐ **سجل الردود (ردّ #٥٣)**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/df5c30b5b8e7c9bcd984fc4002824f9220be26c2/docs/CHATGPT-REVIEW-LOG.md`
+- ⭐ **هذه الرسالة كاملة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/df5c30b5b8e7c9bcd984fc4002824f9220be26c2/docs/GPT-REVIEW-053-REQUEST.md`
+- ⭐ **الحالة الحالية**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/df5c30b5b8e7c9bcd984fc4002824f9220be26c2/CURRENT-STATE.md`
+- ⭐ **مصفوفة الاختبارات**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/df5c30b5b8e7c9bcd984fc4002824f9220be26c2/docs/TEST-MATRIX.md`
+- ⭐ **القرارات**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/df5c30b5b8e7c9bcd984fc4002824f9220be26c2/DECISIONS.md`
+- ⭐ **القرارات المفتوحة**: ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/df5c30b5b8e7c9bcd984fc4002824f9220be26c2/docs/OPEN-DECISIONS.md`
