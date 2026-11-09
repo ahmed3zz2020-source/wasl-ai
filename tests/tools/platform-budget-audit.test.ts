@@ -88,6 +88,163 @@ function relative(file: string): string {
   return path.relative(ROOT, file).split(path.sep).join('/');
 }
 
+// ============================================================
+// M-107: the guard of the evidence (a PURE rule, and it can fail)
+// ============================================================
+
+/** the SQL that switches the guard of the evidence off (and on). */
+export const DISABLE_TRIGGER = 'disable trigger tenant_deletion_evidence_immutable';
+export const ENABLE_TRIGGER = 'enable trigger tenant_deletion_evidence_immutable';
+
+/**
+ * THE FILES THAT MAY EXECUTE the switch of the guard off.
+ *   - tests/server/harness.ts: the approved helper and the purge;
+ *   - tests/server/foundation-evidence-guard.test.ts: the live proof
+ *     (it kills the backend and the process ON PURPOSE, so the disable
+ *     is inside a transaction that never commits).
+ * A file that needs the guard off must be added HERE on purpose.
+ */
+export const APPROVED_GUARD_FILES: readonly string[] = [
+  'tests/server/harness.ts',
+  'tests/server/foundation-evidence-guard.test.ts',
+];
+
+/**
+ * THE FILES THAT ONLY HOLD THE RULE (the SQL is a literal in them and
+ * it is never executed by them).
+ */
+export const RULE_GUARD_FILES: readonly string[] = [
+  'tests/tools/platform-budget-audit.test.ts',
+];
+
+export interface GuardFile {
+  readonly name: string;
+  readonly text: string;
+}
+
+/**
+ * M-107: THE RULE OF THE FILES.
+ * A file that switches the guard of the evidence off must be in the
+ * approved list. (The old rule searched for the WORD `begin` anywhere
+ * in the file => an unrelated `begin` satisfied it => the rule could be
+ * fooled by a comment.)
+ */
+export function checkEvidenceGuardFiles(files: readonly GuardFile[]): string[] {
+  const offenders: string[] = [];
+  for (const file of files) {
+    if (!file.text.includes(DISABLE_TRIGGER)) continue;
+    if (APPROVED_GUARD_FILES.includes(file.name)) continue;
+    if (RULE_GUARD_FILES.includes(file.name)) continue;
+    offenders.push(
+      `${file.name}: the guard of the evidence is switched off outside the approved helper`,
+    );
+  }
+  return offenders;
+}
+
+/** the block of ONE exported function of a source. */
+export function functionBlock(text: string, header: string): string {
+  const start = text.indexOf(header);
+  if (start < 0) return '';
+  const end = text.indexOf('\n}', start);
+  return end < 0 ? text.slice(start) : text.slice(start, end + 2);
+}
+
+/** the statement that contains a place of the text. */
+export function statementAround(text: string, index: number): string {
+  const before = text.slice(0, index);
+  const start = Math.max(before.lastIndexOf('await'), before.lastIndexOf(';') + 1);
+  const end = text.indexOf(';', index);
+  return text.slice(start, end < 0 ? undefined : end + 1);
+}
+
+/** the connection that runs a statement. */
+export function connectionOf(statement: string): string {
+  return /(\w+)\s*\.\s*query\s*\(/.exec(statement)?.[1] ?? '';
+}
+
+/**
+ * M-107: EVERY switch of the guard off must be INSIDE a transaction,
+ * and the transaction must be opened on the SAME connection.
+ * (The old rule accepted any `begin` that appeared anywhere before the
+ * switch, even on another connection, even in a comment.)
+ */
+export function checkGuardDisableSites(text: string, label: string): string[] {
+  const problems: string[] = [];
+  const lines = text.split('\n');
+  let offset = 0;
+  for (const [index, line] of lines.entries()) {
+    const at = line.indexOf(DISABLE_TRIGGER);
+    const position = offset + at;
+    offset += line.length + 1;
+    if (at < 0) continue;
+    const statement = statementAround(text, position);
+    const connection = connectionOf(statement);
+    if (!connection) {
+      problems.push(
+        `${label}:${index + 1}: the switch of the guard off is not a query of a connection`,
+      );
+      continue;
+    }
+    const before = text.slice(0, position);
+    const opened = new RegExp(`${connection}\\s*\\.\\s*query\\s*\\(\\s*['"\`]begin['"\`]`).test(before);
+    if (!opened) {
+      problems.push(
+        `${label}:${index + 1}: the guard is switched off OUTSIDE a transaction (the connection ${connection} did not open one)`,
+      );
+    }
+  }
+  return problems;
+}
+
+/**
+ * M-107: THE SEQUENCE OF AN APPROVED HELPER.
+ * ONE connection, and on THAT connection: begin, disable, enable,
+ * commit - and a rollback on a failure.
+ */
+export function checkGuardHelperBlock(block: string, label: string): string[] {
+  const problems: string[] = [];
+  if (!block) {
+    problems.push(`${label}: the helper was not found`);
+    return problems;
+  }
+  const connect = /const\s+(\w+)\s*=\s*await\s+\w+\.connect\(\)/.exec(block);
+  if (!connect) {
+    problems.push(`${label}: it does not open a connection`);
+    return problems;
+  }
+  const client = connect[1] ?? '';
+  const connections = (block.match(/\.connect\(\)/g) ?? []).length;
+  if (connections !== 1) {
+    problems.push(`${label}: it opens ${connections} connections (it must be one)`);
+  }
+  const begin = block.indexOf(`query('begin')`);
+  const disable = block.indexOf(DISABLE_TRIGGER);
+  const enable = block.indexOf(ENABLE_TRIGGER);
+  const commit = block.indexOf(`query('commit')`);
+  const rollback = block.indexOf(`query('rollback')`);
+  if (!(begin >= 0 && begin < disable && disable < enable && enable < commit)) {
+    problems.push(`${label}: the sequence begin -> disable -> enable -> commit is broken`);
+  }
+  if (rollback < 0) {
+    problems.push(`${label}: it does not roll back (a failure would leave the guard off)`);
+  }
+  for (const [what, index] of [
+    ['begin', begin],
+    ['disable', disable],
+    ['enable', enable],
+    ['commit', commit],
+    ['rollback', rollback],
+  ] as const) {
+    if (index < 0) continue;
+    const statement = statementAround(block, index);
+    if (!new RegExp(`\\b${client}\\b`).test(statement)) {
+      problems.push(`${label}: the ${what} does not run on the connection ${client}`);
+    }
+  }
+  return problems;
+}
+
 /**
  * ⭐⭐ The inventory of a file: the lines that touch a shared resource
  * and whether the line MUTATES it.
@@ -202,66 +359,131 @@ test('FOUNDATION 4) the audit of the shared platform resources (M-82)', async (t
     );
   });
 
-  await t.test('⭐⭐⭐ M-100: the guard of the evidence is switched off ONLY inside a transaction', async () => {
-    // ⭐⭐⭐ M-100: THE RULE THAT MAKES THE FIX PERMANENT.
-    // ⭐⭐⭐ `alter table ... disable trigger` switches the guard off for
-    // ⭐⭐⭐ the WHOLE table ⇒ ⭐⭐⭐ ⇒ if a drill does it OUTSIDE a
-    // ⭐⭐⭐ ⇒ transaction ⇒ ⇒ ⇒ the guard is off for everybody while
-    // ⭐⭐⭐ ⇒ that drill runs ⇒ ⇒ ⇒ ⇒ and the evidence of EVERY
-    // ⭐⭐⭐ ⇒ company is unprotected ⇒ ⇒ ⇒ ⇒ ⇒ the audit fails.
+  await t.test('M-100: the guard of the evidence is switched off ONLY inside a transaction', async () => {
+    // THE RULE THAT MAKES THE FIX PERMANENT (M-107 made it strict):
+    //   1. only the APPROVED files may execute the switch of the guard
+    //      off (and the rule itself is only a literal in the audit);
+    //   2. every switch of the guard off must be inside a transaction
+    //      that was opened on the SAME connection;
+    //   3. the approved helper must do it in ONE transaction on ONE
+    //      connection: begin -> disable -> enable -> commit, and a
+    //      rollback on a failure.
     const harness = fs.readFileSync(path.join(ROOT, 'tests', 'server', 'harness.ts'), 'utf8');
-    const offenders: string[] = [];
-    for (const file of allFiles()) {
-      const text = fs.readFileSync(file, 'utf8');
-      if (!text.includes('disable trigger tenant_deletion_evidence_immutable')) continue;
-      const name = relative(file);
-      if (name === 'tests/server/harness.ts') continue; // ⭐⭐ the helper itself.
-      if (name === 'tests/tools/platform-budget-audit.test.ts') continue; // ⭐⭐ this file (the pattern is in a literal).
-      // ⭐⭐⭐ THE RULE: the `disable` must come AFTER a `begin` ⇒ ⇒ ⇒
-      // ⭐⭐⭐ ⇒ it is inside a transaction ⇒ ⇒ ⇒ ⇒ the window is closed
-      // ⭐⭐⭐ ⇒ by the table lock ⇒ ⇒ ⇒ ⇒ and a crash rolls it back.
-      const at = text.indexOf('disable trigger tenant_deletion_evidence_immutable');
-      const before = text.slice(0, at);
-      const opened = before.lastIndexOf("query('begin')") >= 0 || before.lastIndexOf('begin') >= 0;
-      if (!opened) offenders.push(name);
-    }
+    const offenders = checkEvidenceGuardFiles(
+      allFiles().map((file) => ({ name: relative(file), text: fs.readFileSync(file, 'utf8') })),
+    );
     assert.deepEqual(
       offenders,
       [],
-      `⭐⭐⭐ these files switch the guard off OUTSIDE a transaction ⇒ the guard is off for the whole table:\n${offenders.join('\n')}`,
+      `these files switch the guard of the evidence off OUTSIDE the approved helper:\n${offenders.join('\n')}`,
     );
-    // ⭐⭐⭐ AND THE HELPER ITSELF: the `disable` is between a `begin`
-    // ⭐⭐⭐ and a `commit` ⇒ ⇒ ⇒ and a failure rolls it back ⇒ ⇒ ⇒.
-    const helper = harness.slice(
-      harness.indexOf('export async function withEvidenceGuardDisabled'),
+    // AND EVERY SITE of the approved files is inside a transaction of the
+    // SAME connection.
+    for (const name of APPROVED_GUARD_FILES) {
+      const text = fs.readFileSync(path.join(ROOT, name), 'utf8');
+      assert.deepEqual(
+        checkGuardDisableSites(text, name),
+        [],
+        `a switch of the guard off that is not inside a transaction:\n${checkGuardDisableSites(text, name).join('\n')}`,
+      );
+    }
+    // AND THE HELPERS THEMSELVES (the same sequence, on one connection).
+    assert.deepEqual(
+      checkGuardHelperBlock(
+        functionBlock(harness, 'export async function withEvidenceGuardDisabled'),
+        'withEvidenceGuardDisabled',
+      ),
+      [],
+      'the helper that switches the guard off is not one transaction on one connection',
     );
-    const begin = helper.indexOf("query('begin')");
-    const disable = helper.indexOf('disable trigger tenant_deletion_evidence_immutable');
-    const enable = helper.indexOf('enable trigger tenant_deletion_evidence_immutable');
-    const commit = helper.indexOf("query('commit')");
-    const rollback = helper.indexOf("query('rollback')");
-    assert.ok(begin >= 0, '⭐⭐⭐ the helper does not open a transaction');
+    assert.deepEqual(
+      checkGuardHelperBlock(
+        functionBlock(harness, 'export async function purgeEvidence'),
+        'purgeEvidence',
+      ),
+      [],
+      'the purge of the evidence is not one transaction on one connection',
+    );
+    // AND the purge does not take an advisory lock (the transaction of
+    // the table replaces it).
+    const purge = functionBlock(harness, 'export async function purgeEvidence');
     assert.ok(
-      begin < disable && disable < enable && enable < commit,
-      '⭐⭐⭐ the guard is not switched off inside the transaction ⇒ the window is open',
+      !purge.includes('pg_advisory_lock'),
+      'the purge of the evidence takes an advisory lock => the key of another resource is used',
+    );
+  });
+
+  await t.test('M-107: the NEGATIVE PROOF of the guard of the evidence', async () => {
+    // The rule must be able to FAIL: these sources break it on purpose
+    // and the rule must catch every one of them.
+    //
+    // (a) an unrelated `begin` (in a comment, or on another connection)
+    //     does NOT satisfy the rule any more.
+    const cheat = [
+      '// we begin the work here',
+      'const client = await pool.connect();',
+      "await client.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+    ].join('\n');
+    assert.deepEqual(
+      checkEvidenceGuardFiles([
+        { name: 'tests/tools/a-cheating-file.test.ts', text: cheat },
+      ]),
+      ['tests/tools/a-cheating-file.test.ts: the guard of the evidence is switched off outside the approved helper'],
+      'the rule accepted a file that switches the guard off outside the approved helper',
     );
     assert.ok(
-      rollback >= 0,
-      '⭐⭐⭐ the helper does not roll back ⇒ a failure leaves the guard off',
+      checkGuardDisableSites(cheat, 'the cheating file').length > 0,
+      'the rule accepted a switch of the guard off that is not inside a transaction',
     );
-    // ⭐⭐⭐ AND the purge of the evidence uses the same discipline.
-    const purge = harness.slice(harness.indexOf('export async function purgeEvidence'));
-    const purgeBegin = purge.indexOf("query('begin')");
-    const purgeDisable = purge.indexOf('disable trigger tenant_deletion_evidence_immutable');
-    const purgeCommit = purge.indexOf("query('commit')");
-    const purgeRollback = purge.indexOf("query('rollback')");
+    // (b) a `begin` on ANOTHER connection does not open the transaction
+    //     of the switch.
+    const otherConnection = [
+      'const a = await pool.connect();',
+      "await a.query('begin');",
+      'const b = await pool.connect();',
+      "await b.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+    ].join('\n');
     assert.ok(
-      purgeBegin >= 0 && purgeBegin < purgeDisable && purgeDisable < purgeCommit,
-      '⭐⭐⭐ the purge of the evidence is not atomic ⇒ the guard can stay off',
+      checkGuardDisableSites(otherConnection, 'the two connections').length > 0,
+      'the rule accepted a switch of the guard off on another connection',
     );
+    // (c) a helper that opens TWO connections is caught.
+    const twoConnections = [
+      'const a = await pool.connect();',
+      "await a.query('begin');",
+      "await b.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('enable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('commit');",
+      "await a.query('rollback');",
+    ].join('\n');
     assert.ok(
-      purgeRollback >= 0,
-      '⭐⭐⭐ the purge of the evidence does not roll back ⇒ a failure leaves the guard off',
+      checkGuardHelperBlock(twoConnections, 'the two connections').length > 0,
+      'the rule accepted a helper that opens two connections',
+    );
+    // (d) a helper without a rollback is caught.
+    const noRollback = [
+      'const a = await pool.connect();',
+      "await a.query('begin');",
+      "await a.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('enable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('commit');",
+    ].join('\n');
+    assert.ok(
+      checkGuardHelperBlock(noRollback, 'the helper without a rollback').length > 0,
+      'the rule accepted a helper that does not roll back',
+    );
+    // (e) a helper whose sequence is broken is caught.
+    const brokenSequence = [
+      'const a = await pool.connect();',
+      "await a.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('begin');",
+      "await a.query('enable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('commit');",
+      "await a.query('rollback');",
+    ].join('\n');
+    assert.ok(
+      checkGuardHelperBlock(brokenSequence, 'the broken sequence').length > 0,
+      'the rule accepted a helper whose sequence is broken',
     );
   });
 
