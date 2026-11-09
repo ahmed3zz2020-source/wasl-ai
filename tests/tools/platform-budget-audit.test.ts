@@ -192,6 +192,30 @@ export function checkGuardDisableSites(text: string, label: string): string[] {
       problems.push(
         `${label}:${index + 1}: the guard is switched off OUTSIDE a transaction (the connection ${connection} did not open one)`,
       );
+      continue;
+    }
+    // ⭐⭐⭐ M-112: the transaction must still be OPEN at the moment of
+    // the switch. A `begin` that was closed by a `commit` or a
+    // `rollback` BEFORE the switch does NOT hold the switch => the old
+    // rule accepted it (it only asked "was a begin before?").
+    const beginPattern = new RegExp(
+      `${connection}\\s*\\.\\s*query\\s*\\(\\s*['"\`]begin['"\`]`,
+      'g',
+    );
+    let beginIndex = -1;
+    for (const match of before.matchAll(beginPattern)) {
+      beginIndex = match.index ?? -1;
+    }
+    if (beginIndex >= 0) {
+      const between = before.slice(beginIndex);
+      const closed = new RegExp(
+        `${connection}\\s*\\.\\s*query\\s*\\(\\s*['"\`](commit|rollback)['"\`]`,
+      ).test(between);
+      if (closed) {
+        problems.push(
+          `${label}:${index + 1}: the transaction of the connection ${connection} was CLOSED (commit or rollback) BEFORE the switch of the guard off`,
+        );
+      }
     }
   }
   return problems;
@@ -228,6 +252,19 @@ export function checkGuardHelperBlock(block: string, label: string): string[] {
   }
   if (rollback < 0) {
     problems.push(`${label}: it does not roll back (a failure would leave the guard off)`);
+  }
+  // ⭐⭐⭐ M-112: the transaction must not be closed between the `begin`
+  // and the switch of the guard off.
+  if (begin >= 0 && disable > begin) {
+    const between = block.slice(begin, disable);
+    const closed = new RegExp(
+      `\\b${client}\\b[^\\n]*\\.\\s*query\\s*\\(\\s*['"\`](commit|rollback)['"\`]`,
+    ).test(between);
+    if (closed) {
+      problems.push(
+        `${label}: the transaction is closed (commit or rollback) BETWEEN the begin and the switch of the guard off`,
+      );
+    }
   }
   for (const [what, index] of [
     ['begin', begin],
@@ -484,6 +521,44 @@ test('FOUNDATION 4) the audit of the shared platform resources (M-82)', async (t
     assert.ok(
       checkGuardHelperBlock(brokenSequence, 'the broken sequence').length > 0,
       'the rule accepted a helper whose sequence is broken',
+    );
+  });
+
+  await t.test('M-112: the NEGATIVE PROOF of a transaction that was CLOSED before the switch', async () => {
+    // ⭐⭐⭐ M-112: a transaction that was CLOSED before the switch of
+    // the guard off does NOT hold the switch => the rule must catch it.
+    const closedBefore = [
+      'const a = await pool.connect();',
+      "await a.query('begin');",
+      "await a.query('commit');",
+      "await a.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+    ].join('\n');
+    assert.ok(
+      checkGuardDisableSites(closedBefore, 'the closed transaction').length > 0,
+      'the rule accepted a switch of the guard off after the transaction was committed',
+    );
+    const rolledBackBefore = [
+      'const a = await pool.connect();',
+      "await a.query('begin');",
+      "await a.query('rollback');",
+      "await a.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+    ].join('\n');
+    assert.ok(
+      checkGuardDisableSites(rolledBackBefore, 'the rolled back transaction').length > 0,
+      'the rule accepted a switch of the guard off after the transaction was rolled back',
+    );
+    const closedInsideTheHelper = [
+      'const a = await pool.connect();',
+      "await a.query('begin');",
+      "await a.query('rollback');",
+      "await a.query('alter table tenant_deletion_evidence disable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('enable trigger tenant_deletion_evidence_immutable');",
+      "await a.query('commit');",
+      "await a.query('rollback');",
+    ].join('\n');
+    assert.ok(
+      checkGuardHelperBlock(closedInsideTheHelper, 'the closed helper').length > 0,
+      'the rule accepted a helper that closes the transaction before the switch of the guard off',
     );
   });
 
