@@ -132,7 +132,7 @@ function reclaimSource(impl: Impl, claim: string, barrier: string, id: number): 
       },
     };
 
-    const won = take(claim, owner, ownerFile, seam);
+    const won = await take(claim, owner, ownerFile, seam);
     fs.writeFileSync(path.join(barrier, 'done-' + id), '1');
     // the owner stays ALIVE until the parent says so (like a real owner
     // that holds the block) => a live claim is never taken.
@@ -140,7 +140,7 @@ function reclaimSource(impl: Impl, claim: string, barrier: string, id: number): 
       if (fs.existsSync(path.join(barrier, 'finish-' + id))) break;
       sleep(10);
     }
-    process.stdout.write(JSON.stringify({ won: won === true, token: owner.token }));
+    process.stdout.write(JSON.stringify({ won: won === true, token: owner.token }), () => { process.exit(0); });
   `;
 }
 
@@ -177,13 +177,13 @@ function releaseSource(impl: Impl, claim: string, barrier: string): string {
       },
     };
 
-    release(claim, owner, ownerFile, seam);
+    await release(claim, owner, ownerFile, seam);
     fs.writeFileSync(path.join(barrier, 'done'), '1');
     for (let i = 0; i < 6000; i += 1) {
       if (fs.existsSync(path.join(barrier, 'finish'))) break;
       sleep(10);
     }
-    process.stdout.write('released');
+    process.stdout.write('released', () => { process.exit(0); });
   `;
 }
 
@@ -343,12 +343,17 @@ test('FOUNDATION 04) the race of the reclaim of a claim (M-105)', async (t) => {
       claim: string,
       owner: unknown,
       ownerFile: string,
-    ) => boolean;
+    ) => boolean | Promise<boolean>;
     const writeStale = module[NEW_IMPL.writeStale] as (
       claim: string,
       ownerFile: string,
     ) => void;
     const readOwner = module[NEW_IMPL.readOwner] as (claim: string) => { token: string } | null;
+    const release = module[NEW_IMPL.release] as (
+      claim: string,
+      owner: unknown,
+      ownerFile: string,
+    ) => void | Promise<void>;
     const { currentPortOwner, writePortOwnerFile } = (await import(HARNESS)) as {
       currentPortOwner: () => { token: string };
       writePortOwnerFile: (owner: { token: string }) => string;
@@ -365,7 +370,7 @@ test('FOUNDATION 04) the race of the reclaim of a claim (M-105)', async (t) => {
 
     const mine = currentPortOwner();
     const myFile = writePortOwnerFile(mine);
-    const taken = take(claim, mine, myFile);
+    const taken = await take(claim, mine, myFile);
     assert.ok(taken, 'the stale claim was NOT reclaimed');
     const owner = readOwner(claim);
     assert.ok(owner, 'the reclaimed claim has no owner');
@@ -374,6 +379,7 @@ test('FOUNDATION 04) the race of the reclaim of a claim (M-105)', async (t) => {
     // block of the dead process is NOT lost.
     assert.ok(fs.existsSync(claim), 'the claim of the dead process was dropped instead of taken');
 
+    await release(claim, mine, myFile);
     fs.rmSync(claim, { force: true, recursive: true });
     fs.rmSync(deadOwnerFile, { force: true });
     fs.rmSync(myFile, { force: true });

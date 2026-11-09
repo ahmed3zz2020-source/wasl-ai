@@ -119,7 +119,7 @@ export async function startHarness(options: HarnessOptions = {}): Promise<Harnes
       await appPool.end();
       await ownerPool.end();
       // ⭐⭐⭐ M-99: the block goes back to the pool.
-      reserved.release();
+      await reserved.release();
     },
   };
 }
@@ -465,177 +465,172 @@ export function replaceClaimOwner(claim: string, ownerFile: string): void {
   fs.linkSync(ownerFile, claimOwnerPath(claim));
 }
 
-export function takeMarker(
-  marker: string,
-  owner: PortOwner,
-  ownerFile: string,
-  seam?: PortSeam,
-): boolean {
-  const ownerPath = claimOwnerPath(marker);
-  fs.mkdirSync(path.dirname(marker), { recursive: true });
-  for (let attempt = 0; attempt < 64; attempt += 1) {
-    // (1) THE CLAIM IS A DIRECTORY: mkdir() is atomic and it fails with
-    //     EEXIST when the name is taken, so a block is never shared.
-    let created = false;
-    try {
-      fs.mkdirSync(marker);
-      created = true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') return false;
-    }
-    if (created) {
-      // The ownership is ONE atomic link() onto the fixed name `owner`.
-      try {
-        fs.linkSync(ownerFile, ownerPath);
-        return true;
-      } catch {
-        try {
-          fs.rmdirSync(marker);
-        } catch {
-          // it is not empty: somebody owns it. Leave it alone.
-        }
-        return false;
-      }
-    }
-    // (2) IS THERE AN IDENTITY IN THE CLAIM?
-    let hasIdentity = true;
-    try {
-      fs.statSync(ownerPath);
-    } catch {
-      hasIdentity = false;
-    }
-    if (!hasIdentity) {
-      // The claim has NO identity: it is broken or abandoned. Take it with
-      // ONE atomic link(): the name is free, so exactly one process wins.
-      try {
-        fs.linkSync(ownerFile, ownerPath);
-        return true;
-      } catch {
-        continue; // somebody else won the race: look again.
-      }
-    }
-    const existing = readOwner(ownerPath);
-    if (existing && ownerAlive(existing)) {
-      // The owner is alive: the block is really taken. Never take it.
-      return false;
-    }
-    // (3) THE RECLAIM: the identity is MOVED OUT of the claim, so the
-    //     CLAIM ITSELF NEVER DISAPPEARS and no other process can claim
-    //     the block while we are here.
-    seam?.afterDecision?.();
-    const moved = `${ownerPath}.take.${owner.token}.${attempt}`;
-    try {
-      fs.renameSync(ownerPath, moved);
-    } catch {
-      continue; // somebody else moved it first: look again.
-    }
-    const quarantined = readOwner(moved);
-    const sameIdentity =
-      existing !== null &&
-      quarantined !== null &&
-      quarantined.token === existing.token &&
-      quarantined.pid === existing.pid &&
-      quarantined.start === existing.start;
-    const broken = existing === null && quarantined === null;
-    if (!sameIdentity && !broken) {
-      // It is NOT the stale identity we judged: give it back, never delete
-      // it. If the name is taken now we keep our private copy (it is not
-      // ours to delete).
-      try {
-        fs.linkSync(moved, ownerPath);
-        fs.unlinkSync(moved);
-      } catch {
-        // keep the private copy.
-      }
-      continue;
-    }
-    // (4) THE CLAIM IS OURS: ONE atomic link() onto the fixed name.
-    try {
-      fs.linkSync(ownerFile, ownerPath);
-    } catch {
-      unlinkQuietly(moved);
-      return false; // somebody else won the race.
-    }
-    unlinkQuietly(moved);
-    return true;
-  }
-  return false;
+// ⭐⭐⭐ M-109: THE CLAIM OF A BLOCK IS ARBITRATED BY THE KERNEL.
+// ⭐⭐⭐ WHY: the old protocol decided the owner with the FILE SYSTEM ⇒ ⇒ 
+// ⭐⭐⭐ a directory + an atomic link() + a RECLAIM of a stale claim ⇒ ⇒ 
+// ⭐⭐⭐ ⇒ ⇒ and the reclaim MOVED the identity of the claim out BEFORE
+// ⭐⭐⭐ ⇒ ⇒ it checked that the identity is the stale one it judged ⇒ ⇒ 
+// ⭐⭐⭐ ⇒ ⇒ ⇒ so a reclaimer with an OLD reading could move the FRESH
+// ⭐⭐⭐ ⇒ ⇒ ⇒ identity of another process away ⇒ ⇒ ⇒ and a third
+// ⭐⭐⭐ ⇒ ⇒ ⇒ process could take the free name ⇒ ⇒ ⇒ TWO
+// ⭐⭐⭐ ⇒ ⇒ ⇒ processes believed they own the same block.
+// ⭐⭐⭐ THE FIX: the owner of a block is the process that HOLDS a guard
+// ⭐⭐⭐ ⇒ ⇒ an ABSTRACT unix socket whose name is the base port ⇒ ⇒ ⇒ 
+// ⭐⭐⭐ ⇒ ⇒ the kernel arbitrates the name (bind() is atomic) ⇒ ⇒ ⇒ 
+// ⭐⭐⭐ ⇒ ⇒ and the kernel RELEASES the name when the process dies ⇒ ⇒ ⇒ 
+// ⭐⭐⭐ ⇒ ⇒ ⇒ so there is NO reclaim, NO takeover, NO window and
+// ⭐⭐⭐ ⇒ ⇒ ⇒ NO stale claim ⇒ ⇒ ⇒ and the block of a
+// ⭐⭐⭐ ⇒ ⇒ ⇒ dead process is free at once.
+// ⭐⭐⭐ THE RECORD IN THE DIRECTORY IS ONLY A RECORD NOW ⇒ ⇒ ⇒ it says
+// ⭐⭐⭐ ⇒ ⇒ ⇒ who holds the block (for the humans) ⇒ ⇒ ⇒ and it is NOT
+// ⭐⭐⭐ ⇒ ⇒ ⇒ the arbitration ⇒ ⇒ ⇒ so writing it can never steal
+// ⭐⭐⭐ ⇒ ⇒ ⇒ the claim of another process.
+const PORT_GUARD_PREFIX = '\0wasl-pb-';
+
+/** ⭐⭐⭐ the live guards, by the path of the claim. */
+const PORT_GUARDS = new Map<string, net.Server>();
+
+/**
+ * ⭐⭐⭐ M-109: the name of the guard of a claim.
+ * ⭐⭐⭐ It is derived from the BASE PORT (not from the path) ⇒ ⇒ ⇒ so it
+ * ⭐⭐⭐ does not depend on the temporary directory ⇒ ⇒ ⇒ and two
+ * ⭐⭐⭐ processes on the same machine always agree on it.
+ */
+export function portGuardName(marker: string): string {
+ const match = /block-(\d+)$/.exec(marker);
+ if (match?.[1]) return `${PORT_GUARD_PREFIX}${match[1]}`;
+ // a claim that is not a block (the probes of the tests) ⇒ ⇒ ⇒ a hash
+ // of the full path ⇒ ⇒ ⇒ it is still stable across the processes.
+ let hash = 0;
+ for (let index = 0; index < marker.length; index += 1) {
+ hash = (hash * 31 + marker.charCodeAt(index)) >>> 0;
+ }
+ return `${PORT_GUARD_PREFIX}x${hash.toString(16)}`;
+}
+
+/** ⭐⭐⭐ close a guard and wait until the kernel freed the name. */
+async function closeGuard(marker: string): Promise<void> {
+ const server = PORT_GUARDS.get(marker);
+ if (!server) return;
+ PORT_GUARDS.delete(marker);
+ await new Promise<void>((resolve) => {
+ try {
+ server.close(() => resolve());
+ } catch {
+ resolve();
+ }
+ });
 }
 
 /**
- * M-105: give a claim back WITHOUT releasing the identity file of the
- * owner (the owner still needs it for the next block).
+ * ⭐⭐⭐ M-109: TAKE THE CLAIM OF A BLOCK.
+ * ⭐⭐⭐ THE MECHANISM: bind an abstract unix socket whose name is the
+ * ⭐⭐⭐ base port ⇒ ⇒ ⇒ the kernel is the judge ⇒ ⇒ ⇒ and it refuses
+ * ⭐⭐⭐ the second binder with EADDRINUSE ⇒ ⇒ ⇒ so two files
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ can NEVER own one block ⇒ ⇒ ⇒ no
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ double reservation, ever.
+ * ⭐⭐⭐ THE STALE CLAIM: there is none any more ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ the kernel frees the name when the owner dies ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ so the block of a dead process is taken
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ at once ⇒ ⇒ ⇒ .
  */
-export function dropClaim(claim: string, owner: PortOwner): void {
-  const ownerPath = claimOwnerPath(claim);
-  const moved = `${ownerPath}.drop.${owner.token}.${Date.now()}`;
-  try {
-    fs.renameSync(ownerPath, moved);
-  } catch {
-    return;
-  }
-  const held = readOwner(moved);
-  if (held && held.token !== owner.token) {
-    // it is not ours: give it back
-    try {
-      fs.linkSync(moved, ownerPath);
-      fs.unlinkSync(moved);
-    } catch {
-      // keep the private copy.
-    }
-    return;
-  }
-  unlinkQuietly(moved);
-  try {
-    fs.rmdirSync(claim);
-  } catch {
-    // not empty: somebody owns it now.
-  }
+export async function takeMarker(
+ marker: string,
+ owner: PortOwner,
+ ownerFile: string,
+ seam?: PortSeam,
+): Promise<boolean> {
+ const name = portGuardName(marker);
+ const server = net.createServer();
+ // ⭐⭐⭐ THE SEAM: the decision is taken and the ACT (the bind) did not
+ // ⭐⭐⭐ happen yet ⇒ ⇒ ⇒ so the test can freeze the process HERE ⇒ 
+ // ⭐⭐⭐ ⇒ ⇒ ⇒ and the race becomes deterministic (not by luck).
+ seam?.afterDecision?.();
+ const bound = await new Promise<boolean>((resolve) => {
+ let settled = false;
+ const settle = (value: boolean): void => {
+ if (settled) return;
+ settled = true;
+ resolve(value);
+ };
+ // ⭐⭐⭐ fail-closed: ANY error means we do NOT own the block.
+ server.once('error', () => settle(false));
+ server.listen(name, () => settle(true));
+ });
+ if (!bound) {
+ try {
+ server.close();
+ } catch {
+ // it never listened.
+ }
+ return false;
+ }
+ server.on('error', () => undefined);
+ PORT_GUARDS.set(marker, server);
+ // ⭐⭐⭐ THE RECORD (who holds the block) ⇒ ⇒ ⇒ it is a convenience for
+ // ⭐⭐⭐ the humans ⇒ ⇒ ⇒ and NOT the arbitration ⇒ ⇒ ⇒ 
+ // ⭐⭐⭐ ⇒ ⇒ ⇒ so it can never steal the claim of another one.
+ try {
+ fs.mkdirSync(marker, { recursive: true });
+ fs.writeFileSync(claimOwnerPath(marker), `${owner.token}|${owner.pid}|${owner.start}`);
+ } catch {
+ // the record is not the arbitration ⇒ a failure here is not fatal.
+ }
+ return true;
 }
 
 /**
- * M-105: THE RELEASE. It must NEVER delete the claim of another process.
- * The identity is MOVED to a private name first (an atomic step), then it
- * is checked, and only the PRIVATE copy is deleted: the canonical name is
- * never touched by the release, so a claim that another process took in
- * the meantime survives it.
+ * ⭐⭐⭐ M-109: GIVE A CLAIM BACK.
+ * ⭐⭐⭐ THE MECHANISM: close the guard of THIS process ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ the kernel frees the name ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ and only THIS process can
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ close it ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ the release can NEVER touch the claim of another process.
  */
-export function releaseMarker(
-  claim: string,
-  owner: PortOwner,
-  ownerFile: string,
-  seam?: PortSeam,
-): void {
-  const ownerPath = claimOwnerPath(claim);
-  const moved = `${ownerPath}.release.${owner.token}.${Date.now()}`;
-  try {
-    fs.renameSync(ownerPath, moved);
-  } catch {
-    // there is no identity: nothing of ours is there.
-    unlinkQuietly(ownerFile);
-    return;
-  }
-  const held = readOwner(moved);
-  if (held && held.token !== owner.token) {
-    // It is NOT ours: give it back and never delete it.
-    try {
-      fs.linkSync(moved, ownerPath);
-      fs.unlinkSync(moved);
-    } catch {
-      // keep the private copy.
-    }
-    unlinkQuietly(ownerFile);
-    return;
-  }
-  seam?.afterDecision?.();
-  // Only OUR private copy is deleted.
-  unlinkQuietly(moved);
-  try {
-    fs.rmdirSync(claim);
-  } catch {
-    // not empty: somebody owns the claim now.
-  }
-  unlinkQuietly(ownerFile);
+export async function releaseMarker(
+ claim: string,
+ owner: PortOwner,
+ ownerFile: string,
+ seam?: PortSeam,
+): Promise<void> {
+ seam?.afterDecision?.();
+ await closeGuard(claim);
+ // the record: it is deleted ONLY when it is ours ⇒ ⇒ ⇒ 
+ // ⇒ ⇒ ⇒ a claim that another process took survives us.
+ const ownerPath = claimOwnerPath(claim);
+ const held = readOwner(ownerPath);
+ if (!held || held.token === owner.token) {
+ unlinkQuietly(ownerPath);
+ try {
+ fs.rmdirSync(claim);
+ } catch {
+ // not empty: somebody else owns the record now.
+ }
+ }
+ unlinkQuietly(ownerFile);
+}
+
+/**
+ * ⭐⭐⭐ M-109: give a claim back WITHOUT waiting for the owner ⇒ ⇒ ⇒ it
+ * ⭐⭐⭐ is used when the ports of the block turned out to be taken ⇒ ⇒ ⇒ 
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ so the guard is closed and the block goes back to the pool.
+ */
+export async function dropClaim(claim: string, owner: PortOwner): Promise<void> {
+ await closeGuard(claim);
+ const ownerPath = claimOwnerPath(claim);
+ const held = readOwner(ownerPath);
+ if (!held || held.token === owner.token) {
+ unlinkQuietly(ownerPath);
+ try {
+ fs.rmdirSync(claim);
+ } catch {
+ // not empty: somebody else owns the record now.
+ }
+ }
 }
 
 /** ⭐⭐ Reserve a block of ports (atomic ⇒ two files never share one). */
@@ -662,7 +657,7 @@ export async function reservePortBlock(
     for (let k = 0; k < totalBlocks; k += 1) {
       const base = 8791 + ((hint + k) % totalBlocks) * blockSize;
       const marker = path.join(PORT_BLOCK_DIR, `block-${base}`);
-      if (!takeMarker(marker, owner, ownerFile)) continue;
+      if (!(await takeMarker(marker, owner, ownerFile))) continue;
       // ⭐⭐⭐ M-101: the marker is NOT a proof that the ports are free
       // ⭐⭐⭐ (something outside the marker system may hold a port) ⇒ ⇒
       // ⭐⭐⭐ so the probe stays as the second line of defence.
@@ -676,13 +671,13 @@ export async function reservePortBlock(
       if (free) {
         return {
           base,
-          release: () => {
-            releaseMarker(marker, owner, ownerFile);
+          release: async () => {
+            await releaseMarker(marker, owner, ownerFile);
           },
         };
       }
       // ⭐⭐ the block is taken by something else ⇒ ⇒ give it back.
-      dropClaim(marker, owner);
+      await dropClaim(marker, owner);
     }
   } finally {
     unlinkQuietly(ownerFile);

@@ -78,7 +78,7 @@ function spawnReservingChild(holdMs: number): {
     const block = await reservePortBlock();
     process.stdout.write(String(block.base));
     await new Promise((r) => setTimeout(r, ${holdMs}));
-    block.release();
+    await block.release();
   `;
   const child = spawn(
     process.execPath,
@@ -110,7 +110,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
       process.stdout.write(String(block.base));
       // ⭐⭐ hold the reservation so the siblings really race.
       await new Promise((r) => setTimeout(r, 3000));
-      block.release();
+      await block.release();
     `;
     const children = [0, 1, 2, 3, 4, 5].map(() => reserveChild(source));
     const results = await Promise.all(children);
@@ -141,7 +141,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
       const block = await reservePortBlock();
       process.stdout.write(String(block.base));
       await new Promise((r) => setTimeout(r, 4000));
-      block.release();
+      await block.release();
     `;
     const { child, readBase } = spawnReservingChild(4000);
     const base = await readBase();
@@ -154,7 +154,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
     // ⭐⭐ block ourselves and release it ⇒ ⇒ the child keeps its own.
     const { reservePortBlock } = await import(HARNESS);
     const mine = await reservePortBlock();
-    mine.release();
+    await mine.release();
     assert.ok(
       fs.existsSync(path.join(PORT_BLOCK_DIR, `block-${base}`)),
       'the release of another process removed the reservation of the child',
@@ -197,7 +197,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
     const { reservePortBlock } = await import(HARNESS);
     const mine = await reservePortBlock();
     assert.ok(mine.base > 0, 'no block could be reserved');
-    mine.release();
+    await mine.release();
   });
 
   await t.test('⭐⭐⭐ M-101d: a STALE MARKER WITH A REUSED PID is reclaimed', async () => {
@@ -208,7 +208,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
     // ⭐⭐⭐ The drill is at the level of the MARKER ⇒ ⇒ ⇒ (the
     // ⭐⭐⭐ directory of the blocks is shared with the other files ⇒ ⇒
     // ⭐⭐⭐ ⇒ ⇒ ⇒ and a block of another file must never be touched).
-    const { takeMarker, currentPortOwner, writePortOwnerFile, writeStaleClaim, readClaimOwner } =
+    const { takeMarker, releaseMarker, currentPortOwner, writePortOwnerFile, writeStaleClaim, readClaimOwner } =
       await import(HARNESS);
     const owners = path.join(PORT_BLOCK_DIR, 'owners');
     fs.mkdirSync(owners, { recursive: true });
@@ -226,11 +226,12 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
 
     const mine = currentPortOwner();
     const myFile = writePortOwnerFile(mine);
-    const taken = takeMarker(staleMarker, mine, myFile);
+    const taken = await takeMarker(staleMarker, mine, myFile);
     assert.ok(taken, 'the stale marker of a reused pid was NOT reclaimed');
     const owner = readClaimOwner(staleMarker);
     assert.ok(owner, 'the reclaimed claim has no owner');
     assert.equal(owner.token, mine.token, 'the marker does not carry our identity');
+    await releaseMarker(staleMarker, mine, myFile);
     fs.rmSync(staleMarker, { force: true, recursive: true });
     fs.rmSync(fakeOwnerFile, { force: true });
     fs.rmSync(myFile, { force: true });
@@ -240,15 +241,19 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
     const liveOwner = currentPortOwner();
     const liveFile = writePortOwnerFile(liveOwner);
     const liveMarker = path.join(PORT_BLOCK_DIR, `probe-live-${Date.now()}`);
-    writeStaleClaim(liveMarker, liveFile);
+    // the LIVE owner HOLDS the claim ⇒ ⇒ ⇒ (the kernel arbitrates it) ⇒
+    // ⇒ ⇒ ⇒ ⇒ so the second one is refused by the KERNEL.
+    const held = await takeMarker(liveMarker, liveOwner, liveFile);
+    assert.ok(held, 'the live owner could not take its own claim');
     const other = currentPortOwner();
     const otherFile = writePortOwnerFile(other);
     assert.equal(
-      takeMarker(liveMarker, other, otherFile),
+      await takeMarker(liveMarker, other, otherFile),
       false,
       'the claim of a LIVE owner was taken',
     );
     assert.ok(fs.existsSync(liveMarker), 'the claim of a LIVE owner was removed');
+    await releaseMarker(liveMarker, liveOwner, liveFile);
     fs.rmSync(liveMarker, { force: true, recursive: true });
     fs.rmSync(liveFile, { force: true });
     fs.rmSync(otherFile, { force: true });
@@ -270,7 +275,7 @@ test('FOUNDATION 04) the reservation of the ports (M-101)', async (t) => {
         const inBlock = mine.base <= taken && taken < mine.base + 30;
         assert.ok(!inBlock, `the reservation took the block of the taken port ${mine.base}`);
       } finally {
-        mine.release();
+        await mine.release();
       }
     } finally {
       await new Promise<void>((resolve) => holder.close(() => resolve()));
