@@ -171,7 +171,7 @@
 #### ٣.٤.١ ⭐⭐⭐ الروابط المثبَّتة (raw على الـcommit المنشور)
 
 | ⭐ **نصّ الردّ #٥٥** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/GPT-REVIEW-055-REQUEST.md` |
-| ⭐ **سجل الردود (§٣ = ردّ #٥٥)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/CHATGPT-REVIEW-LOG.md` |
+| ⭐ **سجل الردود (§٣ = ردّ #٥٥)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/9fa232be9827bd1b257f9adfba07e7c7470b343c/docs/CHATGPT-REVIEW-LOG.md` |
 | ⭐ **تقرير الجولة (bis 3)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/docs/FOUNDATION-BUILD-03-PHASE-04-BIS3-REPORT.md` |
 | ⭐ **حارس الأرقام المنشورة (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/tools/published_numbers_audit.py` |
 | ⭐ **اختبار حارس الأرقام (M113)** | ⭐ `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/3a97e6188588a3a342d0295f00b78f7ae7b78851/tests/tools/published-numbers.test.ts` |
