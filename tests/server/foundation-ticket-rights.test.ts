@@ -34,84 +34,31 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { UnitOfWork } from '../../server/db/unit-of-work.ts';
+import {
+  TICKET_OPERATIONS,
+  TICKET_RIGHTS_MATRIX,
+  type TicketOperation,
+  type TicketRole,
+  type TicketStatus,
+} from './foundation-ticket-rights.matrix.ts';
 import { loginAs, resetSyntheticData, startHarness } from './harness.ts';
 
 const NS = 'rgt';
 const PASSCODE = process.env['WASL_TEST_PASSCODE'] ?? 'wasl-local-test';
 
-type Role = 'owner' | 'supervisor' | 'agent' | 'viewer';
-type Status = 200 | 201 | 403 | 404 | 409;
-type Operation =
-  | 'list'
-  | 'read_in_scope'
-  | 'read_out_of_scope'
-  | 'read_assigned'
-  | 'create'
-  | 'update'
-  | 'assign';
+type Role = TicketRole;
+type Status = TicketStatus;
+type Operation = TicketOperation;
 
-const OPERATIONS: readonly Operation[] = [
-  'list',
-  'read_in_scope',
-  'read_out_of_scope',
-  'read_assigned',
-  'create',
-  'update',
-  'assign',
-];
+const OPERATIONS: readonly Operation[] = TICKET_OPERATIONS;
 
 /**
  * THE MATRIX - the single source of the truth of the answer.
- * IT IS WRITTEN BY HAND and it is NOT read from the core => otherwise
- * the test would prove nothing.
- *
- * THE SCOPE IS PART OF THE MATRIX and this is NOT a detail:
- *   the AGENT sees the tickets that are ASSIGNED to him => a ticket of
- *   the company that is not his is OUT OF HIS SCOPE => the answer is
- *   404 and not 403 (the ticket does not exist IN HIS SCOPE, and it is
- *   not forbidden).
- *   the reader of the ticket knows TWO things: what he may do (the
- *   capability) and what he may SEE (the scope) => they are not the
- *   same thing.
+ * IT LIVES IN ITS OWN FILE (M-110) => the table of the reply and the
+ * measurement of the API read the SAME numbers => a cell of the
+ * document can never drift away from the behaviour.
  */
-const MATRIX: Readonly<Record<Role, Readonly<Record<Operation, Status>>>> = Object.freeze({
-  owner: Object.freeze({
-    list: 200,
-    read_in_scope: 200,
-    read_out_of_scope: 200,
-    read_assigned: 200,
-    create: 201,
-    update: 200,
-    assign: 201,
-  }),
-  supervisor: Object.freeze({
-    list: 200,
-    read_in_scope: 200,
-    read_out_of_scope: 200,
-    read_assigned: 200,
-    create: 201,
-    update: 200,
-    assign: 403,
-  }),
-  agent: Object.freeze({
-    list: 200,
-    read_in_scope: 200,
-    read_out_of_scope: 404,
-    read_assigned: 200,
-    create: 403,
-    update: 403,
-    assign: 403,
-  }),
-  viewer: Object.freeze({
-    list: 200,
-    read_in_scope: 200,
-    read_out_of_scope: 200,
-    read_assigned: 200,
-    create: 403,
-    update: 403,
-    assign: 403,
-  }),
-});
+const MATRIX = TICKET_RIGHTS_MATRIX;
 
 /**
  * THE CHECKER (M-106): the expected status is a NUMBER and a server
