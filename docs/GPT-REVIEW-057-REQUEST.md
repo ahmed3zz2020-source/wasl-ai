@@ -106,7 +106,7 @@ git log -1 --oneline main
 | ٥ | ⭐ `tests/ui/crm-ui.test.ts` | ⭐ **M-120-1..7** |
 | ٦ | ⭐ `tests/server/foundation-tickets-queue.test.ts` | ⭐ **٩ اختبارات (API + العزل + العدّاد + الإسناد)** |
 | ٧ | ⭐ `tests/tools/completion-board.test.ts` · ⭐ `tools/completion_board.py` · ⭐ `docs/completion-board.json` · ⭐ `docs/COMPLETION-BOARD.md` | ⭐ **لوحة نسب الإنجاز (مولَّدة · قابلة لإعادة التشغيل)** |
-| ٨ | ⭐ `tools/wasl-round-screenshots.ts` · ⭐ `docs/previews/m116-m120-*.png` | ⭐ **٩ لقطات قبل/بعد** |
+| ٨ | ⭐ `tools/wasl-round-screenshots.ts` · ⭐ `docs/previews/m116-m120-*.png` | ⭐ **٨ لقطات قبل/بعد** |
 | ٩ | ⭐ `package.json` | ⭐ **إدراج ملفَّي الاختبار الجديدين (وإلا ما كانشوا هيركضوا)** |
 | ١٠ | ⭐ `DECISIONS.md` · ⭐ `CURRENT-STATE.md` · ⭐ `SESSION-NOTES.md` · ⭐ `docs/CHATGPT-REVIEW-LOG.md` · ⭐ `docs/TEST-MATRIX.md` · ⭐ `logs/2026-11-09.md` | ⭐ **السجل والقرار والأرقام المنشورة** |
 
