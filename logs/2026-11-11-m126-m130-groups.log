@@ -1,8 +1,29 @@
 === GROUP unit ===
-EXIT=1 duration=72s
+EXIT=0 duration=89s
 # tests 605
-# pass 603
-# fail 2
+# pass 605
+# fail 0
 # skipped 0
 
 === GROUP integration ===
+EXIT=0 duration=444s
+# tests 266
+# pass 265
+# fail 0
+# skipped 1
+
+=== GROUP security ===
+EXIT=0 duration=45s
+# tests 127
+# pass 127
+# fail 0
+# skipped 0
+
+=== GROUP recovery ===
+EXIT=0 duration=35s
+# tests 16
+# pass 16
+# fail 0
+# skipped 0
+
+=== ALL GROUPS DONE ===

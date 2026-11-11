@@ -1,0 +1,113 @@
+
+> wasl-ai@0.1.0 test:recovery
+> node --experimental-strip-types --test tests/server/foundation-backup.test.ts tests/server/foundation-recovery.test.ts tests/server/foundation-backup-streaming.test.ts
+
+TAP version 13
+# Subtest: FOUNDATION 16) the backup is streamed and never writes a clear text dump (M-72)
+    # Subtest: ⭐⭐⭐ M-72a: no clear text dump exists on the disk at any moment
+    ok 1 - ⭐⭐⭐ M-72a: no clear text dump exists on the disk at any moment
+      ---
+      duration_ms: 451.249763
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-72b: a failure BEFORE the copy publishes nothing
+    ok 2 - ⭐⭐⭐ M-72b: a failure BEFORE the copy publishes nothing
+      ---
+      duration_ms: 106.469885
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-72c: a failure DURING the copy publishes nothing
+    ok 3 - ⭐⭐⭐ M-72c: a failure DURING the copy publishes nothing
+      ---
+      duration_ms: 326.183343
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-72d: a failure AFTER the copy publishes nothing
+    ok 4 - ⭐⭐⭐ M-72d: a failure AFTER the copy publishes nothing
+      ---
+      duration_ms: 396.856973
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-72e: a big database is backed up without loading it in memory
+    ok 5 - ⭐⭐⭐ M-72e: a big database is backed up without loading it in memory
+      ---
+      duration_ms: 9398.313091
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-72f: the verification catches a truncated and a replaced artifact
+    ok 6 - ⭐⭐⭐ M-72f: the verification catches a truncated and a replaced artifact
+      ---
+      duration_ms: 466.95251
+      type: 'test'
+      ...
+    1..6
+ok 1 - FOUNDATION 16) the backup is streamed and never writes a clear text dump (M-72)
+  ---
+  duration_ms: 11164.573768
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 11) the backup and the restore drill (M-04)
+    # Subtest: ⭐⭐ M-04a: the backup is written and the restore brings the data back
+    ok 1 - ⭐⭐ M-04a: the backup is written and the restore brings the data back
+      ---
+      duration_ms: 6207.60188
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-04b: the drill leaves nothing behind
+    ok 2 - ⭐⭐ M-04b: the drill leaves nothing behind
+      ---
+      duration_ms: 6176.857209
+      type: 'test'
+      ...
+    1..2
+ok 2 - FOUNDATION 11) the backup and the restore drill (M-04)
+  ---
+  duration_ms: 12402.610314
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 15) the backup, the encryption and the restore drill (M-69)
+    # Subtest: ⭐⭐⭐ M-69a: the artifact is encrypted and the manifest matches
+    ok 1 - ⭐⭐⭐ M-69a: the artifact is encrypted and the manifest matches
+      ---
+      duration_ms: 480.826086
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-69b: the restore brings the data back and is measured
+    ok 2 - ⭐⭐⭐ M-69b: the restore brings the data back and is measured
+      ---
+      duration_ms: 6119.875865
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-69c: a corrupted artifact is refused
+    ok 3 - ⭐⭐⭐ M-69c: a corrupted artifact is refused
+      ---
+      duration_ms: 545.520757
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-69d: an artifact with open permissions is refused
+    ok 4 - ⭐⭐⭐ M-69d: an artifact with open permissions is refused
+      ---
+      duration_ms: 446.501554
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-69e: a replaced artifact is detected
+    ok 5 - ⭐⭐ M-69e: a replaced artifact is detected
+      ---
+      duration_ms: 1060.266529
+      type: 'test'
+      ...
+    1..5
+ok 3 - FOUNDATION 15) the backup, the encryption and the restore drill (M-69)
+  ---
+  duration_ms: 9250.193759
+  type: 'test'
+  ...
+1..3
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 34081.596906
