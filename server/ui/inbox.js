@@ -426,6 +426,10 @@ function closeThread(options = {}) {
     return;
   }
   state.selected = null;
+  // ⭐⭐⭐ M-132: ⭐⭐⭐ no conversation on the screen ⇒ ⇒ ⇒ ⇒ no
+  // ⭐⭐⭐ M-132 confirmation on the screen (the pending of each
+  // ⭐⭐⭐ M-132 conversation waits for its own conversation).
+  syncQuickReplyStrip();
   setThreadView(false);
   $('thread').hidden = true;
   $('thread-placeholder').hidden = false;
@@ -734,6 +738,11 @@ async function openConversation(ref, options = {}) {
   // ⭐⭐⭐ M-127: the state of the list is remembered before the thread.
   if (changed && !state.threadView) rememberListView();
   state.selected = { ref };
+  // ⭐⭐⭐ M-132: ⭐⭐⭐ the confirmation on the screen belongs to the
+  // ⭐⭐⭐ M-132 conversation that is on the screen NOW ⇒ ⇒ ⇒ ⇒ (the
+  // ⭐⭐⭐ M-132 confirmation of A is NOT shown while B is open ⇒ ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-132 and it comes back with A).
+  syncQuickReplyStrip();
   state.knownMessageRefs = new Set();
   $('thread-placeholder').hidden = true;
   $('thread').hidden = false;
@@ -1010,8 +1019,14 @@ const QUICK_REPLIES = [
   },
 ];
 
-/** ⭐⭐⭐ M-130: the template that waits for the confirmation. */
-let pendingQuickReply = null;
+/**
+ * ⭐⭐⭐ M-130 · M-132: ⭐⭐⭐ the template that waits for the confirmation
+ * ⭐⭐⭐ M-132 is PER CONVERSATION ⇒ ⇒ ⇒ ⇒ (it is a map, like the drafts)
+ * ⭐⭐⭐ M-132 ⇒ ⇒ ⇒ ⇒ a confirmation of conversation A can NEVER be
+ * ⭐⭐⭐ M-132 pressed for conversation B ⇒ ⇒ ⇒ ⇒ and it is not lost
+ * ⭐⭐⭐ M-132 ⇒ ⇒ ⇒ ⇒ (it waits for its own conversation).
+ */
+const pendingQuickReplies = new Map();
 
 /** ⭐⭐⭐ M-130: the templates are drawn once (and they never send). */
 function renderQuickReplies() {
@@ -1048,7 +1063,7 @@ function applyQuickReply(template) {
     // ⭐⭐⭐ M-130: ⭐⭐⭐ the text of the employee is NEVER replaced
     // ⭐⭐⭐ M-130 without a clear confirmation ⇒ ⇒ ⇒ ⇒ the question is
     // ⭐⭐⭐ M-130 asked and the answer is waited for.
-    pendingQuickReply = { template, ref };
+    pendingQuickReplies.set(ref, { template });
     $('quick-replies-confirm').hidden = false;
     return;
   }
@@ -1064,13 +1079,41 @@ function applyQuickReply(template) {
 function writeQuickReply(ref, template) {
   const box = $('reply-body');
   if (!box) return;
-  box.value = template.text;
-  box.focus();
+  // ⭐⭐⭐ M-132: ⭐⭐⭐ the template belongs to ONE conversation ⇒ ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-132 it is written in the composer ONLY when that very
+  // ⭐⭐⭐ M-132 conversation is the one on the screen NOW ⇒ ⇒ ⇒ ⇒ ⇒ the
+  // ⭐⭐⭐ M-132 template of conversation A NEVER replaces the draft of
+  // ⭐⭐⭐ M-132 conversation B (the employee moved while the
+  // ⭐⭐⭐ M-132 confirmation was on the screen).
+  const open = state.selected?.ref === ref;
   draftOf(ref).text = template.text;
-  pendingQuickReply = null;
+  pendingQuickReplies.delete(ref);
   const confirm = $('quick-replies-confirm');
   if (confirm) confirm.hidden = true;
+  if (!open) {
+    // ⭐⭐⭐ M-132: ⭐⭐⭐ the template is NOT lost ⇒ ⇒ ⇒ ⇒ it waits in
+    // ⭐⭐⭐ M-132 the draft of ITS OWN conversation ⇒ ⇒ ⇒ ⇒ and the
+    // ⭐⭐⭐ M-132 composer of the conversation on the screen is NOT
+    // ⭐⭐⭐ M-132 touched at all.
+    toast('القالب اتحفظ في مسودة محادثته هو — رجع ليها تشوفه.');
+    return;
+  }
+  box.value = template.text;
+  box.focus();
   toast('القالب اتكتب في المربع — عدّل اللي عايزه وابعت.');
+}
+
+/**
+ * ⭐⭐⭐ M-132: ⭐⭐⭐ a pending confirmation belongs to the conversation
+ * ⭐⭐⭐ M-132 that raised it ⇒ ⇒ ⇒ ⇒ it dies with that conversation ⇒
+ * ⭐⭐⭐ M-132 ⇒ ⇒ ⇒ ⇒ and it can never be pressed for another one.
+ */
+function syncQuickReplyStrip() {
+  const ref = state.selected?.ref;
+  const waiting = ref ? pendingQuickReplies.get(ref) : null;
+  const confirm = $('quick-replies-confirm');
+  if (confirm) confirm.hidden = !waiting;
+  return waiting;
 }
 
 /**
@@ -1158,12 +1201,26 @@ async function sendReply(event) {
     //   is verified before any failure is declared.
     if (answer.status === 0 || answer.status >= 500) {
       const stored = await verifyStoredReply(ref, messageRef);
+      // ⭐⭐⭐ M-133: ⭐⭐⭐ the verification takes TIME ⇒ ⇒ ⇒ ⇒ the
+      // ⭐⭐⭐ M-133 employee may have moved to another conversation
+      // ⭐⭐⭐ M-133 while it was in the air ⇒ ⇒ ⇒ ⇒ ⭐⭐⭐ the flag of
+      // ⭐⭐⭐ M-133 the screen is READ AGAIN now ⇒ ⇒ ⇒ ⇒ (the old one
+      // ⭐⭐⭐ M-133 was frozen before the wait ⇒ ⇒ ⇒ ⇒ and it lied).
+      // ⭐⭐⭐ M-133: ⭐⭐⭐ a late answer NEVER touches a conversation
+      // ⭐⭐⭐ M-133 that is not its own ⇒ ⇒ ⇒ ⇒ it does not clear the
+      // ⭐⭐⭐ M-133 composer of another one ⇒ ⇒ ⇒ ⇒ and it does not
+      // ⭐⭐⭐ M-133 pull the employee back to the old one.
+      const stillOpenNow = state.selected?.ref === ref;
+      const epochNow = state.epoch;
+      // ⭐⭐⭐ M-133: ⭐⭐⭐ the session died while the verification was
+      // ⭐⭐⭐ M-133 in the air ⇒ ⇒ ⇒ ⇒ nothing is painted at all.
+      if (epochNow !== state.epoch) return;
       if (stored) {
         draft.messageRef = null;
         draft.text = '';
-        if (stillOpen) $('reply-body').value = '';
+        if (stillOpenNow) $('reply-body').value = '';
         toast('الرد اتحفظ — الشبكة وقعت قبل ما يوصل التأكيد. مش محتاج تبعت تاني.');
-        if (stillOpen) await openConversation(ref);
+        if (stillOpenNow) await openConversation(ref);
         await loadConversations();
         return;
       }
@@ -1275,6 +1332,8 @@ async function login() {
   // ⭐⭐⭐ M-127 of the old company NEVER lands under the new one.
   state.epoch += 1;
   state.drafts.clear();
+  // ⭐⭐⭐ M-132: ⭐⭐⭐ the confirmations die with the session too.
+  pendingQuickReplies.clear();
   state.retry = null;
   saveSession();
   $('login-row').hidden = true;
@@ -1299,6 +1358,8 @@ async function logout() {
   state.retry = null;
   // ⭐⭐⭐ M-126: the drafts die with the session.
   state.drafts.clear();
+  // ⭐⭐⭐ M-132: ⭐⭐⭐ the confirmations die with the session too.
+  pendingQuickReplies.clear();
   clearSession();
   await api('DELETE', '/api/session');
   state.token = null;
@@ -1347,15 +1408,24 @@ $('composer').addEventListener('submit', (event) => {
 // ⭐⭐⭐ M-130: ⭐⭐⭐ the confirmation of the replacement ⇒ ⇒ ⇒ (the
 // ⭐⭐⭐ M-130 text of the employee is replaced ONLY when he says so).
 $('btn-quick-replace').addEventListener('click', () => {
-  const waiting = pendingQuickReply;
-  pendingQuickReply = null;
-  const confirm = $('quick-replies-confirm');
-  if (confirm) confirm.hidden = true;
-  if (!waiting) return;
-  writeQuickReply(waiting.ref, waiting.template);
+  // ⭐⭐⭐ M-132: ⭐⭐⭐ the button applies to the conversation that is on
+  // ⭐⭐⭐ M-132 the screen NOW ⇒ ⇒ ⇒ ⇒ and it uses the template that
+  // ⭐⭐⭐ M-132 waits for THAT conversation ⇒ ⇒ ⇒ ⇒ ⇒ a template of
+  // ⭐⭐⭐ M-132 conversation A can never replace the text of
+  // ⭐⭐⭐ M-132 conversation B (⇒ ⇒ ⇒ ⇒ even if the button is pressed
+  // ⭐⭐⭐ M-132 by force).
+  const ref = state.selected?.ref;
+  const waiting = ref ? pendingQuickReplies.get(ref) : null;
+  if (!waiting) {
+    const confirm = $('quick-replies-confirm');
+    if (confirm) confirm.hidden = true;
+    return;
+  }
+  writeQuickReply(ref, waiting.template);
 });
 $('btn-quick-keep').addEventListener('click', () => {
-  pendingQuickReply = null;
+  const ref = state.selected?.ref;
+  if (ref) pendingQuickReplies.delete(ref);
   const confirm = $('quick-replies-confirm');
   if (confirm) confirm.hidden = true;
 });
@@ -1471,15 +1541,16 @@ async function bootSession() {
     await logout();
     return;
   }
-  const filtered =
-    $('filter-query').value.trim() !== '' ||
-    $('filter-state').value !== '' ||
-    $('filter-assignee').value !== '';
-  if (state.conversations.length === 0 && $('list-error').hidden && !filtered) {
-    // ⭐⭐ The session may be over: the answer said so.
-    await logout();
-    return;
-  }
+  // ⭐⭐⭐ M-131: ⭐⭐⭐ the session ends ONLY when the SERVER says so
+  // ⭐⭐⭐ M-131 (401 / 403) ⇒ ⇒ ⇒ ⇒ an EMPTY list (⇒ ⇒ ⇒ a company that
+  // ⭐⭐⭐ M-131 has no conversations ⇒ ⇒ ⇒ ⇒ or a search that matches
+  // ⭐⭐⭐ M-131 nothing) ⇒ ⇒ ⇒ ⇒ is NOT a logout ⇒ ⇒ ⇒ ⇒ and a network
+  // ⭐⭐⭐ M-131 that died (status 0) ⇒ ⇒ ⇒ ⇒ is NOT a logout either ⇒
+  // ⭐⭐⭐ M-131 ⇒ ⇒ ⇒ ⇒ the employee is NEVER thrown out of a VALID
+  // ⭐⭐⭐ M-131 session by an empty page.
+  // ⭐⭐⭐ M-131: ⭐⭐⭐ the rule (general): ⭐⭐⭐ the DECISION comes from
+  // ⭐⭐⭐ M-131 the state of the ANSWER ⇒ ⇒ ⇒ ⇒ never from the absence
+  // ⭐⭐⭐ M-131 of data.
   // ⭐⭐ D-071: the CRM points at a conversation ⇒ the inbox opens it.
   const wanted = new URLSearchParams(window.location.search).get('conversation');
   if (wanted) {
