@@ -30,15 +30,21 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 605 + 266 + 127 + 16 = 1014 -->
-<!-- wasl:current-total 1014 = 1013 pass + 0 fail + 1 skipped -->
+<!-- wasl:current-partition 605 + 286 + 127 + 16 = 1034 -->
+<!-- wasl:current-total 1034 = 1033 pass + 0 fail + 1 skipped -->
 
-> ⭐⭐ **CURRENT (round #59)**: the partition is checked by a TOOL
+> ⭐⭐ **CURRENT (round #60 · D-084)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **605 + 266 + 127 + 16 = 1014** = the number of `npm test` exactly
-> (1013 of the 1014 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **605 + 286 + 127 + 16 = 1034** = the number of `npm test` exactly
+> (1033 of the 1034 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
+> ⭐⭐ **The +20 of this round are the acceptance tests of the new
+> items** (`tests/ui/inbox-session-isolation.test.ts` = 4 ·
+> `tests/ui/inbox-draft-offline.test.ts` = 6 ·
+> `tests/ui/tickets-capabilities.test.ts` = 10) ⇒ ⇒ ⇒ ⇒ they are all in
+> the `integration` group (they drive the real browser + the real
+> PostgreSQL) ⇒ ⇒ ⇒ ⇒ ⇒ the other three groups did not move.
 > ⭐⭐ **The tool fails when a published number is not the measured one**
 > ⇒ ⇒ ⇒ a number can no longer drift silently.
 > ⭐⭐ **The `Files` column of the table above is derived from

@@ -138,21 +138,24 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
       areas: { id: string; done: number; total: number; percent: number }[];
     };
     assert.equal(computed.total, 75, '⭐⭐⭐ the computed denominator is not 75');
-    assert.equal(computed.done, 42, `⭐⭐⭐ the computed done is ${computed.done} instead of 42`);
-    assert.equal(computed.percent, 56, `⭐⭐⭐ the computed percentage is ${computed.percent}`);
+    // ⭐⭐⭐ D-084: ⭐⭐⭐ the five items of the mandate (ui-19 · tk-16 ·
+    // ⭐⭐⭐ tk-17 · tk-19 · tk-20) are done with their acceptance tests
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ 42 + 5 = 47.
+    assert.equal(computed.done, 47, `⭐⭐⭐ the computed done is ${computed.done} instead of 47`);
+    assert.equal(computed.percent, 62.7, `⭐⭐⭐ the computed percentage is ${computed.percent}`);
     const ui = computed.areas.find((area) => area.id === 'ui');
     const tickets = computed.areas.find((area) => area.id === 'tickets');
     const platform = computed.areas.find((area) => area.id === 'platform');
-    assert.equal(ui?.done, 19, '⭐⭐⭐ the area of the interface is wrong');
-    assert.equal(ui?.percent, 95, '⭐⭐⭐ the area of the interface is wrong');
-    assert.equal(tickets?.done, 16, '⭐⭐⭐ the area of the tickets is wrong');
-    assert.equal(tickets?.percent, 80, '⭐⭐⭐ the area of the tickets is wrong');
+    assert.equal(ui?.done, 20, '⭐⭐⭐ the area of the interface is wrong');
+    assert.equal(ui?.percent, 100, '⭐⭐⭐ the area of the interface is wrong');
+    assert.equal(tickets?.done, 20, '⭐⭐⭐ the area of the tickets is wrong');
+    assert.equal(tickets?.percent, 100, '⭐⭐⭐ the area of the tickets is wrong');
     assert.equal(platform?.done, 7, '⭐⭐⭐ the area of the platform is wrong');
     assert.equal(platform?.percent, 20, '⭐⭐⭐ the area of the platform is wrong');
     // ⭐⭐⭐ and the published file carries those numbers.
     const published = fs.readFileSync(PUBLISHED, 'utf8');
-    assert.match(published, /42\/75 = 56\.0%/, '⭐⭐⭐ the published board does not carry the computed numbers');
-    assert.match(published, /47%/, '⭐⭐⭐ the published board does not carry the estimate of this round');
+    assert.match(published, /47\/75 = 62\.7%/, '⭐⭐⭐ the published board does not carry the computed numbers');
+    assert.match(published, /48%/, '⭐⭐⭐ the published board does not carry the estimate of this round');
   });
 
   await t.test('⭐⭐⭐ M-123: the board shows the areas BEFORE and AFTER (the same weights)', () => {
@@ -172,7 +175,10 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
     const delta =
       computed.done -
       Object.values(inventory.baseline?.areas ?? {}).reduce((sum, value) => sum + value, 0);
-    assert.equal(delta, 1, `⭐⭐⭐ the difference of the round is ${delta} instead of 1`);
+    // ⭐⭐⭐ D-084: ⭐⭐⭐ the difference against the BASELINE of the board
+    // ⭐⭐⭐ is six items (one of the round #59 + the five of the round
+    // ⭐⭐⭐ #60) ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ the baseline is 41 and the truth is 47.
+    assert.equal(delta, 6, `⭐⭐⭐ the difference of the round is ${delta} instead of 6`);
     for (const area of computed.areas) {
       const before = inventory.baseline?.areas?.[area.id];
       assert.ok(before !== undefined, `⭐⭐⭐ the area ${area.id} has no number before`);
@@ -190,7 +196,12 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
     assert.equal(series[0]?.value, 44, '⭐⭐⭐ the baseline of the owner is not 44');
     assert.equal(series[1]?.value, 45, '⭐⭐⭐ the estimate after M-114 is not 45');
     assert.equal(series[2]?.value, 46, '⭐⭐⭐ the estimate of the round #57 is not 46');
-    assert.equal(series[3]?.value, 47, '⭐⭐⭐ the estimate of this round is not 47');
+    assert.equal(series[3]?.value, 47, '⭐⭐⭐ the estimate of the round #59 is not 47');
+    // ⭐⭐⭐ D-084: ⭐⭐⭐ the owner APPROVED 47% and set the condition of
+    // ⭐⭐⭐ 48% (a proven functional development) ⇒ ⇒ ⇒ ⇒ ⇒ the newest
+    // ⭐⭐⭐ estimate is 48% and it is approved ⇒ ⇒ ⇒ ⇒ ⇒ and it must
+    // ⭐⭐⭐ carry the decision of the owner in its basis.
+    assert.equal(series[4]?.value, 48, '⭐⭐⭐ the estimate of the round #60 is not 48');
     let previous = -1;
     for (const entry of series) {
       assert.ok(entry.value >= previous, '⭐⭐⭐ the estimate went backwards');
@@ -199,11 +210,20 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
     }
     // ⭐⭐⭐ the estimate of the round #57 is APPROVED by the owner (D-082)
     assert.equal(series[2]?.status, 'owner', '⭐⭐⭐ the estimate of the round #57 is not approved');
-    // ⭐⭐⭐ the estimate of THIS round is a proposal (it needs the owner)
-    // ⭐⭐⭐ ⇐ ⭐⭐ it is never presented as an approved decision.
+    // ⭐⭐⭐ D-084: ⭐⭐⭐ the estimate of THIS round is APPROVED — because
+    // ⭐⭐⭐ the owner decided it (47% approved + the condition of 48% met
+    // ⭐⭐⭐ with a proven functional development) ⇒ ⇒ ⇒ ⇒ ⇒ and the guard
+    // ⭐⭐⭐ now demands the PROOF of that approval (the decision of the
+    // ⭐⭐⭐ owner named in the basis) ⇒ ⇒ ⇒ ⇒ ⇒ so an approved number can
+    // ⭐⭐⭐ never appear without the owner behind it.
     const last = series[series.length - 1];
-    assert.equal(last?.status, 'proposed', '⭐⭐⭐ the estimate of this round is presented as approved');
-    assert.equal(last?.value, 47, '⭐⭐⭐ the last estimate of the scale is not 47');
+    assert.equal(last?.status, 'owner', '⭐⭐⭐ the estimate of this round is not approved (D-084)');
+    assert.equal(last?.value, 48, '⭐⭐⭐ the last estimate of the scale is not 48');
+    assert.match(
+      last?.basis ?? '',
+      /D-084/,
+      '⭐⭐⭐ the approved estimate does not name the decision of the owner',
+    );
   });
 
   await t.test('⭐⭐⭐ M-118-5: the items of this round are marked with their truth', () => {
@@ -225,14 +245,21 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
     );
     assert.match(audit.evidence, /inbox-ui/, '⭐⭐⭐ the audit has no evidence of the inbox');
     assert.match(audit.evidence, /crm-ui/, '⭐⭐⭐ the audit has no evidence of the CRM');
-    // ⭐⭐⭐ and the item of the writing queue stays OPEN (the queue of
-    // ⭐⭐⭐ the messages while the connection is cut is NOT built).
+    // ⭐⭐⭐ D-084: ⭐⭐⭐ the item of the writing queue is now BUILT — the
+    // ⭐⭐⭐ draft of the reply survives the cut of the connection, the
+    // ⭐⭐⭐ retry is by hand and it carries the same reference ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ the reply is never stored twice (ui-19).
     const queueOfWriting = inventory.items.find((item) => item.id === 'ui-19');
     assert.ok(queueOfWriting, '⭐⭐⭐ the item of the writing queue is missing');
     assert.equal(
       queueOfWriting.done,
-      false,
-      '⭐⭐⭐ the writing queue is marked as done (it is not built)',
+      true,
+      '⭐⭐⭐ the writing queue is NOT marked as done (it IS built in ui-19)',
+    );
+    assert.match(
+      queueOfWriting.evidence,
+      /inbox-draft-offline/,
+      '⭐⭐⭐ the writing queue has no evidence of its acceptance test',
     );
   });
 
@@ -365,7 +392,7 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
     assert.match(published, /يحتاج إعادة تقييم/, '⭐⭐⭐ the published board does not mark the domains that need a review');
     assert.match(published, /المحادثات/, '⭐⭐⭐ the published board has no row of the conversations');
     // ⭐⭐⭐ and the third scale does NOT replace the scale of the owner.
-    assert.match(published, /42\/75 = 56\.0%/, '⭐⭐⭐ the internal list is not published any more');
+    assert.match(published, /47\/75 = 62\.7%/, '⭐⭐⭐ the internal list is not published any more');
     assert.match(published, /46%/, '⭐⭐⭐ the estimate of the owner is not published any more');
   });
 });
