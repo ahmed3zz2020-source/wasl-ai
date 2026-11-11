@@ -320,6 +320,14 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
       `delete from support_tickets where tenant_id = $1 and ref like 'tkt_b04_ui_bulk_%'`,
       [tenantId],
     );
+    // ⭐⭐⭐ M-130: ⭐⭐⭐ the tickets OF THE RUN ITSELF are wiped too ⇒ ⇒ ⇒
+    // ⭐⭐⭐ M-130 (their reference carries a RANDOM suffix ⇒ ⇒ ⇒ ⇒ ⇒ a run
+    // ⭐⭐⭐ M-130 that is killed leaves its own two rows behind ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ M-130 and the next run counts them ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ a FALSE failure
+    // ⭐⭐⭐ M-130 of the product) ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ the whole company is wiped
+    // ⭐⭐⭐ M-130 before the fixture ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ the counts are stable.
+    await uow.query(`delete from support_ticket_changes where tenant_id = $1`, [tenantId]);
+    await uow.query(`delete from support_tickets where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from messages where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from conversations where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);
@@ -537,6 +545,16 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
       [agentId, 'UI agent'],
       [viewerId, 'UI viewer'],
     ]);
+    // ⭐⭐⭐ M-131: ⭐⭐⭐ the page of the inbox does NOT close the session
+    // ⭐⭐⭐ M-131 of an empty list any more (⇒ ⇒ ⇒ ⇒ ⇒ a VALID session of
+    // ⭐⭐⭐ M-131 a company without conversations stays) ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ the
+    // ⭐⭐⭐ M-131 drill signs OUT explicitly before it signs in ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ M-131 (⇒ ⇒ ⇒ ⇒ ⇒ it does not rely on a logout that used to
+    // ⭐⭐⭐ M-131 happen by accident).
+    if (await page.isVisible('#btn-logout')) {
+      await page.click('#btn-logout');
+      await page.waitForTimeout(700);
+    }
     await page.selectOption('#login-tenant', tenantId);
     await page.selectOption('#login-user', ownerId);
     await page.click('#btn-login');
