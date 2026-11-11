@@ -54,9 +54,24 @@ const state = {
   selected: null,
   allowedStates: [],
   agents: [],
-  /** ⭐ The reference of the reply that is being prepared. */
-  draftRef: null,
-  sending: false,
+  /**
+   * ⭐⭐⭐ M-126: ⭐⭐⭐ the drafts belong to the CONVERSATION ⇒ ⇒ ⇒
+   * ⭐⭐⭐ (a map: the reference of the conversation ⇒ ⇒ ⇒ { the
+   * ⭐⭐⭐ reference of the reply · the text · the sending }) ⇒ ⇒ ⇒
+   * ⭐⭐⭐ ⇒ ⇒ ⇒ and the text of one conversation NEVER touches
+   * ⭐⭐⭐ another one ⇒ ⇒ ⇒ nor the reference of one reply is ever
+   * ⭐⭐⭐ used for another conversation ⇒ ⇒ ⇒ (the server refuses a
+   * ⭐⭐⭐ repeated reference ⇒ ⇒ ⇒ ⇒ the reply of the employee would
+   * ⭐⭐⭐ be LOST).
+   */
+  drafts: new Map(),
+  /**
+   * ⭐⭐⭐ M-127: ⭐⭐⭐ the number of the session ⇒ ⇒ ⇒ (an answer of
+   * ⭐⭐⭐ an old session is NEVER painted ⇒ ⇒ ⇒ nor the answer of an
+   * ⭐⭐⭐ old company ⇒ ⇒ ⇒ ⇒ the data of a company never appears
+   * ⭐⭐⭐ under the name of another one).
+   */
+  epoch: 0,
   /** ⭐⭐ M-78: the page of the list (the pagination is real). */
   page: 0,
   pageSize: 25,
@@ -70,8 +85,16 @@ const state = {
   knownMessageRefs: new Set(),
   /** ⭐⭐⭐ M-125: the connection with the server is gone. */
   offline: false,
+  /** ⭐⭐⭐ M-127: the status of the last answer of the list. */
+  listStatus: null,
   /** ⭐⭐⭐ M-125: the place of the list before the conversation. */
   listScroll: 0,
+  /**
+   * ⭐⭐⭐ M-127: ⭐⭐⭐ the state of the list (the search · the filters
+   * ⭐⭐⭐ M-127 · the page · the place of the screen) ⇒ ⇒ ⇒ and the way
+   * ⭐⭐⭐ M-127 back returns to exactly the same place.
+   */
+  listView: { query: '', state: '', assignee: '', page: 0, scroll: 0 },
   /** ⭐⭐⭐ M-125: the small screen shows EITHER the list OR the thread. */
   threadView: false,
   /** ⭐⭐⭐ M-125: what to do when the connection comes back. */
@@ -139,6 +162,123 @@ function newDraftRef() {
 }
 
 /**
+ * ⭐⭐⭐ M-126: ⭐⭐⭐ the draft of ONE conversation ⇒ ⇒ ⇒ (the map is
+ * ⭐⭐⭐ keyed by the reference of the conversation ⇒ ⇒ ⇒ ⇒ the text
+ * ⭐⭐⭐ and the reference of the reply belong to it alone).
+ */
+function draftOf(ref) {
+  let draft = state.drafts.get(ref);
+  if (!draft) {
+    draft = { messageRef: null, text: '', sending: false };
+    state.drafts.set(ref, draft);
+  }
+  return draft;
+}
+
+/**
+ * ⭐⭐⭐ M-126: ⭐⭐⭐ the text of the composer belongs to the
+ * ⭐⭐⭐ conversation that is open NOW ⇒ ⇒ ⇒ (it is saved in its
+ * ⭐⭐⭐ draft ⇒ ⇒ ⇒ ⇒ it comes back when the employee returns to
+ * ⭐⭐⭐ that conversation ⇒ ⇒ ⇒ ⇒ and it NEVER touches the text of
+ * ⭐⭐⭐ another conversation).
+ */
+function saveComposerToDraft() {
+  const ref = state.selected?.ref;
+  if (!ref) return;
+  const box = $('reply-body');
+  if (!box) return;
+  draftOf(ref).text = box.value;
+}
+
+/**
+ * ⭐⭐⭐ M-126: ⭐⭐⭐ the draft of the conversation that is open comes
+ * ⭐⭐⭐ into the composer ⇒ ⇒ ⇒ (and the composer of the employee is
+ * ⭐⭐⭐ NEVER emptied by the answer of another conversation).
+ */
+function restoreDraftToComposer(ref) {
+  const box = $('reply-body');
+  if (!box) return;
+  box.value = draftOf(ref).text;
+}
+
+/**
+ * ⭐⭐⭐ M-127: ⭐⭐⭐ the state of the list is kept in the storage of
+ * ⭐⭐⭐ M-127 the tab ⇒ ⇒ ⇒ ⇒ the search · the filters · the page · and
+ * ⭐⭐⭐ M-127 the place of the screen come back after a RELOAD ⇒ ⇒ ⇒
+ * ⭐⭐⭐ M-127 (and after the way back of the conversation) ⇒ ⇒ ⇒ ⇒ the
+ * ⭐⭐⭐ M-127 employee never loses the place where he was.
+ */
+const LIST_VIEW_KEY = 'wasl_inbox_list_view_v1';
+
+function saveListViewToStorage() {
+  try {
+    const scroller = $('conversation-list');
+    sessionStorage.setItem(
+      LIST_VIEW_KEY,
+      JSON.stringify({
+        query: $('filter-query').value,
+        state: $('filter-state').value,
+        assignee: $('filter-assignee').value,
+        page: state.page,
+        scroll: window.scrollY,
+        listScroll: scroller ? scroller.scrollTop : 0,
+      }),
+    );
+  } catch {
+    // ⭐⭐ a browser that refuses the storage is not a failure of the work.
+  }
+}
+
+function loadListViewFromStorage() {
+  try {
+    const raw = sessionStorage.getItem(LIST_VIEW_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (typeof saved !== 'object' || saved === null) return;
+    state.listView = {
+      query: typeof saved.query === 'string' ? saved.query : '',
+      state: typeof saved.state === 'string' ? saved.state : '',
+      assignee: typeof saved.assignee === 'string' ? saved.assignee : '',
+      page: Number.isFinite(saved.page) && saved.page > 0 ? Number(saved.page) : 0,
+      scroll: Number.isFinite(saved.scroll) ? Number(saved.scroll) : 0,
+    };
+    state.listScroll = Number.isFinite(saved.listScroll) ? Number(saved.listScroll) : 0;
+  } catch {
+    // ⭐⭐ nothing to restore.
+  }
+}
+
+/**
+ * ⭐⭐⭐ M-127: ⭐⭐⭐ the state of the list is remembered before the
+ * ⭐⭐⭐ conversation opens ⇒ ⇒ ⇒ (the way back returns to the SAME
+ * ⭐⭐⭐ place: the search · the filters · the page · the scroll).
+ */
+function rememberListView() {
+  state.listView = {
+    query: $('filter-query').value,
+    state: $('filter-state').value,
+    assignee: $('filter-assignee').value,
+    page: state.page,
+    scroll: window.scrollY,
+  };
+  const scroller = $('conversation-list');
+  state.listScroll = scroller ? scroller.scrollTop : 0;
+  saveListViewToStorage();
+}
+
+/** ⭐⭐⭐ M-127: the state of the list comes back as it was. */
+function restoreListView() {
+  $('filter-query').value = state.listView.query;
+  $('filter-state').value = state.listView.state;
+  $('filter-assignee').value = state.listView.assignee;
+  state.page = state.listView.page;
+  renderPagination();
+  const scroller = $('conversation-list');
+  if (scroller && state.listScroll > 0) scroller.scrollTop = state.listScroll;
+  if (state.listView.scroll > 0) window.scrollTo(0, state.listView.scroll);
+}
+
+/**
  * ⭐⭐⭐ M-79: the race of the requests.
  * ⭐ Every request that paints the screen belongs to a CHANNEL (the
  *   list, the thread, the refresh). ⭐ A new request in a channel
@@ -148,11 +288,46 @@ function newDraftRef() {
  */
 const channels = new Map();
 
+/**
+ * ⭐⭐⭐ M-127: ⭐⭐⭐ the answer of a request that is NOT wanted anymore
+ * ⭐⭐⭐ is dropped BEFORE the new request is sent ⇒ ⇒ ⇒ (the search
+ * ⭐⭐⭐ that is typed drops the answer of the old search at once ⇒
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ the old list NEVER lands under the new text).
+ */
+function invalidateChannel(name) {
+  const entry = channels.get(name);
+  if (!entry) return;
+  entry.seq = entry.seq + 1;
+  if (entry.controller) {
+    try {
+      entry.controller.abort();
+    } catch {
+      // ⭐⭐ the request is already done ⇒ nothing to abort.
+    }
+  }
+}
+
+/**
+ * ⭐⭐⭐ M-127: ⭐⭐⭐ the search that waits is cancelled ⇒ ⇒ ⇒ (a page
+ * ⭐⭐⭐ M-127 that changes · a filter that changes · a logout ⇒ ⇒ ⇒
+ * ⭐⭐⭐ ⇒ ⇒ ⇒ the search of the old text NEVER lands).
+ */
+function cancelPendingSearch() {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+  }
+  invalidateChannel('list');
+}
+
 /** ⭐ The call to the local API. */
 async function api(method, path, body, channel = null) {
   const headers = {};
   if (state.token) headers.authorization = `Bearer ${state.token}`;
   if (body !== undefined) headers['content-type'] = 'application/json';
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the session of this call ⇒ ⇒ ⇒ (an answer that
+  // ⭐⭐⭐ M-127 belongs to an OLD session is NEVER painted).
+  const epoch = state.epoch;
   let seq = 0;
   let controller = null;
   if (channel !== null) {
@@ -175,6 +350,10 @@ async function api(method, path, body, channel = null) {
     if (channel !== null && channels.get(channel)?.seq !== seq) {
       return { ok: false, status: 0, body: {}, stale: true };
     }
+    // ⭐⭐⭐ M-127: the session changed while the request was in the air.
+    if (epoch !== state.epoch) {
+      return { ok: false, status: 0, body: {}, stale: true };
+    }
     return { ok: false, status: 0, body: { error: { code: 'network_error' } } };
   }
   const text = await response.text();
@@ -186,6 +365,12 @@ async function api(method, path, body, channel = null) {
   }
   // ⭐⭐ M-79: a late answer is dropped, never painted.
   if (channel !== null && channels.get(channel)?.seq !== seq) {
+    return { ok: response.ok, status: response.status, body: parsed, stale: true };
+  }
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the answer of an OLD session (or of an old
+  // ⭐⭐⭐ M-127 company) is dropped ⇒ ⇒ ⇒ ⇒ the data of a company
+  // ⭐⭐⭐ M-127 NEVER appears under the name of another one.
+  if (epoch !== state.epoch) {
     return { ok: response.ok, status: response.status, body: parsed, stale: true };
   }
   return { ok: response.ok, status: response.status, body: parsed };
@@ -227,13 +412,29 @@ function setThreadView(on) {
 }
 
 /** ⭐⭐⭐ M-125: ⭐⭐⭐ the conversation is closed and the list is back. */
-function closeThread() {
+function closeThread(options = {}) {
+  // ⭐⭐⭐ M-126: the text of the composer is saved in the draft of the
+  // ⭐⭐⭐ M-126 conversation that closes ⇒ ⇒ ⇒ ⇒ it comes back when
+  // ⭐⭐⭐ M-126 the employee returns to it.
+  saveComposerToDraft();
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the way back goes through the history of the
+  // ⭐⭐⭐ M-127 browser ⇒ ⇒ ⇒ ⇒ the button of the page and the button
+  // ⭐⭐⭐ M-127 of the browser are ONE thing ⇒ ⇒ ⇒ (and the address
+  // ⭐⭐⭐ M-127 of the page comes back to the list).
+  if (!options.fromHistory && window.history.state?.waslConversation) {
+    window.history.back();
+    return;
+  }
   state.selected = null;
   setThreadView(false);
   $('thread').hidden = true;
   $('thread-placeholder').hidden = false;
   stopPolling();
   renderConversations();
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the list comes back with its search · its
+  // ⭐⭐⭐ M-127 filters · its page · and its place on the screen.
+  restoreListView();
+  if (!options.fromHistory) clearConversationInUrl();
 }
 
 /** ⭐ The message of an error (the code decides, never the raw text). */
@@ -319,6 +520,15 @@ async function loadConversations(options = {}) {
 
   const answer = await api('GET', `/api/inbox/conversations?${params.toString()}`, undefined, 'list');
   if (answer.stale) return; // ⭐⭐ M-79: a late answer never paints.
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the status of the answer of the list ⇒ ⇒ ⇒ (it
+  // ⭐⭐⭐ M-127 tells an expired session from an empty result).
+  state.listStatus = answer.status;
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the answer paints ONLY if the search it carries
+  // ⭐⭐⭐ M-127 is still the one in the box ⇒ ⇒ ⇒ ⇒ the list of the
+  // ⭐⭐⭐ M-127 old search NEVER lands under the new text ⇒ ⇒ ⇒ (the
+  // ⭐⭐⭐ M-127 answer of the old search is dropped even if it arrives
+  // ⭐⭐⭐ M-127 INSIDE the waiting window of the new one).
+  if ($('filter-query').value.trim() !== query) return;
   $('list-loading').hidden = true;
   // ⭐⭐⭐ M-125: ⭐⭐⭐ the network is gone ⇒ ⇒ ⇒ (the banner + the
   // ⭐⭐⭐ M-125 button of the retry ⇒ ⇒ ⇒ and the list stays as it is).
@@ -339,6 +549,10 @@ async function loadConversations(options = {}) {
   renderConversations();
   renderPagination();
   $('list-counter').textContent = `${state.total} محادثة`;
+  // ⭐⭐⭐ M-127: the state of the list is kept (the search · the
+  // ⭐⭐⭐ M-127 filters · the page · the place) ⇒ ⇒ ⇒ ⇒ it comes back
+  // ⭐⭐⭐ M-127 after a reload of the page.
+  saveListViewToStorage();
 }
 
 /** ⭐⭐ M-78: the controls of the pages. */
@@ -472,7 +686,53 @@ async function pollThread() {
 }
 
 // ------------------------------------------------------------ the thread
+/**
+ * ⭐⭐⭐ M-127: ⭐⭐⭐ the conversation that is open lives in the address
+ * ⭐⭐⭐ M-127 of the page ⇒ ⇒ ⇒ ⇒ the back button of the BROWSER
+ * ⭐⭐⭐ M-127 returns to the list (and NOT out of the page) ⇒ ⇒ ⇒ and
+ * ⭐⭐⭐ M-127 the way back is the same on every screen.
+ */
+function conversationInUrl() {
+  try {
+    return new URLSearchParams(window.location.search).get('conversation');
+  } catch {
+    return null;
+  }
+}
+
+/** ⭐⭐⭐ M-127: the conversation joins the history of the browser. */
+function pushConversation(ref) {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('conversation', ref);
+    window.history.pushState({ waslConversation: ref }, '', url.toString());
+  } catch {
+    // ⭐⭐ a browser that refuses the history still works (the button
+    // ⭐⭐ of the page closes the conversation).
+  }
+}
+
+/** ⭐⭐⭐ M-127: the conversation leaves the address (without a new entry). */
+function clearConversationInUrl() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('conversation');
+    window.history.replaceState({}, '', url.toString());
+  } catch {
+    // ⭐⭐ nothing to do.
+  }
+}
+
 async function openConversation(ref, options = {}) {
+  // ⭐⭐⭐ M-126: ⭐⭐⭐ the text of the composer belongs to the
+  // ⭐⭐⭐ M-126 conversation that is open NOW ⇒ ⇒ ⇒ (it is saved
+  // ⭐⭐⭐ M-126 before the switch ⇒ ⇒ ⇒ ⇒ it comes back with its
+  // ⭐⭐⭐ M-126 conversation ⇒ ⇒ ⇒ ⇒ and it NEVER touches the text of
+  // ⭐⭐⭐ M-126 another conversation).
+  const changed = state.selected?.ref !== ref;
+  if (changed) saveComposerToDraft();
+  // ⭐⭐⭐ M-127: the state of the list is remembered before the thread.
+  if (changed && !state.threadView) rememberListView();
   state.selected = { ref };
   state.knownMessageRefs = new Set();
   $('thread-placeholder').hidden = true;
@@ -530,6 +790,18 @@ async function openConversation(ref, options = {}) {
   await loadAgents();
   renderConversations();
   startPolling(); // ⭐⭐ M-77: the thread refreshes by itself.
+
+  // ⭐⭐⭐ M-126: ⭐⭐⭐ the draft of THIS conversation comes into the
+  // ⭐⭐⭐ M-126 composer ⇒ ⇒ ⇒ (the text of the employee comes back
+  // ⭐⭐⭐ M-126 with his conversation ⇒ ⇒ ⇒ ⇒ and the composer of
+  // ⭐⭐⭐ M-126 another conversation is NEVER touched).
+  restoreDraftToComposer(ref);
+  // ⭐⭐⭐ M-126: the button follows the conversation that is open.
+  renderComposerState(ref);
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the conversation joins the history of the
+  // ⭐⭐⭐ M-127 browser ⇒ ⇒ ⇒ ⇒ the back button of the browser
+  // ⭐⭐⭐ M-127 returns to the list (and not out of the page).
+  if (changed && !options.fromHistory) pushConversation(ref);
 
   // ⭐⭐ D-071: the link to the file of the customer (the CRM).
   const customerId = conversation.customer_id;
@@ -642,6 +914,12 @@ function renderRights() {
   const note = $('readonly-note');
   if (composer) composer.hidden = !state.mayReply;
   if (note) note.hidden = state.mayReply;
+  // ⭐⭐⭐ M-130: ⭐⭐⭐ the quick replies are a part of the writing ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-130 ⇒ ⇒ ⇒ the role that may only READ does not see them ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-130 (the right of the core announces it ⇒ ⇒ ⇒ and the page
+  // ⭐⭐⭐ M-130 never decides for itself).
+  const quick = $('quick-replies');
+  if (quick) quick.hidden = !state.mayReply;
   const stateField = $('state-select');
   if (stateField) {
     stateField.disabled = !state.mayChangeState;
@@ -703,10 +981,138 @@ async function loadAgents() {
   field.hidden = !state.mayAssign;
 }
 
+/**
+ * ⭐⭐⭐ M-130: ⭐⭐⭐ the quick replies ⇒ ⇒ ⇒ (a small set of trial
+ * ⭐⭐⭐ M-130 templates for the employee ⇒ ⇒ ⇒ ⇒ NO central management
+ * ⭐⭐⭐ M-130 · NO storage of the templates · NO AI ⇒ ⇒ ⇒ ⇒ they live
+ * ⭐⭐⭐ M-130 in the page itself ⇒ ⇒ ⇒ and the data is synthetic).
+ */
+const QUICK_REPLIES = [
+  {
+    id: 'welcome',
+    label: 'ترحيب',
+    text: 'أهلاً بيك! أنا هنا عشان أساعدك في طلبك — قولي بالظبط إيه اللي محتاجه.',
+  },
+  {
+    id: 'more_details',
+    label: 'طلب تفاصيل إضافية',
+    text: 'عشان أقدر أساعدك صح، محتاج منك تفاصيل أكتر: رقم الطلب (لو موجود) · وقت الطلب · المشكلة اللي ظهرتلك بالظبط.',
+  },
+  {
+    id: 'following_up',
+    label: 'متابعة الطلب',
+    text: 'طلبك اتسجّل عندنا وأنا بتابعه مع الفريق المسؤول — هرجعلك أول ما يتحدّث معاك.',
+  },
+  {
+    id: 'closing',
+    label: 'إغلاق الطلب',
+    text: 'تمام، طلبك اتقفل وجاهز من عندنا. لو فيه أي حاجة تانية أنا موجود في أي وقت.',
+  },
+];
+
+/** ⭐⭐⭐ M-130: the template that waits for the confirmation. */
+let pendingQuickReply = null;
+
+/** ⭐⭐⭐ M-130: the templates are drawn once (and they never send). */
+function renderQuickReplies() {
+  const list = $('quick-replies-list');
+  if (!list) return;
+  list.textContent = '';
+  for (const template of QUICK_REPLIES) {
+    const button = document.createElement('button');
+    // ⭐⭐⭐ M-130: the button is NOT a submit ⇒ ⇒ ⇒ (choosing a
+    // ⭐⭐⭐ M-130 template NEVER sends anything).
+    button.type = 'button';
+    button.className = 'ghost quick-reply';
+    button.dataset.template = template.id;
+    button.textContent = template.label;
+    button.title = template.text;
+    button.addEventListener('click', () => applyQuickReply(template));
+    list.appendChild(button);
+  }
+}
+
+/**
+ * ⭐⭐⭐ M-130: ⭐⭐⭐ choosing a template puts its text in the composer
+ * ⭐⭐⭐ M-130 ⇒ ⇒ ⇒ ⇒ it NEVER sends it by itself ⇒ ⇒ ⇒ ⇒ the employee
+ * ⭐⭐⭐ M-130 edits it and sends it with his own hand.
+ */
+function applyQuickReply(template) {
+  const ref = state.selected?.ref;
+  // ⭐⭐⭐ M-130: the right of the core decides ⇒ ⇒ ⇒ (the page never
+  // ⭐⭐⭐ M-130 decides for itself).
+  if (!ref || !state.mayReply) return;
+  const box = $('reply-body');
+  if (!box) return;
+  if (box.value.trim().length > 0) {
+    // ⭐⭐⭐ M-130: ⭐⭐⭐ the text of the employee is NEVER replaced
+    // ⭐⭐⭐ M-130 without a clear confirmation ⇒ ⇒ ⇒ ⇒ the question is
+    // ⭐⭐⭐ M-130 asked and the answer is waited for.
+    pendingQuickReply = { template, ref };
+    $('quick-replies-confirm').hidden = false;
+    return;
+  }
+  writeQuickReply(ref, template);
+}
+
+/**
+ * ⭐⭐⭐ M-130: ⭐⭐⭐ the text of the template goes into the composer
+ * ⭐⭐⭐ M-130 ⇒ ⇒ ⇒ ⇒ and into the draft of THIS conversation ⇒ ⇒ ⇒
+ * ⭐⭐⭐ M-130 ⇒ ⇒ ⇒ the reference of the reply is NOT touched ⇒ ⇒ ⇒
+ * ⭐⭐⭐ M-130 (⇒ ⇒ ⇒ no repeated reference ⇒ ⇒ ⇒ ⇒ no lost reply).
+ */
+function writeQuickReply(ref, template) {
+  const box = $('reply-body');
+  if (!box) return;
+  box.value = template.text;
+  box.focus();
+  draftOf(ref).text = template.text;
+  pendingQuickReply = null;
+  const confirm = $('quick-replies-confirm');
+  if (confirm) confirm.hidden = true;
+  toast('القالب اتكتب في المربع — عدّل اللي عايزه وابعت.');
+}
+
+/**
+ * ⭐⭐⭐ M-126: ⭐⭐⭐ the state of the composer belongs to the
+ * ⭐⭐⭐ M-126 conversation that is open ⇒ ⇒ ⇒ (the button of a reply
+ * ⭐⭐⭐ M-126 that is in the air in ONE conversation does NOT lock the
+ * ⭐⭐⭐ M-126 employee out of another one ⇒ ⇒ ⇒ ⇒ and it never stays
+ * ⭐⭐⭐ M-126 locked after the answer of another conversation).
+ */
+function renderComposerState(ref) {
+  if (!ref) return;
+  if (state.selected?.ref !== ref) return; // ⭐⭐⭐ another conversation is open.
+  const draft = draftOf(ref);
+  const button = $('btn-send');
+  if (!button) return;
+  button.disabled = draft.sending;
+  button.textContent = draft.sending ? 'جارٍ الإرسال…' : 'إرسال';
+}
+
 // ------------------------------------------------------------ the actions
+/**
+ * ⭐⭐⭐ M-126: ⭐⭐⭐ the reply belongs to the conversation it was
+ * ⭐⭐⭐ M-126 written in ⇒ ⇒ ⇒ (the reference of the reply · the text
+ * ⭐⭐⭐ M-126 of the composer · and the answer of the server ⇒ ⇒ ⇒
+ * ⭐⭐⭐ M-126 ⇒ ⇒ ⇒ ALL of them belong to THAT conversation) ⇒ ⇒ ⇒
+ * ⭐⭐⭐ M-126 ⇒ ⇒ ⇒ ⇒ the answer of one conversation NEVER clears
+ * ⭐⭐⭐ M-126 the text of another one ⇒ ⇒ ⇒ nor reopens it ⇒ ⇒ ⇒
+ * ⭐⭐⭐ M-126 nor reuses its reference (⇒ ⇒ ⇒ the server refuses the
+ * ⭐⭐⭐ M-126 repeated reference ⇒ ⇒ ⇒ ⇒ the reply of the employee
+ * ⭐⭐⭐ M-126 would be LOST).
+ */
 async function sendReply(event) {
   event.preventDefault();
-  if (state.sending) return;
+  const ref = state.selected?.ref;
+  if (!ref) {
+    toast(ERROR_LABELS.body_required, true);
+    return;
+  }
+  const draft = draftOf(ref);
+  // ⭐⭐⭐ M-126: the guard is per conversation ⇒ ⇒ ⇒ (a reply that is
+  // ⭐⭐⭐ M-126 in the air in one conversation does NOT block another).
+  if (draft.sending) return;
   const body = $('reply-body').value.trim();
   if (!body) {
     toast(ERROR_LABELS.body_required, true);
@@ -715,21 +1121,33 @@ async function sendReply(event) {
   // ⭐⭐ The reference is prepared once and kept until the answer
   //   arrives: a retry of the same reply is refused by the server, so
   //   the message can never be stored twice.
-  if (!state.draftRef) state.draftRef = newDraftRef();
-  state.sending = true;
-  const button = $('btn-send');
-  button.disabled = true;
-  button.textContent = 'جارٍ الإرسال…';
+  // ⭐⭐⭐ M-126: ⭐⭐⭐ and it belongs to THIS conversation alone.
+  if (!draft.messageRef) draft.messageRef = newDraftRef();
+  const messageRef = draft.messageRef;
+  const epoch = state.epoch;
+  draft.sending = true;
+  renderComposerState(ref);
 
-  const ref = state.selected?.ref;
   const answer = await api('POST', `/api/inbox/conversations/${encodeURIComponent(ref)}/replies`, {
     body,
-    client_message_ref: state.draftRef,
+    client_message_ref: messageRef,
   });
 
-  state.sending = false;
-  button.disabled = false;
-  button.textContent = 'إرسال';
+  draft.sending = false;
+  // ⭐⭐⭐ M-126: ⭐⭐⭐ the button belongs to the conversation that is
+  // ⭐⭐⭐ M-126 on the screen NOW ⇒ ⇒ ⇒ (the answer of a reply that
+  // ⭐⭐⭐ M-126 is in the air does not touch the composer of another
+  // ⭐⭐⭐ M-126 conversation).
+  renderComposerState(ref);
+  // ⭐⭐⭐ M-127: the session changed while the reply was in the air ⇒
+  // ⭐⭐⭐ M-127 the answer belongs to a session that does not exist ⇒
+  // ⭐⭐⭐ M-127 it is dropped (and nothing is painted).
+  if (epoch !== state.epoch || answer.stale) return;
+
+  // ⭐⭐⭐ M-126: ⭐⭐⭐ is THIS conversation still the one on the
+  // ⭐⭐⭐ M-126 screen? ⇒ ⇒ ⇒ (if the employee moved to another one
+  // ⭐⭐⭐ M-126 ⇒ ⇒ ⇒ the answer must NOT touch the screen).
+  const stillOpen = state.selected?.ref === ref;
 
   if (!answer.ok) {
     // ⭐⭐⭐ M-80: the answer was LOST. ⭐ The failure is NOT declared
@@ -739,12 +1157,13 @@ async function sendReply(event) {
     //   or when the server failed AFTER the write (5xx) ⇒ ⭐ the result
     //   is verified before any failure is declared.
     if (answer.status === 0 || answer.status >= 500) {
-      const stored = await verifyStoredReply(ref, state.draftRef);
+      const stored = await verifyStoredReply(ref, messageRef);
       if (stored) {
-        state.draftRef = null;
-        $('reply-body').value = '';
+        draft.messageRef = null;
+        draft.text = '';
+        if (stillOpen) $('reply-body').value = '';
         toast('الرد اتحفظ — الشبكة وقعت قبل ما يوصل التأكيد. مش محتاج تبعت تاني.');
-        await openConversation(ref);
+        if (stillOpen) await openConversation(ref);
         await loadConversations();
         return;
       }
@@ -755,10 +1174,11 @@ async function sendReply(event) {
     }
     if (answer.status === 409) {
       // ⭐⭐ The server refused the duplicate ⇒ the FIRST one is stored.
-      state.draftRef = null;
-      $('reply-body').value = '';
+      draft.messageRef = null;
+      draft.text = '';
+      if (stillOpen) $('reply-body').value = '';
       toast('الرد كان متحفظ من قبل — مش تكرار.');
-      await openConversation(ref);
+      if (stillOpen) await openConversation(ref);
       return;
     }
     toast(errorMessage(answer.body, 'تعذّر إرسال الرد.'), true);
@@ -766,10 +1186,16 @@ async function sendReply(event) {
     //   server refuses the duplicate instead of storing it twice.
     return;
   }
-  state.draftRef = null;
-  $('reply-body').value = '';
+  // ⭐⭐⭐ M-126: ⭐⭐⭐ the reply of THIS conversation is done ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-126 ⇒ ⇒ ⇒ its draft is cleared (and only its draft) ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-126 ⇒ ⇒ ⇒ and the screen is refreshed ONLY if this
+  // ⭐⭐⭐ M-126 conversation is still the one on the screen ⇒ ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-126 the employee is never pulled back to another one.
+  draft.messageRef = null;
+  draft.text = '';
+  if (stillOpen) $('reply-body').value = '';
   toast('تم إرسال الرد وحفظه.');
-  await openConversation(ref);
+  if (stillOpen) await openConversation(ref);
   await loadConversations();
 }
 
@@ -793,6 +1219,10 @@ async function changeState() {
     to,
     reason: 'inbox',
   });
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the answer of an OLD session is dropped ⇒ ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-127 the conversation of the old company is NEVER reopened
+  // ⭐⭐⭐ M-127 after the session changed.
+  if (answer.stale) return;
   if (!answer.ok) {
     toast(errorMessage(answer.body, 'تعذّر تغيير الحالة.'), true);
     await openConversation(ref);
@@ -810,6 +1240,8 @@ async function changeAssignee() {
     actor_id: actor,
     reason: 'inbox',
   });
+  // ⭐⭐⭐ M-127: the answer of an old session is dropped.
+  if (answer.stale) return;
   if (!answer.ok) {
     toast(errorMessage(answer.body, 'تعذّر إسناد المحادثة.'), true);
     return;
@@ -838,6 +1270,12 @@ async function login() {
   state.role = answer.body.session?.role ?? '';
   state.userId = answer.body.session?.user_id ?? '';
   state.sessionTenantId = answer.body.session?.tenant_id ?? $('login-tenant').value;
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ a new session ⇒ ⇒ ⇒ ⇒ every answer that is in
+  // ⭐⭐⭐ M-127 the air of the OLD session is dropped ⇒ ⇒ ⇒ ⇒ the data
+  // ⭐⭐⭐ M-127 of the old company NEVER lands under the new one.
+  state.epoch += 1;
+  state.drafts.clear();
+  state.retry = null;
   saveSession();
   $('login-row').hidden = true;
   $('who').hidden = false;
@@ -852,6 +1290,15 @@ async function login() {
 
 async function logout() {
   stopPolling();
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the search that waits is cancelled ⇒ ⇒ ⇒ (it
+  // ⭐⭐⭐ M-127 must not land on a session that is over) ⇒ ⇒ ⇒ and the
+  // ⭐⭐⭐ M-127 answers that are in the air are dropped ⇒ ⇒ ⇒ ⇒ the
+  // ⭐⭐⭐ M-127 data of the old company NEVER comes back.
+  cancelPendingSearch();
+  state.epoch += 1;
+  state.retry = null;
+  // ⭐⭐⭐ M-126: the drafts die with the session.
+  state.drafts.clear();
   clearSession();
   await api('DELETE', '/api/session');
   state.token = null;
@@ -877,10 +1324,16 @@ $('btn-refresh').addEventListener('click', () => {
 // ⭐⭐ M-78: the pages of the list.
 $('btn-prev').addEventListener('click', () => {
   if (state.page <= 0) return;
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the page that changes CANCELS the search that
+  // ⭐⭐⭐ M-127 waits ⇒ ⇒ ⇒ ⇒ the search of the old text never comes
+  // ⭐⭐⭐ M-127 back and takes the employee to the first page.
+  cancelPendingSearch();
   state.page -= 1;
   void loadConversations();
 });
 $('btn-next').addEventListener('click', () => {
+  // ⭐⭐⭐ M-127: the page that changes cancels the waiting search.
+  cancelPendingSearch();
   state.page += 1;
   void loadConversations();
 });
@@ -890,6 +1343,21 @@ $('btn-refresh-thread').addEventListener('click', () => {
 });
 $('composer').addEventListener('submit', (event) => {
   void sendReply(event);
+});
+// ⭐⭐⭐ M-130: ⭐⭐⭐ the confirmation of the replacement ⇒ ⇒ ⇒ (the
+// ⭐⭐⭐ M-130 text of the employee is replaced ONLY when he says so).
+$('btn-quick-replace').addEventListener('click', () => {
+  const waiting = pendingQuickReply;
+  pendingQuickReply = null;
+  const confirm = $('quick-replies-confirm');
+  if (confirm) confirm.hidden = true;
+  if (!waiting) return;
+  writeQuickReply(waiting.ref, waiting.template);
+});
+$('btn-quick-keep').addEventListener('click', () => {
+  pendingQuickReply = null;
+  const confirm = $('quick-replies-confirm');
+  if (confirm) confirm.hidden = true;
 });
 $('state-select').addEventListener('change', () => {
   void changeState();
@@ -903,10 +1371,22 @@ $('assign-select').addEventListener('change', () => {
 $('btn-back').addEventListener('click', () => {
   closeThread();
 });
-// ⭐⭐⭐ M-125: ⭐⭐⭐ the browser's back button closes the
-// ⭐⭐⭐ M-125 conversation ⇒ ⇒ ⇒ (the same as «رجوع»).
+/**
+ * ⭐⭐⭐ M-127: ⭐⭐⭐ the browser's back button ⇒ ⇒ ⇒ ⇒ the conversation
+ * ⭐⭐⭐ M-127 goes back to the list (and NOT out of the page) ⇒ ⇒ ⇒
+ * ⭐⭐⭐ M-127 ⇒ ⇒ ⇒ and it comes back to the conversation that was
+ * ⭐⭐⭐ M-127 open before it ⇒ ⇒ ⇒ ⇒ the address of the page and the
+ * ⭐⭐⭐ M-127 screen always agree.
+ */
 window.addEventListener('popstate', () => {
-  if (state.threadView) closeThread();
+  const wanted = conversationInUrl();
+  if (wanted) {
+    if (state.selected?.ref !== wanted) {
+      void openConversation(wanted, { fromHistory: true });
+    }
+    return;
+  }
+  if (state.selected) closeThread({ fromHistory: true });
 });
 // ⭐⭐⭐ M-125: ⭐⭐⭐ the retry of the connection that is gone.
 $('btn-retry-offline').addEventListener('click', () => {
@@ -930,8 +1410,14 @@ window.addEventListener('online', () => {
 });
 let searchTimer = null;
 $('filter-query').addEventListener('input', () => {
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the answer of the OLD search is dropped AT ONCE
+  // ⭐⭐⭐ M-127 ⇒ ⇒ ⇒ ⇒ the old list never lands under the new text
+  // ⭐⭐⭐ M-127 ⇒ ⇒ ⇒ (not even inside the waiting window before the
+  // ⭐⭐⭐ M-127 new search is sent).
+  invalidateChannel('list');
   if (searchTimer) clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
+    searchTimer = null;
     void loadConversations({ resetPage: true });
   }, 250);
 });
@@ -939,20 +1425,21 @@ $('filter-state').addEventListener('change', () => {
   // ⭐⭐⭐ M-125: ⭐⭐⭐ a filter that changes CANCELS the pending
   // ⭐⭐⭐ M-125 search ⇒ ⇒ ⇒ (the search of the old text never
   // ⭐⭐⭐ M-125 lands on the new filter).
-  if (searchTimer) {
-    clearTimeout(searchTimer);
-    searchTimer = null;
-  }
+  // ⭐⭐⭐ M-127: and the answer that is in the air is dropped too.
+  cancelPendingSearch();
   void loadConversations({ resetPage: true });
 });
 $('filter-assignee').addEventListener('change', () => {
-  if (searchTimer) {
-    clearTimeout(searchTimer);
-    searchTimer = null;
-  }
+  // ⭐⭐⭐ M-127: a filter that changes cancels the waiting search.
+  cancelPendingSearch();
   void loadConversations({ resetPage: true });
 });
 void bootSession();
+/**
+ * ⭐⭐⭐ M-130: ⭐⭐⭐ the templates of the quick replies are drawn once
+ * ⭐⭐⭐ M-130 ⇒ ⇒ ⇒ (they never send anything by themselves).
+ */
+renderQuickReplies();
 /**
  * ⭐⭐ D-071: the page comes back with the session of the tab.
  * ⭐ The token is checked by the SERVER (the first call decides) ⇒
@@ -960,22 +1447,47 @@ void bootSession();
  */
 async function bootSession() {
   if (!restoreSession()) return;
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the state of the list comes back as it was ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-127 (the search · the filters · the page · the place).
+  loadListViewFromStorage();
+  restoreListView();
   $('login-row').hidden = true;
   $('who').hidden = false;
   $('who-name').textContent = state.userId;
   $('who-role').textContent = STATE_LABELS[state.role] ?? state.role;
   $('workspace').hidden = false;
   $('assignee-filter-field').hidden = state.role === 'agent';
-  await loadConversations({ resetPage: true });
-  if (state.conversations.length === 0 && $('list-error').hidden) {
-    // ⭐ The session may be over: the answer said so.
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the page of the list comes back as it was ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-127 (the page is NOT reset ⇒ ⇒ ⇒ the employee comes back
+  // ⭐⭐⭐ M-127 to the same place).
+  await loadConversations();
+  // ⭐⭐⭐ M-127: ⭐⭐⭐ the session is over ONLY when the SERVER says so
+  // ⭐⭐⭐ M-127 (401 / 403) ⇒ ⇒ ⇒ ⇒ an EMPTY list (⇒ ⇒ ⇒ a search
+  // ⭐⭐⭐ M-127 that matches nothing ⇒ ⇒ ⇒ ⇒ or a company without
+  // ⭐⭐⭐ M-127 conversations) ⇒ ⇒ ⇒ ⇒ is NOT a logout ⇒ ⇒ ⇒ ⇒ ⇒ the
+  // ⭐⭐⭐ M-127 employee is NEVER thrown out of his session by his own
+  // ⭐⭐⭐ M-127 search.
+  if (state.listStatus === 401 || state.listStatus === 403) {
+    await logout();
+    return;
+  }
+  const filtered =
+    $('filter-query').value.trim() !== '' ||
+    $('filter-state').value !== '' ||
+    $('filter-assignee').value !== '';
+  if (state.conversations.length === 0 && $('list-error').hidden && !filtered) {
+    // ⭐⭐ The session may be over: the answer said so.
     await logout();
     return;
   }
   // ⭐⭐ D-071: the CRM points at a conversation ⇒ the inbox opens it.
   const wanted = new URLSearchParams(window.location.search).get('conversation');
   if (wanted) {
-    await openConversation(wanted);
+    await openConversation(wanted, { fromHistory: true });
+    // ⭐⭐⭐ M-127: ⭐⭐⭐ the address of the page comes back to the
+    // ⭐⭐⭐ M-127 list ⇒ ⇒ ⇒ ⇒ the back button of the browser leaves
+    // ⭐⭐⭐ M-127 the page (the employee came from another page) ⇒ ⇒ ⇒
+    // ⭐⭐⭐ M-127 and it does NOT push an entry of its own.
     const url = new URL(window.location.href);
     url.searchParams.delete('conversation');
     window.history.replaceState({}, '', url.toString());

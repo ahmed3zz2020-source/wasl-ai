@@ -95,7 +95,7 @@ def main() -> int:
         print("FAIL no renumbering note was found to anchor the new one")
         return 1
     first_note = notes[0]
-    new_note = "> " + stars(38) + " تنبيه ترقيم (جولة M121..M125 + D-082): " + args.note
+    new_note = "> " + stars(38) + " تنبيه ترقيم (جولة M126..M130 + D-083): " + args.note
     text = text.replace(first_note, new_note + "\n\n" + first_note, 1)
 
     # ---------------------------------------------------------------

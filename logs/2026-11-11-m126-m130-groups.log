@@ -1,0 +1,8 @@
+=== GROUP unit ===
+EXIT=1 duration=72s
+# tests 605
+# pass 603
+# fail 2
+# skipped 0
+
+=== GROUP integration ===

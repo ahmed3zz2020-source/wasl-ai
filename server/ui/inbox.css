@@ -471,6 +471,93 @@ button.ghost:hover:not(:disabled) {
   flex: 1;
 }
 
+/* ============================================================
+   ⭐⭐⭐ M-130: the quick replies (the employee picks a template
+   and the text goes into the composer — nothing is sent).
+   ⭐⭐⭐ Every colour is a variable of the theme ⇒ ⇒ ⇒ the section
+   ⭐⭐⭐ is readable in the light theme AND in the dark one.
+   ============================================================ */
+.quick-replies {
+  padding: 10px 16px 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+.quick-replies-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.quick-replies-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.quick-replies-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.quick-replies-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-reply {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.quick-reply:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.quick-replies-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  background: var(--warn-soft);
+}
+
+.quick-replies-question {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.quick-replies-confirm-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 860px) {
+  .quick-replies {
+    padding: 8px 12px 0;
+  }
+
+  .quick-reply {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
 /* ------------------------------------------------------------ states */
 .state-box {
   padding: 26px 18px;

@@ -160,6 +160,26 @@
               ⭐⭐⭐ انت تشوف المحادثة فقط — الكتابة مش متاحة لدورك.
             </p>
 
+            <!-- ⭐⭐⭐ M-130: ⭐⭐⭐ the quick replies (a local trial of
+                 ⭐⭐⭐ M-130 the employee ⇒ ⇒ ⇒ NO central management ·
+                 ⭐⭐⭐ M-130 NO storage · NO AI · NO real customer) ⇒ ⇒ ⇒
+                 ⭐⭐⭐ M-130 the section is hidden from the role that may
+                 ⭐⭐⭐ M-130 only read (the server announces the right). -->
+            <section class="quick-replies" id="quick-replies" hidden aria-label="ردود سريعة">
+              <div class="quick-replies-head">
+                <span class="quick-replies-title">ردود سريعة</span>
+                <span class="quick-replies-hint">القالب بيتكتب في المربع — ومبترسلش لوحده</span>
+              </div>
+              <div class="quick-replies-list" id="quick-replies-list"></div>
+              <div class="quick-replies-confirm" id="quick-replies-confirm" hidden>
+                <span class="quick-replies-question">فيه نص مكتوب في مربع الرد — تستبدله بالقالب؟</span>
+                <span class="quick-replies-confirm-actions">
+                  <button class="ghost" id="btn-quick-replace" type="button">استبدل بالقالب</button>
+                  <button class="ghost" id="btn-quick-keep" type="button">أبقِ نصي</button>
+                </span>
+              </div>
+            </section>
+
             <form class="composer" id="composer">
               <label class="field grow">
                 <span class="sr-only">نص الرد</span>

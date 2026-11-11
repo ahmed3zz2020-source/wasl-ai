@@ -312,6 +312,14 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
   // ⭐⭐ a run that was KILLED must not change the counts ⇒ ⭐⭐⇒ the
   // ⭐⭐ rows are wiped BEFORE the fixture too (not only after it).
   await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+    // ⭐⭐⭐ M-129: ⭐⭐⭐ the BULK of the tickets is wiped too ⇒ ⇒ ⇒ (a run
+    // ⭐⭐⭐ M-129 that is killed between the seeding of the bulk and its
+    // ⭐⭐⭐ M-129 wipe leaves sixty rows behind ⇒ ⇒ ⇒ ⇒ and the next run
+    // ⭐⭐⭐ M-129 counts them ⇒ ⇒ ⇒ ⇒ ⇒ a FALSE failure of the product).
+    await uow.query(
+      `delete from support_tickets where tenant_id = $1 and ref like 'tkt_b04_ui_bulk_%'`,
+      [tenantId],
+    );
     await uow.query(`delete from messages where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from conversations where tenant_id = $1`, [tenantId]);
     await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);

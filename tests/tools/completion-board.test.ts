@@ -235,4 +235,137 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
       '⭐⭐⭐ the writing queue is marked as done (it is not built)',
     );
   });
+
+  // ============================================================
+  // M-128 — the twelve commercial domains (a THIRD scale)
+  // ============================================================
+  await t.test('⭐⭐⭐ M-128-1: the twelve domains carry EQUAL weights that never move', () => {
+    const inventory = readInventory() as Inventory & {
+      commercial_domains?: {
+        id: string;
+        name: string;
+        weight: number;
+        capabilities: { id: string; title: string; evidence: string[] }[];
+      }[];
+    };
+    const domains = inventory.commercial_domains ?? [];
+    assert.equal(domains.length, 12, `⭐⭐⭐ the inventory holds ${domains.length} domains instead of 12`);
+    const ids = new Set(domains.map((domain) => domain.id));
+    assert.equal(ids.size, 12, '⭐⭐⭐ two commercial domains carry the same identifier');
+    for (const domain of domains) {
+      assert.equal(
+        domain.weight,
+        8.33,
+        `⭐⭐⭐ the weight of ${domain.id} is ${domain.weight} instead of 8.33 (the weights never move)`,
+      );
+      assert.ok(domain.capabilities.length > 0, `⭐⭐⭐ the domain ${domain.id} holds no capability`);
+    }
+    const total = domains.reduce((sum, domain) => sum + domain.weight, 0);
+    assert.ok(
+      Math.abs(total - 100) <= 0.1,
+      `⭐⭐⭐ the weights of the domains sum to ${total} instead of 100`,
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-128-2: every claimed evidence REALLY exists (the tool refuses a made up one)', () => {
+    const inventory = readInventory() as Inventory & {
+      commercial_domains?: {
+        id: string;
+        capabilities: { id: string; evidence: string[] }[];
+      }[];
+    };
+    for (const domain of inventory.commercial_domains ?? []) {
+      for (const capability of domain.capabilities) {
+        for (const file of capability.evidence) {
+          assert.ok(
+            fs.existsSync(path.join(REPO, file)),
+            `⭐⭐⭐ the capability ${capability.id} claims a file that does not exist: ${file}`,
+          );
+        }
+      }
+    }
+    // ⭐⭐⭐ and the tool REFUSES a tampered inventory (a file that is
+    // ⭐⭐⭐ not there ⇒ the audit fails ⇒ ⇒ ⇒ the number cannot be
+    // ⭐⭐⭐ written by hand).
+    const tampered = JSON.parse(fs.readFileSync(INVENTORY, 'utf8')) as {
+      commercial_domains: { capabilities: { id: string; evidence: string[] }[] }[];
+    };
+    tampered.commercial_domains[0]!.capabilities[0]!.evidence = ['docs/does-not-exist.md'];
+    const temporary = path.join(REPO, 'docs', '.completion-domains-tampered.json');
+    fs.writeFileSync(temporary, JSON.stringify(tampered), 'utf8');
+    try {
+      const output = execFileSync('python3', [TOOL, '--json'], {
+        encoding: 'utf8',
+        cwd: REPO,
+        env: { ...process.env, WASL_BOARD_INVENTORY: temporary },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      assert.fail(`⭐⭐⭐ the tool accepted a made up evidence: ${output}`);
+    } catch (error) {
+      const stderr = String((error as { stderr?: string }).stderr ?? '');
+      assert.match(
+        stderr,
+        /does NOT exist|COMPLETION BOARD AUDIT FAILED/,
+        `⭐⭐⭐ the tool did not refuse the tampered inventory: ${stderr}`,
+      );
+    } finally {
+      fs.rmSync(temporary, { force: true });
+    }
+  });
+
+  await t.test('⭐⭐⭐ M-128-3: the numbers are MEASURED (the disk now · the baseline commit before)', () => {
+    const computed = JSON.parse(runTool(['--json'])) as {
+      domains: {
+        baseline: { sha: string };
+        rows: {
+          id: string;
+          done: number;
+          total: number;
+          percent: number;
+          percent_before: number;
+          needs_review: boolean;
+          changed: { id: string }[];
+        }[];
+        reviewed: number;
+        pending_review: number;
+        weighted_percent: number;
+        weighted_percent_before: number;
+      };
+    };
+    const domains = computed.domains;
+    assert.equal(domains.rows.length, 12, '⭐⭐⭐ the computed domains are not 12');
+    assert.match(domains.baseline.sha, /^[0-9a-f]{40}$/, '⭐⭐⭐ the baseline carries no commit');
+    // ⭐⭐⭐ the conversations domain moved BECAUSE of the three new
+    // ⭐⭐⭐ capabilities of this round (the proof is the file itself).
+    const conversations = domains.rows.find((row) => row.id === 'conversations');
+    assert.ok(conversations, '⭐⭐⭐ the domain of the conversations is missing');
+    assert.ok(
+      conversations.percent > conversations.percent_before,
+      '⭐⭐⭐ the domain of the conversations did not move',
+    );
+    assert.equal(conversations.done, conversations.total, '⭐⭐⭐ the conversations are not complete');
+    for (const id of ['conv-draft', 'conv-ux', 'conv-quick']) {
+      assert.ok(
+        conversations.changed.some((capability) => capability.id === id),
+        `⭐⭐⭐ the capability ${id} is not reported as new`,
+      );
+    }
+    // ⭐⭐⭐ a domain that needs a review is NOT given a number ⇒ ⇒ ⇒
+    // ⭐⭐⭐ and it is NOT in the total ⇒ ⇒ ⇒ ⇒ no inflation.
+    const staff = domains.rows.find((row) => row.id === 'staff');
+    assert.ok(staff?.needs_review, '⭐⭐⭐ the domain of the staff has no review');
+    assert.equal(domains.pending_review, 2, '⭐⭐⭐ the number of the domains that need a review is wrong');
+    assert.ok(
+      domains.weighted_percent >= domains.weighted_percent_before,
+      '⭐⭐⭐ the weighted total went backwards',
+    );
+    // ⭐⭐⭐ the published file carries the table of the twelve.
+    const published = fs.readFileSync(PUBLISHED, 'utf8');
+    assert.match(published, /المجالات الأصلية الاثنا عشر/, '⭐⭐⭐ the published board has no third scale');
+    assert.match(published, /يحتاج إعادة تقييم/, '⭐⭐⭐ the published board does not mark the domains that need a review');
+    assert.match(published, /المحادثات/, '⭐⭐⭐ the published board has no row of the conversations');
+    // ⭐⭐⭐ and the third scale does NOT replace the scale of the owner.
+    assert.match(published, /42\/75 = 56\.0%/, '⭐⭐⭐ the internal list is not published any more');
+    assert.match(published, /46%/, '⭐⭐⭐ the estimate of the owner is not published any more');
+  });
 });

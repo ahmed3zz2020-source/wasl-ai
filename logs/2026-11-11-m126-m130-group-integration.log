@@ -1,0 +1,738 @@
+
+> wasl-ai@0.1.0 test:integration
+> node --experimental-strip-types --test tests/server/foundation-isolation.test.ts tests/server/foundation-api.test.ts tests/server/foundation-identity.test.ts tests/server/foundation-privacy.test.ts tests/server/foundation-deletion.test.ts tests/server/foundation-concurrency.test.ts tests/server/foundation-multi-instance.test.ts tests/server/foundation-consistency.test.ts tests/server/foundation-hosting.test.ts tests/server/foundation-inbox.test.ts tests/server/foundation-docker-hosting.test.ts tests/ui/inbox-ui.test.ts tests/ui/inbox-draft-safety.test.ts tests/ui/inbox-mobile-ux.test.ts tests/ui/inbox-quick-replies.test.ts tests/server/foundation-crm.test.ts tests/server/foundation-sync.test.ts tests/ui/crm-ui.test.ts tests/server/foundation-crm-isolation.test.ts tests/server/foundation-tickets.test.ts tests/ui/tickets-ui.test.ts tests/server/foundation-tickets-assign.test.ts tests/server/foundation-tickets-queue.test.ts tests/server/foundation-tickets-snapshot.test.ts tests/tools/port-reservation.test.ts tests/tools/port-reservation-race.test.ts tests/tools/admin-timeout.test.ts tests/tools/port-reservation-m109.test.ts
+
+TAP version 13
+# Subtest: FOUNDATION 2) API contract, durability and the end to end journey
+    # Subtest: ⭐ AC-09a: the accepted journey passes every step
+    ok 1 - ⭐ AC-09a: the accepted journey passes every step
+      ---
+      duration_ms: 394.544598
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-09b: the rejected journey is refused
+    ok 2 - ⭐ AC-09b: the rejected journey is refused
+      ---
+      duration_ms: 98.850061
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-02: a write survives a service restart and a new connection
+    ok 3 - ⭐ AC-02: a write survives a service restart and a new connection
+      ---
+      duration_ms: 136.765485
+      type: 'test'
+      ...
+    # Subtest: ⭐ input validation: the API refuses malformed requests
+    ok 4 - ⭐ input validation: the API refuses malformed requests
+      ---
+      duration_ms: 106.013551
+      type: 'test'
+      ...
+    # Subtest: ⭐ errors are safe: no SQL text and no secrets in the answers
+    ok 5 - ⭐ errors are safe: no SQL text and no secrets in the answers
+      ---
+      duration_ms: 79.478824
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-01: the health endpoint reports the local scope
+    ok 6 - ⭐ AC-01: the health endpoint reports the local scope
+      ---
+      duration_ms: 4.132792
+      type: 'test'
+      ...
+    1..6
+ok 1 - FOUNDATION 2) API contract, durability and the end to end journey
+  ---
+  duration_ms: 1767.45212
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 7) the concurrent operations (D-067 remediation)
+    # Subtest: ⭐ R-04a: two concurrent transitions, one valid update, no silent loss
+    ok 1 - ⭐ R-04a: two concurrent transitions, one valid update, no silent loss
+      ---
+      duration_ms: 76.831227
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04b: a stale expected version is a reported conflict
+    ok 2 - ⭐ R-04b: a stale expected version is a reported conflict
+      ---
+      duration_ms: 40.461752
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04c: an illegal transition is refused under a race
+    ok 3 - ⭐ R-04c: an illegal transition is refused under a race
+      ---
+      duration_ms: 58.907246
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04d: two concurrent messages are both kept
+    ok 4 - ⭐ R-04d: two concurrent messages are both kept
+      ---
+      duration_ms: 71.127394
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04e: the memory matches the database and survives a restart
+    ok 5 - ⭐ R-04e: the memory matches the database and survives a restart
+      ---
+      duration_ms: 208.289078
+      type: 'test'
+      ...
+    1..5
+ok 2 - FOUNDATION 7) the concurrent operations (D-067 remediation)
+  ---
+  duration_ms: 1123.081107
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 12) the consistency between two backend instances (M-66)
+    # Subtest: ⭐⭐⭐ M-66a: the same message reference is refused, not dropped
+    ok 1 - ⭐⭐⭐ M-66a: the same message reference is refused, not dropped
+      ---
+      duration_ms: 83.678387
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-66b: a write of one instance is visible to the other at once
+    ok 2 - ⭐⭐⭐ M-66b: a write of one instance is visible to the other at once
+      ---
+      duration_ms: 49.740196
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-66c: a new operation never reads a stale conversation
+    ok 3 - ⭐⭐⭐ M-66c: a new operation never reads a stale conversation
+      ---
+      duration_ms: 69.28348
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-66d: a restarted instance reads the committed state
+    ok 4 - ⭐⭐⭐ M-66d: a restarted instance reads the committed state
+      ---
+      duration_ms: 143.624643
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-66e: two companies run in parallel and never mix
+    ok 5 - ⭐⭐ M-66e: two companies run in parallel and never mix
+      ---
+      duration_ms: 120.933305
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-66f: the append is based on the committed version
+    ok 6 - ⭐⭐ M-66f: the append is based on the committed version
+      ---
+      duration_ms: 43.997686
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-66g: read your writes on the same instance
+    ok 7 - ⭐⭐ M-66g: read your writes on the same instance
+      ---
+      duration_ms: 35.962996
+      type: 'test'
+      ...
+    1..7
+ok 3 - FOUNDATION 12) the consistency between two backend instances (M-66)
+  ---
+  duration_ms: 1202.936168
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 24) the CRM never shows what belongs to another employee (M-83)
+    # Subtest: ⭐⭐⭐ M-83a: the list does not leak the count of the conversations of the other employee
+    ok 1 - ⭐⭐⭐ M-83a: the list does not leak the count of the conversations of the other employee
+      ---
+      duration_ms: 42.795541
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83b: the list does not leak the TEXT of the last message of the other employee
+    ok 2 - ⭐⭐⭐ M-83b: the list does not leak the TEXT of the last message of the other employee
+      ---
+      duration_ms: 12.56973
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83c: the list does not leak the moment of the last interaction of the other employee
+    ok 3 - ⭐⭐⭐ M-83c: the list does not leak the moment of the last interaction of the other employee
+      ---
+      duration_ms: 13.240307
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83d: the ORDER of the list does not leak the activity of the other employee
+    ok 4 - ⭐⭐⭐ M-83d: the ORDER of the list does not leak the activity of the other employee
+      ---
+      duration_ms: 29.758238
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83e: the profile of the customer shows only the conversations of the agent
+    ok 5 - ⭐⭐⭐ M-83e: the profile of the customer shows only the conversations of the agent
+      ---
+      duration_ms: 18.484016
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83f: the SEARCH of the agent does not find the secret of the other employee
+    ok 6 - ⭐⭐⭐ M-83f: the SEARCH of the agent does not find the secret of the other employee
+      ---
+      duration_ms: 27.809862
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83g: the owner and the supervisor keep their approved scope
+    ok 7 - ⭐⭐⭐ M-83g: the owner and the supervisor keep their approved scope
+      ---
+      duration_ms: 46.202722
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83h: the scope follows the assignment WHILE the CRM is used
+    ok 8 - ⭐⭐⭐ M-83h: the scope follows the assignment WHILE the CRM is used
+      ---
+      duration_ms: 67.867165
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83i: the viewer reads the whole company (the scope of the core)
+    ok 9 - ⭐⭐⭐ M-83i: the viewer reads the whole company (the scope of the core)
+      ---
+      duration_ms: 9.961872
+      type: 'test'
+      ...
+    1..9
+ok 4 - FOUNDATION 24) the CRM never shows what belongs to another employee (M-83)
+  ---
+  duration_ms: 1444.317244
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 20) the customer CRM works on the real backend (D-071)
+    # Subtest: ⭐⭐⭐ CRM-01: the list is PAGINATED and the total is real
+    ok 1 - ⭐⭐⭐ CRM-01: the list is PAGINATED and the total is real
+      ---
+      duration_ms: 69.200424
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-02: the search narrows the list and works with the pages
+    ok 2 - ⭐⭐⭐ CRM-02: the search narrows the list and works with the pages
+      ---
+      duration_ms: 56.053135
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-03: the profile carries the customer and its conversations
+    ok 3 - ⭐⭐⭐ CRM-03: the profile carries the customer and its conversations
+      ---
+      duration_ms: 16.781958
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-04: the edit needs the capability of the core
+    ok 4 - ⭐⭐⭐ CRM-04: the edit needs the capability of the core
+      ---
+      duration_ms: 44.533171
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-05: the edit refuses the invalid input
+    ok 5 - ⭐⭐⭐ CRM-05: the edit refuses the invalid input
+      ---
+      duration_ms: 31.477852
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-06: the edit refuses a customer of another company
+    ok 6 - ⭐⭐⭐ CRM-06: the edit refuses a customer of another company
+      ---
+      duration_ms: 56.078665
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-07: the edit refuses a stale version (no lost update)
+    ok 7 - ⭐⭐⭐ CRM-07: the edit refuses a stale version (no lost update)
+      ---
+      duration_ms: 53.769279
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-08: the edit is audited
+    ok 8 - ⭐⭐⭐ CRM-08: the edit is audited
+      ---
+      duration_ms: 9.5365
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-09: an agent reaches only the customers of their conversations
+    ok 9 - ⭐⭐⭐ CRM-09: an agent reaches only the customers of their conversations
+      ---
+      duration_ms: 22.899464
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-77: the refresh asks only for what is new
+    ok 10 - ⭐⭐⭐ M-77: the refresh asks only for what is new
+      ---
+      duration_ms: 35.794066
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-10: the data survives a RESTART of the server
+    ok 11 - ⭐⭐⭐ CRM-10: the data survives a RESTART of the server
+      ---
+      duration_ms: 136.11996
+      type: 'test'
+      ...
+    1..11
+ok 5 - FOUNDATION 20) the customer CRM works on the real backend (D-071)
+  ---
+  duration_ms: 1803.524368
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 6) the deletion of a tenant (D-067 remediation)
+    # Subtest: ⭐ D-01: the full deletion completes and leaves a durable evidence
+    ok 1 - ⭐ D-01: the full deletion completes and leaves a durable evidence
+      ---
+      duration_ms: 372.734396
+      type: 'test'
+      ...
+    # Subtest: ⭐ D-02: the partial deletion keeps the tenant and the audit trail
+    ok 2 - ⭐ D-02: the partial deletion keeps the tenant and the audit trail
+      ---
+      duration_ms: 209.853525
+      type: 'test'
+      ...
+    # Subtest: ⭐ D-03: a failing step rolls the whole deletion back
+    ok 3 - ⭐ D-03: a failing step rolls the whole deletion back
+      ---
+      duration_ms: 166.541767
+      type: 'test'
+      ...
+    # Subtest: ⭐ D-04: an unknown or foreign request never reports a success
+    ok 4 - ⭐ D-04: an unknown or foreign request never reports a success
+      ---
+      duration_ms: 303.49415
+      type: 'test'
+      ...
+    1..4
+ok 6 - FOUNDATION 6) the deletion of a tenant (D-067 remediation)
+  ---
+  duration_ms: 1539.080621
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 20) the image definition and the local compose (M-75)
+    # Subtest: ⭐⭐⭐ M-75a: the image holds no secret and it is not a root image
+    ok 1 - ⭐⭐⭐ M-75a: the image holds no secret and it is not a root image
+      ---
+      duration_ms: 5.84189
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-75b: the compose file publishes the backend on the loopback only
+    ok 2 - ⭐⭐⭐ M-75b: the compose file publishes the backend on the loopback only
+      ---
+      duration_ms: 5.316067
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-75c: the dynamic drill (build, compose, health, readiness, shutdown)
+    ok 3 - ⭐⭐⭐ M-75c: the dynamic drill (build, compose, health, readiness, shutdown) # SKIP the dynamic drill is BLOCKED in this environment - no Docker daemon answers: spawnSync docker ENOENT
+      ---
+      duration_ms: 2.948875
+      type: 'test'
+      ...
+    1..3
+ok 7 - FOUNDATION 20) the image definition and the local compose (M-75)
+  ---
+  duration_ms: 15.712894
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 16) the preparation of a host (M-70)
+    # Subtest: ⭐⭐⭐ M-70a: the roles of the database are separated
+    ok 1 - ⭐⭐⭐ M-70a: the roles of the database are separated
+      ---
+      duration_ms: 26.883926
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70b: the liveness and the readiness are two answers
+    ok 2 - ⭐⭐⭐ M-70b: the liveness and the readiness are two answers
+      ---
+      duration_ms: 14.77979
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70c: SIGTERM stops the server cleanly
+    ok 3 - ⭐⭐⭐ M-70c: SIGTERM stops the server cleanly
+      ---
+      duration_ms: 763.641655
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70d: the configuration files of the host hold no secret
+    ok 4 - ⭐⭐⭐ M-70d: the configuration files of the host hold no secret
+      ---
+      duration_ms: 6.636152
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70e: the TLS termination works locally
+    ok 5 - ⭐⭐⭐ M-70e: the TLS termination works locally
+      ---
+      duration_ms: 447.70805
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-70f: a broken sensitive configuration fails safely
+    ok 6 - ⭐⭐ M-70f: a broken sensitive configuration fails safely
+      ---
+      duration_ms: 3.775753
+      type: 'test'
+      ...
+    1..6
+ok 8 - FOUNDATION 16) the preparation of a host (M-70)
+  ---
+  duration_ms: 1708.956847
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 3) identity, roles and sessions
+    # Subtest: ⭐ AC-05a: the owner can do the owner things
+    ok 1 - ⭐ AC-05a: the owner can do the owner things
+      ---
+      duration_ms: 178.858095
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05b: the supervisor can write but not delete
+    ok 2 - ⭐ AC-05b: the supervisor can write but not delete
+      ---
+      duration_ms: 114.645617
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05c: the agent can write but not create or export
+    ok 3 - ⭐ AC-05c: the agent can write but not create or export
+      ---
+      duration_ms: 104.827843
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05d: the viewer can only read
+    ok 4 - ⭐ AC-05d: the viewer can only read
+      ---
+      duration_ms: 83.94026
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05e: a role sent by the client changes nothing
+    ok 5 - ⭐ AC-05e: a role sent by the client changes nothing
+      ---
+      duration_ms: 98.573043
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05f: the tenant of a session cannot be switched by the client
+    ok 6 - ⭐ AC-05f: the tenant of a session cannot be switched by the client
+      ---
+      duration_ms: 140.120001
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-06a: an expired session is refused
+    ok 7 - ⭐ AC-06a: an expired session is refused
+      ---
+      duration_ms: 2617.027488
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-06b: a revoked session is refused
+    ok 8 - ⭐ AC-06b: a revoked session is refused
+      ---
+      duration_ms: 89.517293
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-06c: a disabled membership stops the next operation
+    ok 9 - ⭐ AC-06c: a disabled membership stops the next operation
+      ---
+      duration_ms: 86.846102
+      type: 'test'
+      ...
+    # Subtest: ⭐ M59: a role change in the database is effective on the next request
+    ok 10 - ⭐ M59: a role change in the database is effective on the next request
+      ---
+      duration_ms: 90.593672
+      type: 'test'
+      ...
+    # Subtest: ⭐ M59b: a token of one company cannot be replayed in another
+    ok 11 - ⭐ M59b: a token of one company cannot be replayed in another
+      ---
+      duration_ms: 61.072672
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-01: the migration connection uses the owner role and its own password
+    ok 12 - ⭐ R-01: the migration connection uses the owner role and its own password
+      ---
+      duration_ms: 23.558729
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02: the seed restores the identity rows after a tenant wipe
+    ok 13 - ⭐ R-02: the seed restores the identity rows after a tenant wipe
+      ---
+      duration_ms: 515.666334
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-03a: a disabled account stops the next request
+    ok 14 - ⭐ R-03a: a disabled account stops the next request
+      ---
+      duration_ms: 76.724653
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-03b: an old session stays dead after a new login
+    ok 15 - ⭐ R-03b: an old session stays dead after a new login
+      ---
+      duration_ms: 144.955876
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-03c: a tampered token is refused
+    ok 16 - ⭐ R-03c: a tampered token is refused
+      ---
+      duration_ms: 61.13135
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ R-03d: the local passcode uses a dedicated KDF (scrypt), salted and never stored in clear
+    ok 17 - ⭐⭐ R-03d: the local passcode uses a dedicated KDF (scrypt), salted and never stored in clear
+      ---
+      duration_ms: 171.682348
+      type: 'test'
+      ...
+    1..17
+ok 9 - FOUNDATION 3) identity, roles and sessions
+  ---
+  duration_ms: 6524.414588
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 18) the customer inbox works on the real backend (D-070)
+    # Subtest: ⭐⭐⭐ IN-01: the list carries the customer, the state and the last message
+    ok 1 - ⭐⭐⭐ IN-01: the list carries the customer, the state and the last message
+      ---
+      duration_ms: 36.848229
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-02: the detail carries the messages in their order
+    ok 2 - ⭐⭐⭐ IN-02: the detail carries the messages in their order
+      ---
+      duration_ms: 25.666779
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-03: a reply is stored as an OUTBOUND message of the employee
+    ok 3 - ⭐⭐⭐ IN-03: a reply is stored as an OUTBOUND message of the employee
+      ---
+      duration_ms: 40.643637
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-04: the same reply twice is REFUSED, never stored twice
+    ok 4 - ⭐⭐⭐ IN-04: the same reply twice is REFUSED, never stored twice
+      ---
+      duration_ms: 42.97591
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-05: the state changes only through the transitions of the core
+    ok 5 - ⭐⭐⭐ IN-05: the state changes only through the transitions of the core
+      ---
+      duration_ms: 27.961981
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-06: the assignment refuses an employee of another company
+    ok 6 - ⭐⭐⭐ IN-06: the assignment refuses an employee of another company
+      ---
+      duration_ms: 25.330425
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-07: the search and the filters narrow the list
+    ok 7 - ⭐⭐⭐ IN-07: the search and the filters narrow the list
+      ---
+      duration_ms: 53.322639
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-08: a company cannot read the conversations of another one
+    ok 8 - ⭐⭐⭐ IN-08: a company cannot read the conversations of another one
+      ---
+      duration_ms: 27.818609
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-09: the capabilities are respected (the viewer and the agent)
+    ok 9 - ⭐⭐⭐ IN-09: the capabilities are respected (the viewer and the agent)
+      ---
+      duration_ms: 47.091492
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-10: the scope of an agent is the conversations that are assigned to them
+    ok 10 - ⭐⭐⭐ IN-10: the scope of an agent is the conversations that are assigned to them
+      ---
+      duration_ms: 19.572088
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-11: a session that is over cannot change anything
+    ok 11 - ⭐⭐⭐ IN-11: a session that is over cannot change anything
+      ---
+      duration_ms: 70.232605
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-12: the messages survive a restart of the server
+    ok 12 - ⭐⭐⭐ IN-12: the messages survive a restart of the server
+      ---
+      duration_ms: 68.437648
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-13: two backends on one database see the same thing
+    ok 13 - ⭐⭐⭐ IN-13: two backends on one database see the same thing
+      ---
+      duration_ms: 96.958927
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-14: the journey from the login to the closed conversation
+    ok 14 - ⭐⭐⭐ IN-14: the journey from the login to the closed conversation
+      ---
+      duration_ms: 393.621232
+      type: 'test'
+      ...
+    1..14
+ok 10 - FOUNDATION 18) the customer inbox works on the real backend (D-070)
+  ---
+  duration_ms: 1741.64715
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 1) isolation, RLS protection and atomicity
+    # Subtest: ⭐ AC-03a: the two companies do not share conversations
+    ok 1 - ⭐ AC-03a: the two companies do not share conversations
+      ---
+      duration_ms: 77.716115
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-03b: writes of another company are refused
+    ok 2 - ⭐ AC-03b: writes of another company are refused
+      ---
+      duration_ms: 26.205224
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-03c: the export and the deletion of another company are refused
+    ok 3 - ⭐ AC-03c: the export and the deletion of another company are refused
+      ---
+      duration_ms: 18.48628
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-04a: the request role cannot bypass the row level security
+    ok 4 - ⭐ AC-04a: the request role cannot bypass the row level security
+      ---
+      duration_ms: 13.521674
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-04b: no tenant context means no rows
+    ok 5 - ⭐ AC-04b: no tenant context means no rows
+      ---
+      duration_ms: 3.366684
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-04c: the isolation policy is enabled and forced
+    ok 6 - ⭐ AC-04c: the isolation policy is enabled and forced
+      ---
+      duration_ms: 5.130134
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-07: a failed composite operation leaves nothing behind
+    ok 7 - ⭐ AC-07: a failed composite operation leaves nothing behind
+      ---
+      duration_ms: 8.96964
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-07b: a thrown error inside a unit of work rolls everything back
+    ok 8 - ⭐ AC-07b: a thrown error inside a unit of work rolls everything back
+      ---
+      duration_ms: 7.673079
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02a: three companies, every operation, no cross talk
+    ok 9 - ⭐ R-02a: three companies, every operation, no cross talk
+      ---
+      duration_ms: 776.448281
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02b: the client cannot choose the tenant
+    ok 10 - ⭐ R-02b: the client cannot choose the tenant
+      ---
+      duration_ms: 120.740825
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02c: the database itself refuses a foreign row
+    ok 11 - ⭐ R-02c: the database itself refuses a foreign row
+      ---
+      duration_ms: 71.248137
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02d: concurrent requests of two companies do not mix
+    ok 12 - ⭐ R-02d: concurrent requests of two companies do not mix
+      ---
+      duration_ms: 198.849046
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02e: the audit trails of the companies are separated
+    ok 13 - ⭐ R-02e: the audit trails of the companies are separated
+      ---
+      duration_ms: 161.150293
+      type: 'test'
+      ...
+    1..13
+ok 11 - FOUNDATION 1) isolation, RLS protection and atomicity
+  ---
+  duration_ms: 2604.779299
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 8) two backend instances on one database (M-01)
+    # Subtest: ⭐⭐ M-01a: a write of one instance is visible to the other
+    ok 1 - ⭐⭐ M-01a: a write of one instance is visible to the other
+      ---
+      duration_ms: 52.854383
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-01b: two instances update at the same time, no update is lost
+    ok 2 - ⭐⭐ M-01b: two instances update at the same time, no update is lost
+      ---
+      duration_ms: 49.123207
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-01c: the second instance sees the committed state (no stale memory)
+    ok 3 - ⭐⭐⭐ M-01c: the second instance sees the committed state (no stale memory)
+      ---
+      duration_ms: 53.505708
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-01d: the instances never mix the companies
+    ok 4 - ⭐⭐ M-01d: the instances never mix the companies
+      ---
+      duration_ms: 21.208981
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-01e: a message written by one instance is stored once and seen by the other
+    ok 5 - ⭐⭐ M-01e: a message written by one instance is stored once and seen by the other
+      ---
+      duration_ms: 33.842833
+      type: 'test'
+      ...
+    1..5
+ok 12 - FOUNDATION 8) two backend instances on one database (M-01)
+  ---
+  duration_ms: 931.26734
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) privacy, retention and deletion
+    # Subtest: ⭐ the retention policies round trip and are per class
+    ok 1 - ⭐ the retention policies round trip and are per class
+      ---
+      duration_ms: 138.227752
+      type: 'test'
+      ...
+    # Subtest: ⭐ an unknown data class is refused
+    ok 2 - ⭐ an unknown data class is refused
+      ---
+      duration_ms: 73.100481
+      type: 'test'
+      ...
+    # Subtest: ⭐ the export contains the tenant data and nothing else
+    ok 3 - ⭐ the export contains the tenant data and nothing else
+      ---
+      duration_ms: 218.826989
+      type: 'test'
+      ...
+    # Subtest: ⭐ the deletion preview changes nothing
+    ok 4 - ⭐ the deletion preview changes nothing
+      ---
+      duration_ms: 86.61994
+      type: 'test'
+      ...
+    # Subtest: ⭐ the deletion removes the data and keeps the audit trail
+    ok 5 - ⭐ the deletion removes the data and keeps the audit trail
+      ---
+      duration_ms: 126.58462
+      type: 'test'
+      ...
+    # Subtest: ⭐ a deletion request of another company cannot be executed here
+    ok 6 - ⭐ a deletion request of another company cannot be executed here
+      ---
+      duration_ms: 591.225662
+      type: 'test'
+      ...
+    # Subtest: ⭐ the deletion request cannot be executed twice
+    ok 7 - ⭐ the deletion request cannot be executed twice
+      ---
+      duration_ms: 149.115226
+      type: 'test'
+      ...
+    1..7
+ok 13 - FOUNDATION 4) privacy, retention and deletion
+  ---
+  duration_ms: 2243.029668
+  type: 'test'
+  ...

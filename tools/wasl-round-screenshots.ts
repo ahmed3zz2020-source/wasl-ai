@@ -137,6 +137,21 @@ await UnitOfWork.run(harness.ownerPool, TENANT, async (uow) => {
      on conflict (id) do nothing`,
     [CUSTOMER, TENANT, 'عميل تجريبي', 'shots@example.invalid'],
   );
+  // ⭐⭐⭐ M-126..M-130: ⭐⭐⭐ a CONVERSATION with a message ⇒ ⇒ ⇒ (the
+  // ⭐⭐⭐ M-126..M-130 inbox has something to show in the shots) ⇒ ⇒ ⇒.
+  await uow.query(
+    `insert into conversations (tenant_id, ref, customer_id, state, version, updated_at)
+     values ($1,$2,$3,'open',1, now())
+     on conflict (tenant_id, ref) do update set state = 'open'`,
+    [TENANT, 'conv_shot_1', CUSTOMER],
+  );
+  await uow.query(
+    `insert into messages (message_ref, tenant_id, conversation_ref, channel, direction, sender,
+                           recipient, body, occurred_at, locale, attributes, stored_at)
+     values ($1,$2,$3,'web','inbound','customer@example.invalid','agent@example.invalid',$4, now(),'ar','{}'::jsonb, now())
+     on conflict (tenant_id, message_ref) do nothing`,
+    ['msg_shot_1', TENANT, 'conv_shot_1', 'رسالة العميل في المحادثة'],
+  );
   // ⭐⭐ three unassigned tickets (the queue of M-119) + one assigned.
   for (let index = 1; index <= 3; index += 1) {
     await uow.query(
@@ -202,6 +217,9 @@ async function routeOldPages(pageRef: any, commit: string): Promise<void> {
     'server/ui/crm.html',
     'server/ui/crm.js',
     'server/ui/crm.css',
+    'server/ui/inbox.html',
+    'server/ui/inbox.js',
+    'server/ui/inbox.css',
   ]);
   for (const [file, content] of files) {
     const name = file.split('/').pop() as string;
@@ -244,9 +262,33 @@ async function shootCrm(tag: string): Promise<void> {
   await page.screenshot({ path: path.join(SHOT_DIR, `${PREFIX}crm-mobile-${tag}-profile.png`), fullPage: true });
 }
 
+/**
+ * ⭐⭐⭐ M-126..M-130: ⭐⭐⭐ the shots of the INBOX ⇒ ⇒ ⇒ (the list and
+ * ⭐⭐⭐ M-126..M-130 the conversation ⇒ ⇒ ⇒ ⇒ the «after» carries the
+ * ⭐⭐⭐ M-126..M-130 quick replies ⇒ ⇒ ⇒ ⇒ and the «before» does not
+ * ⭐⭐⭐ M-126..M-130 ⇒ ⇒ ⇒ ⇒ the difference on the screen IS the change).
+ */
+async function shootInbox(tag: string): Promise<void> {
+  await page.goto(`${base}/ui/inbox.html`);
+  await page.waitForTimeout(1500);
+  await scrollTop();
+  await page.screenshot({
+    path: path.join(SHOT_DIR, `${PREFIX}inbox-mobile-${tag}-list.png`),
+    fullPage: true,
+  });
+  await page.evaluate(`document.querySelector('#conversation-list .conversation').click()`);
+  await page.waitForTimeout(1400);
+  await scrollTop();
+  await page.screenshot({
+    path: path.join(SHOT_DIR, `${PREFIX}inbox-mobile-${tag}-thread.png`),
+    fullPage: true,
+  });
+}
+
 await login();
 await shootTickets('after');
 await shootCrm('after');
+await shootInbox('after');
 
 await routeOldPages(page, BEFORE);
 await page.goto(`${base}/ui/tickets.html`);
@@ -254,6 +296,7 @@ await page.waitForTimeout(1200);
 await login();
 await shootTickets('before');
 await shootCrm('before');
+await shootInbox('before');
 
 await browser.close();
 await UnitOfWork.run(harness.ownerPool, TENANT, async (uow) => {

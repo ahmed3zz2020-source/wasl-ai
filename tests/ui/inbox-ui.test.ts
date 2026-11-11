@@ -119,6 +119,31 @@ function resolveChromiumExecutable(): string | undefined {
 }
 
 test('FOUNDATION 21) the customer inbox in a real browser (D-070)', async (t) => {
+
+/**
+ * ⭐⭐⭐ M-127: ⭐⭐⭐ the state of the list (the search · the filters ·
+ * ⭐⭐⭐ M-127 the page · the place) is kept by the page ⇒ ⇒ ⇒ ⇒ it
+ * ⭐⭐⭐ M-127 survives a reload ⇒ ⇒ ⇒ ⇒ so every drill of this file
+ * ⭐⭐⭐ M-127 RESETS it ⇒ ⇒ ⇒ ⇒ (the drill of one case must never
+ * ⭐⭐⭐ M-127 inherit the state of the previous one) ⇒ ⇒ ⇒ ⇒ and the
+ * ⭐⭐⭐ M-127 reset is CHECKED ⇒ ⇒ ⇒ ⇒ not assumed.
+ */
+async function openTheInbox(page: PageLike): Promise<void> {
+  await page.goto(`http://127.0.0.1:${harness.port}/ui/inbox.html`);
+  await page.waitForTimeout(500);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.evaluate(
+      `(() => { try { sessionStorage.removeItem('wasl_inbox_list_view_v1'); } catch {} })()`,
+    );
+    await page.reload();
+    await page.waitForTimeout(1000);
+    const query = await page.inputValue('#filter-query');
+    const filter = await page.inputValue('#filter-state');
+    if (query === '' && filter === '') return;
+  }
+  throw new Error('the state of the list did not reset');
+}
+
   const playwright = await resolvePlaywright();
   if (!playwright) {
     t.skip('playwright is not available in this environment');
@@ -249,8 +274,7 @@ test('FOUNDATION 21) the customer inbox in a real browser (D-070)', async (t) =>
   });
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  await page.goto(`http://127.0.0.1:${harness.port}/ui/inbox.html`);
-  await page.waitForTimeout(400);
+  await openTheInbox(page);
 
   await t.test('⭐⭐⭐ UI-01: the page is Arabic and the direction is from the right', async () => {
     const direction = await page.evaluate(
@@ -422,8 +446,7 @@ test('FOUNDATION 21) the customer inbox in a real browser (D-070)', async (t) =>
 
   await t.test('⭐⭐⭐ M-125-1: the phone shows EITHER the list OR the conversation, and «رجوع» keeps the state', async () => {
     await page.setViewportSize({ width: 390, height: 780 });
-    await page.goto(`http://127.0.0.1:${harness.port}/ui/inbox.html`);
-    await page.waitForTimeout(1200);
+    await openTheInbox(page);
     // ⭐⭐⭐ the list is on the screen first.
     assert.equal(
       await page.isVisible('.pane.list'),
@@ -480,8 +503,7 @@ test('FOUNDATION 21) the customer inbox in a real browser (D-070)', async (t) =>
   });
 
   await t.test('⭐⭐⭐ M-125-2: the search waits (ONE request) and an OLD reply is dropped', async () => {
-    await page.goto(`http://127.0.0.1:${harness.port}/ui/inbox.html`);
-    await page.waitForTimeout(1200);
+    await openTheInbox(page);
     // ⭐⭐⭐ THE COUNT: ⭐⭐⭐ the whole word is ONE request ⇒ ⇒ ⇒ (the
     // ⭐⭐⭐ M-125 letters of the word are not five requests).
     let requests = 0;
@@ -516,8 +538,7 @@ test('FOUNDATION 21) the customer inbox in a real browser (D-070)', async (t) =>
   });
 
   await t.test('⭐⭐⭐ M-125-3: the loss of the connection is said out loud, and the retry works', async () => {
-    await page.goto(`http://127.0.0.1:${harness.port}/ui/inbox.html`);
-    await page.waitForTimeout(1200);
+    await openTheInbox(page);
     // ⭐⭐⭐ THE VIEWPORT IS THE MOBILE ONE: ⭐⭐⭐ the shot of the lost
     // ⭐⭐⭐ connection must show the phone (390px) ⇒ ⇒ ⇒ (the previous
     // ⭐⭐⭐ test left the desktop size ⇒ ⇒ ⇒ and the shot was of the
@@ -556,8 +577,7 @@ test('FOUNDATION 21) the customer inbox in a real browser (D-070)', async (t) =>
   });
 
   await t.test('⭐⭐⭐ M-125-4: the double send is refused (the button is closed while the reply flies)', async () => {
-    await page.goto(`http://127.0.0.1:${harness.port}/ui/inbox.html`);
-    await page.waitForTimeout(1200);
+    await openTheInbox(page);
     await page.evaluate(`document.querySelector('#conversation-list .conversation').click()`);
     await page.waitForTimeout(1200);
     // ⭐⭐⭐ THE SLOW ANSWER: ⭐⭐⭐ the save of the reply takes 1200ms
@@ -631,7 +651,7 @@ test('FOUNDATION 21) the customer inbox in a real browser (D-070)', async (t) =>
     // ⭐⭐⭐ THE VIEWER: ⭐⭐⭐ he reads the conversation ⇒ ⇒ ⇒ and he
     // ⭐⭐⭐ CANNOT write a reply (the core has no `conversation.write`
     // ⭐⭐⭐ for him ⇒ ⇒ ⇒ and the page hides the composer).
-    await page.goto(`${base}/ui/inbox.html`);
+    await openTheInbox(page);
     await page.waitForTimeout(1000);
     if (await page.isVisible('#btn-logout')) {
       await page.click('#btn-logout');

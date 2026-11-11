@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -43,6 +44,15 @@ PUBLISHED = ROOT / "docs" / "COMPLETION-BOARD.md"
 # ⭐⭐ THE FIXED WEIGHTS (the denominator never changes).
 EXPECTED_WEIGHTS = {"ui": 20, "tickets": 20, "platform": 35}
 EXPECTED_TOTAL = 75
+
+# ⭐⭐⭐ M-128: ⭐⭐⭐ the weights of the TWELVE commercial domains.
+# ⭐⭐⭐ They are EQUAL (one twelfth each) ⇒ ⇒ ⇒ because the original
+# ⭐⭐⭐ list (R002 §4.2) carries no weights of its own ⇒ ⇒ ⇒ ⇒ the
+# ⭐⭐⭐ equal weight is the only choice that does NOT favour a domain
+# ⭐⭐⭐ ⇒ ⇒ ⇒ and the sum is checked (⇒ ⇒ ⇒ the weights never move).
+EXPECTED_DOMAIN_COUNT = 12
+EXPECTED_DOMAIN_WEIGHT = 8.33
+DOMAIN_WEIGHT_TOLERANCE = 0.1
 
 ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩"
 
@@ -140,6 +150,72 @@ def check_inventory(inventory: dict) -> list[str]:
             problems.append(f"⭐⭐⭐ the estimate {entry.get('round')} carries no basis")
         previous = value
 
+    # ---------------------------------------------------------------
+    # ⭐⭐⭐ M-128: ⭐⭐⭐ the twelve commercial domains.
+    # ⭐⭐⭐ THEIR CHECKS:
+    #   ① there are exactly twelve of them (the original list),
+    #   ② their weights are EQUAL and they sum to a hundred ⇒ ⇒ ⇒ the
+    #      weights never move between the rounds,
+    #   ③ every capability that claims an evidence carries files that
+    #      REALLY EXIST ⇒ ⇒ ⇒ ⇒ no number can be written by hand,
+    #   ④ a capability that needs a review is never counted as done.
+    # ---------------------------------------------------------------
+    domains = inventory.get("commercial_domains", [])
+    if len(domains) != EXPECTED_DOMAIN_COUNT:
+        problems.append(
+            f"⭐⭐⭐ the inventory holds {len(domains)} commercial domains "
+            f"instead of {EXPECTED_DOMAIN_COUNT}"
+        )
+    domain_ids: list[str] = []
+    for domain in domains:
+        domain_id = str(domain.get("id", ""))
+        if not domain_id:
+            problems.append("a commercial domain has no identifier")
+            continue
+        if domain_id in domain_ids:
+            problems.append(f"the commercial domain {domain_id} is repeated")
+        domain_ids.append(domain_id)
+        weight = domain.get("weight")
+        if not isinstance(weight, (int, float)) or abs(
+            float(weight) - EXPECTED_DOMAIN_WEIGHT
+        ) > 0.01:
+            problems.append(
+                f"⭐⭐⭐ the weight of the commercial domain {domain_id} is {weight} "
+                f"instead of {EXPECTED_DOMAIN_WEIGHT} ⇒ ⭐⭐ the weights never move"
+            )
+        capabilities = domain.get("capabilities", [])
+        if not capabilities:
+            problems.append(f"⭐⭐⭐ the commercial domain {domain_id} holds no capability")
+        capability_ids: list[str] = []
+        for capability in capabilities:
+            capability_id = str(capability.get("id", ""))
+            if not capability_id:
+                problems.append(f"a capability of the domain {domain_id} has no identifier")
+                continue
+            if capability_id in capability_ids:
+                problems.append(f"the capability {capability_id} is repeated")
+            capability_ids.append(capability_id)
+            if not str(capability.get("title", "")).strip():
+                problems.append(f"the capability {capability_id} carries no title")
+            evidence = capability.get("evidence", [])
+            if not isinstance(evidence, list):
+                problems.append(f"the evidence of the capability {capability_id} is not a list")
+                continue
+            for path in evidence:
+                if not (ROOT / str(path)).exists():
+                    problems.append(
+                        f"⭐⭐⭐ the capability {capability_id} claims the evidence "
+                        f"{path} ⇒ ⇒ ⇒ the file does NOT exist ⇒ ⇒ ⇒ the number "
+                        f"would be made up"
+                    )
+    if domains:
+        total_weight = sum(float(domain.get("weight", 0)) for domain in domains)
+        if abs(total_weight - 100) > DOMAIN_WEIGHT_TOLERANCE:
+            problems.append(
+                f"⭐⭐⭐ the weights of the commercial domains sum to {total_weight} "
+                f"instead of 100"
+            )
+
     return problems
 
 
@@ -173,6 +249,89 @@ def compute(inventory: dict) -> dict:
         # (the baseline of the round: the same weights, the numbers of
         #  the round before ⇒ the board shows before/after)
         "baseline": baseline,
+    }
+
+
+def file_at_commit(sha: str, path: str) -> bool:
+    """⭐⭐⭐ Did this file exist at that commit? (the truth of the baseline)"""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(ROOT), "cat-file", "-e", f"{sha}:{path}"],
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
+def compute_domains(inventory: dict) -> dict:
+    """⭐⭐⭐ M-128: ⭐⭐⭐ the twelve commercial domains.
+
+    ⭐⭐⭐ THE NUMBERS ARE MEASURED, NEVER WRITTEN:
+      the "now" is read from the disk (the file must exist) and the
+      "before" is read from the BASELINE commit (the same file must
+      have existed there) ⇒ ⇒ ⇒ ⇒ the before/after of a domain is the
+      truth of the files ⇒ ⇒ ⇒ and a capability that carries no file
+      is simply NOT built.
+    """
+    baseline = inventory.get("commercial_domains_baseline", {}) or {}
+    sha = str(baseline.get("sha", "")).strip()
+    domains = inventory.get("commercial_domains", [])
+    rows = []
+    for domain in domains:
+        capabilities = domain.get("capabilities", [])
+        total = len(capabilities)
+        done_now = 0
+        done_before = 0
+        changed = []
+        review = []
+        for capability in capabilities:
+            evidence = [str(path) for path in capability.get("evidence", [])]
+            if capability.get("needs_review", False):
+                review.append(capability)
+                continue
+            if not evidence:
+                continue
+            present = all((ROOT / path).exists() for path in evidence)
+            if present:
+                done_now += 1
+            if sha and all(file_at_commit(sha, path) for path in evidence):
+                done_before += 1
+            elif not sha:
+                done_before += 0
+            if present and not (sha and all(file_at_commit(sha, path) for path in evidence)):
+                changed.append(capability)
+        needs_review = len(review) > 0
+        rows.append(
+            {
+                "id": domain.get("id"),
+                "name": domain.get("name"),
+                "source": domain.get("source", ""),
+                "weight": domain.get("weight"),
+                "total": total,
+                "done": done_now,
+                "done_before": done_before,
+                "percent": percent(done_now, total),
+                "percent_before": percent(done_before, total),
+                "needs_review": needs_review,
+                "review": review,
+                "changed": changed,
+            }
+        )
+    reviewed = [row for row in rows if not row["needs_review"]]
+    weight_total = sum(float(row["weight"]) for row in reviewed) or 1.0
+    weighted_now = sum(float(row["weight"]) * row["percent"] for row in reviewed) / weight_total
+    weighted_before = (
+        sum(float(row["weight"]) * row["percent_before"] for row in reviewed) / weight_total
+    )
+    return {
+        "baseline": baseline,
+        "rows": rows,
+        "reviewed": len(reviewed),
+        "pending_review": len(rows) - len(reviewed),
+        "weighted_percent": round(weighted_now, 1),
+        "weighted_percent_before": round(weighted_before, 1),
     }
 
 
@@ -276,7 +435,71 @@ def render(inventory: dict, computed: dict) -> str:
         "**لا** يعني اكتمال WASL التجاري."
     )
     lines.append("")
-    lines.append("## ٣. ⭐⭐⭐ البند المفتوح من هذه الجولة")
+    lines.append("## ٣. ⭐⭐⭐ المقياس الثالث — المجالات الأصلية الاثنا عشر (R002 §4.2)")
+    lines.append("")
+    domains = computed.get("domains")
+    if domains and domains.get("rows"):
+        lines.append(
+            "> ⭐⭐⭐ **هذا مقياس ثالث مستقل** ⇐ ⭐⭐ النطاق = النطاقات الأصلية "
+            "الاثنا عشر للوحة العميل (R002 §4.2) ⇐ ⭐⭐ والأوزان **متساوية** "
+            "(١/١٢ لكل مجال ⇒ ٨٫٣٣٪) لأن R002 لا يحمل أوزاناً ⇒ ⭐⭐ "
+            "والتساوي لا يقدّم مجالاً على غيره ⇐ ⭐⭐ والأوزان لا تتغيّر بين الجولات."
+        )
+        lines.append("")
+        lines.append(
+            "> ⭐⭐⭐ **الأرقام مقيسة لا مكتوبة**: ⭐ «بعد» = القدرات التي ملفاتها "
+            "موجودة **على القرص الآن** ⇐ ⭐ «قبل» = القدرات التي ملفاتها "
+            "كانت موجودة **على خط الأساس** (`git`) ⇐ ⭐⭐ ⇒ ⇒ ⇒ لا رقم يكتبه إنسان."
+        )
+        lines.append("")
+        lines.append("| المجال | الوزن | المبني | قبل | بعد | الفرق | الدليل |")
+        lines.append("|---|---:|---:|---:|---:|---:|---|")
+        for row in domains["rows"]:
+            if row["needs_review"]:
+                before = "يحتاج إعادة تقييم"
+                after = "يحتاج إعادة تقييم"
+                delta = "—"
+                evidence = (
+                    "⏳ بند واحد يحتاج إعادة تقييم: "
+                    + " · ".join(
+                        f"**{capability.get('id')}** — {capability.get('title')}"
+                        for capability in row["review"]
+                    )
+                )
+            else:
+                before = f"{row['percent_before']:.1f}%"
+                after = f"**{row['percent']:.1f}%**"
+                difference = round(row["percent"] - row["percent_before"], 1)
+                delta = f"{'+' if difference > 0 else ''}{difference}"
+                if row["changed"]:
+                    evidence = " · ".join(
+                        f"**{capability.get('id')}** — {capability.get('title')}"
+                        for capability in row["changed"]
+                    )
+                else:
+                    evidence = "بلا تغيير في هذه الجولة"
+            lines.append(
+                f"| ⭐ {row['name']} | {row['weight']} | {row['done']}/{row['total']} "
+                f"| {before} | {after} | {delta} | {evidence} |"
+            )
+        lines.append("")
+        lines.append(
+            f"> ⭐⭐⭐ **المجموع (المجالات المراجَعة فقط)**: ⭐ "
+            f"**{domains['weighted_percent']:.1f}%** (قبل: "
+            f"{domains['weighted_percent_before']:.1f}%) ⇐ ⭐⭐ "
+            f"**{domains['reviewed']}** مجالاً مراجَعاً ⇐ ⭐⭐ و"
+            f"**{domains['pending_review']}** مجالاً **يحتاج إعادة تقييم** "
+            "(⇒ ⭐⭐ خارج المجموع ⇒ ⭐⭐ فلا تضخيم)."
+        )
+        lines.append("")
+        lines.append(
+            "> ⭐⭐⭐ **منع الخلط (مرة أخرى)**: ⭐⭐ هذا الجدول **لا** يلغي التقدير "
+            "العام للمشروع (٤٦٪ المعتمد · ٤٧٪ المقترح) ⇐ ⭐⭐ ولا القائمة "
+            "الداخلية (٧٥ بنداً) ⇐ ⭐⭐ ⇒ ⇒ ⇒ هو **مقياس ثالث** يقيس النطاق "
+            "التجاري الأصلي ⇐ ⭐⭐⇒ ⇒ ⇒ جاهزية المنتج التجاري تُقرأ من سُلّم المالك."
+        )
+        lines.append("")
+    lines.append("## ٤. ⭐⭐⭐ البند المفتوح من هذه الجولة")
     lines.append("")
     for item in inventory.get("items", []):
         note = str(item.get("note", "")).strip()
@@ -284,7 +507,7 @@ def render(inventory: dict, computed: dict) -> str:
             state = "✅" if item.get("done") is True else "❌"
             lines.append(f"- {state} **{item.get('id')}** — {item.get('title')} ⇒ {note}")
     lines.append("")
-    lines.append("## ٤. ⭐⭐⭐ كيف يُعاد تشغيل هذا القياس")
+    lines.append("## ٥. ⭐⭐⭐ كيف يُعاد تشغيل هذا القياس")
     lines.append("")
     lines.append("```bash")
     lines.append("python3 tools/completion_board.py --check   # ⭐⭐ يفحص ولا يكتب")
@@ -305,6 +528,8 @@ def main(argv: list[str] | None = None) -> int:
     inventory = load_inventory()
     problems = check_inventory(inventory)
     computed = compute(inventory)
+    # ⭐⭐⭐ M-128: ⭐⭐⭐ the twelve commercial domains (measured).
+    computed["domains"] = compute_domains(inventory)
 
     if args.json:
         print(json.dumps(computed, ensure_ascii=False, indent=2))

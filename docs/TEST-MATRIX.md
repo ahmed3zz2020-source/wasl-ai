@@ -16,7 +16,7 @@
 | Group | Command | Files | What it proves | What it does NOT prove |
 |:-:|---|:-:|---|---|
 | ⭐ **unit** | `npm run test:unit` | 26 | the frozen core (`src/core`) decides alone: the capabilities, the state machine, the tenant isolation, the atomicity of a conversation | nothing about the database, the HTTP layer or the deployment |
-| ⭐ **integration** | `npm run test:integration` | 25 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image, **the customer CRM on the real backend (D-071)**, **the refresh and the lost answer on two instances (D-071)** | nothing about a load that a machine of the production size would see |
+| ⭐ **integration** | `npm run test:integration` | 28 | the real PostgreSQL and the real HTTP API answer together: the contracts, the identity, the privacy, the deletion, the concurrency, the consistency of two instances, the preparation of a host, **the customer inbox through the API**, **the customer inbox in a real browser**, the static checks of the image, **the customer CRM on the real backend (D-071)**, **the refresh and the lost answer on two instances (D-071)** | nothing about a load that a machine of the production size would see |
 | ⭐ **security** | `npm run test:security` | 13 | the boundaries: the isolation of the tenants, the trust boundary, the secrets, the login protection under pressure, **the graded login protection (M-73)**, the protection of the deletion evidence **and its real limits (M-74)**, **the scope of the access of an agent (M-76)** | nothing about a penetration test of a third party |
 | ⭐ **recovery** | `npm run test:recovery` | 3 | the backup really restores, encrypted, verified and measured, **and never writes a clear text dump on the disk (M-72)** | nothing about a restore on the hardware of the production |
 | ⭐ **e2e** | `npm run e2e` | 1 | the journey of a customer service works from the login to the conversation and the privacy | nothing about a channel other than the local web one |
@@ -30,14 +30,14 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 602 + 246 + 127 + 16 = 991 -->
-<!-- wasl:current-total 991 = 990 pass + 0 fail + 1 skipped -->
+<!-- wasl:current-partition 605 + 266 + 127 + 16 = 1014 -->
+<!-- wasl:current-total 1014 = 1013 pass + 0 fail + 1 skipped -->
 
-> ⭐⭐ **CURRENT (round #58)**: the partition is checked by a TOOL
+> ⭐⭐ **CURRENT (round #59)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **602 + 246 + 127 + 16 = 991** = the number of `npm test` exactly
-> (990 of the 991 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **605 + 266 + 127 + 16 = 1014** = the number of `npm test` exactly
+> (1013 of the 1014 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
 > ⭐⭐ **The tool fails when a published number is not the measured one**
 > ⇒ ⇒ ⇒ a number can no longer drift silently.

@@ -666,5 +666,448 @@
     "total": 75,
     "percent": 54.7,
     "basis": "خط الأساس لهذه الجولة (نفس الأوزان ٢٠/٢٠/٣٥) وهو مرجع المقارنة قبل/بعد."
+  },
+  "commercial_domains": [
+    {
+      "id": "today",
+      "name": "اليوم",
+      "weight": 8.33,
+      "source": "R002 §4.2 (شاشة اليوم — ٦ بطاقات)",
+      "capabilities": [
+        {
+          "id": "today-inbox",
+          "title": "قائمة المحادثات أمام الموظف",
+          "evidence": [
+            "server/ui/inbox.html",
+            "tests/ui/inbox-ui.test.ts"
+          ]
+        },
+        {
+          "id": "today-queue",
+          "title": "طابور التذاكر غير المُسندة",
+          "evidence": [
+            "server/ui/tickets.js",
+            "tests/ui/tickets-ui.test.ts"
+          ]
+        },
+        {
+          "id": "today-counter",
+          "title": "عدّاد الطابور من لقطة واحدة",
+          "evidence": [
+            "server/tickets/queries.ts",
+            "tests/server/foundation-tickets-snapshot.test.ts"
+          ]
+        },
+        {
+          "id": "today-cards",
+          "title": "بطاقات مؤشرات اليوم",
+          "evidence": []
+        },
+        {
+          "id": "today-sales",
+          "title": "مبيعات اليوم",
+          "evidence": []
+        },
+        {
+          "id": "today-appointments",
+          "title": "مواعيد اليوم",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "conversations",
+      "name": "المحادثات",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة المحادثات)",
+      "capabilities": [
+        {
+          "id": "conv-list",
+          "title": "قائمة المحادثات مع البحث والتصفية",
+          "evidence": [
+            "server/ui/inbox.js",
+            "tests/ui/inbox-ui.test.ts"
+          ]
+        },
+        {
+          "id": "conv-thread",
+          "title": "فتح المحادثة ورؤية الرسائل",
+          "evidence": [
+            "server/inbox/queries.ts",
+            "tests/server/foundation-inbox.test.ts"
+          ]
+        },
+        {
+          "id": "conv-reply",
+          "title": "كتابة رد وإرساله مرة واحدة",
+          "evidence": [
+            "tests/ui/inbox-ui.test.ts"
+          ]
+        },
+        {
+          "id": "conv-rights",
+          "title": "حقوق الأدوار كما يقرّرها النواة",
+          "evidence": [
+            "src/core/authorization.ts",
+            "tests/server/foundation-ticket-rights.test.ts"
+          ]
+        },
+        {
+          "id": "conv-mobile",
+          "title": "صندوق الوارد على الموبايل",
+          "evidence": [
+            "tests/ui/inbox-ui.test.ts"
+          ]
+        },
+        {
+          "id": "conv-draft",
+          "title": "سلامة المسودة عند تبديل المحادثة (M126)",
+          "evidence": [
+            "tests/ui/inbox-draft-safety.test.ts"
+          ]
+        },
+        {
+          "id": "conv-ux",
+          "title": "رجوع المتصفح والبحث المعلّق والجلسة القديمة (M127)",
+          "evidence": [
+            "tests/ui/inbox-mobile-ux.test.ts"
+          ]
+        },
+        {
+          "id": "conv-quick",
+          "title": "الردود السريعة الجاهزة (M130)",
+          "evidence": [
+            "tests/ui/inbox-quick-replies.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "customers",
+      "name": "العملاء",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة العملاء)",
+      "capabilities": [
+        {
+          "id": "cus-file",
+          "title": "ملف العميل",
+          "evidence": [
+            "server/ui/crm.html",
+            "server/crm/queries.ts"
+          ]
+        },
+        {
+          "id": "cus-isolation",
+          "title": "عزل بيانات العميل",
+          "evidence": [
+            "tests/server/foundation-crm-isolation.test.ts"
+          ]
+        },
+        {
+          "id": "cus-privacy",
+          "title": "تصدير وحذف بيانات العميل",
+          "evidence": [
+            "tests/server/foundation-privacy.test.ts"
+          ]
+        },
+        {
+          "id": "cus-mobile",
+          "title": "تجربة العميل على الموبايل",
+          "evidence": [
+            "tests/ui/crm-ui.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "name": "الكتالوج",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة الكتالوج)",
+      "capabilities": [
+        {
+          "id": "cat-table",
+          "title": "جدول المنتجات والخدمات",
+          "evidence": []
+        },
+        {
+          "id": "cat-screen",
+          "title": "شاشة الكتالوج",
+          "evidence": []
+        },
+        {
+          "id": "cat-link",
+          "title": "ربط الصنف بالمحادثة",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "orders",
+      "name": "الطلبات والمواعيد",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة الطلبات والمواعيد)",
+      "capabilities": [
+        {
+          "id": "ord-table",
+          "title": "جدول الطلبات",
+          "evidence": []
+        },
+        {
+          "id": "ord-screen",
+          "title": "شاشة الطلبات والمواعيد",
+          "evidence": []
+        },
+        {
+          "id": "ord-track",
+          "title": "متابعة حالة الطلب",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "staff",
+      "name": "الموظفون والأدوار",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة الموظفون والأدوار)",
+      "capabilities": [
+        {
+          "id": "rol-matrix",
+          "title": "مصفوفة الصلاحيات",
+          "evidence": [
+            "src/core/authorization.ts",
+            "tests/server/foundation-permission-matrix.test.ts"
+          ]
+        },
+        {
+          "id": "rol-db",
+          "title": "الأدوار في قاعدة البيانات",
+          "evidence": [
+            "server/db/migrations/007_phase02_crm.sql"
+          ]
+        },
+        {
+          "id": "rol-assign",
+          "title": "إسناد المحادثة لموظف",
+          "evidence": [
+            "tests/server/foundation-tickets-assign.test.ts"
+          ]
+        },
+        {
+          "id": "rol-rights-ui",
+          "title": "إخفاء ما لا يُسمح به في الواجهة",
+          "evidence": [
+            "tests/ui/inbox-ui.test.ts"
+          ]
+        },
+        {
+          "id": "rol-bridge",
+          "title": "جسر الصلاحيات بين التذاكر وعمليات النواة في الإنتاج",
+          "evidence": [],
+          "needs_review": true,
+          "note": "تصديق المالك (D-078) كان للـMVP المحلي فقط ⇒ بند الإنتاج قرار منفصل ⇒ المراجعات الداخلية لا تكفي دليلاً ⇒ يحتاج إعادة تقييم."
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "name": "موظفك الذكي",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة موظفك الذكي)",
+      "capabilities": [
+        {
+          "id": "agent-core",
+          "title": "نواة الوكيل (قدرات · معالجة · ترتيب)",
+          "evidence": [
+            "src/core/capability.ts",
+            "src/core/processing.ts"
+          ]
+        },
+        {
+          "id": "agent-queue",
+          "title": "طابور عمل الوكيل",
+          "evidence": [
+            "src/core/agent-queue.ts",
+            "tests/slice-07.test.ts"
+          ]
+        },
+        {
+          "id": "agent-tenant",
+          "title": "عزل المستأجر وحدّ الثقة",
+          "evidence": [
+            "src/core/tenant.ts",
+            "tests/tenant-isolation.test.ts"
+          ]
+        },
+        {
+          "id": "agent-surface",
+          "title": "سطح في الواجهة للموظف الذكي",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "المعرفة",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة المعرفة)",
+      "capabilities": [
+        {
+          "id": "kno-index",
+          "title": "فهرس المعرفة",
+          "evidence": []
+        },
+        {
+          "id": "kno-retrieve",
+          "title": "استرجاع المعرفة",
+          "evidence": []
+        },
+        {
+          "id": "kno-source",
+          "title": "مصدر المعرفة (ويب · ملفات · واتساب)",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "channels",
+      "name": "القنوات",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة القنوات)",
+      "capabilities": [
+        {
+          "id": "chn-web",
+          "title": "قناة الويب",
+          "evidence": [
+            "server/db/migrations/001_foundation.sql",
+            "tests/server/foundation-inbox.test.ts"
+          ]
+        },
+        {
+          "id": "chn-whatsapp",
+          "title": "قناة واتساب (المسار معتمد؟)",
+          "evidence": [],
+          "needs_review": true,
+          "note": "اختيار المسار (DR-8) وانتشار الأرقام قرار المالك ⇒ الدليل المتاح بحثي فقط ⇒ يحتاج إعادة تقييم."
+        },
+        {
+          "id": "chn-other",
+          "title": "قناة إضافية (إحالة · صوت)",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "name": "الهوية",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة الهوية)",
+      "capabilities": [
+        {
+          "id": "idn-local",
+          "title": "طبقة الهوية المحلية",
+          "evidence": [
+            "src/core/identity.ts",
+            "tests/slice-08.test.ts"
+          ]
+        },
+        {
+          "id": "idn-delegate",
+          "title": "طبقة التفويض",
+          "evidence": [
+            "tests/slice-08.test.ts"
+          ]
+        },
+        {
+          "id": "idn-contract",
+          "title": "عقد مصدر الهوية (غير مفعّل)",
+          "evidence": [
+            "src/core/identity-source-contract.ts"
+          ]
+        },
+        {
+          "id": "idn-session",
+          "title": "الجلسات من قاعدة البيانات",
+          "evidence": [
+            "tests/server/foundation-identity.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reports",
+      "name": "التقارير",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة التقارير)",
+      "capabilities": [
+        {
+          "id": "rep-metrics",
+          "title": "مؤشرات الخدمة",
+          "evidence": [
+            "src/core/service-metrics.ts"
+          ]
+        },
+        {
+          "id": "rep-board",
+          "title": "لوحة نسب الإنجاز",
+          "evidence": [
+            "tools/completion_board.py",
+            "docs/COMPLETION-BOARD.md"
+          ]
+        },
+        {
+          "id": "rep-journey",
+          "title": "تقرير الرحلة",
+          "evidence": [
+            "tests/acceptance-journey.test.ts"
+          ]
+        },
+        {
+          "id": "rep-screen",
+          "title": "شاشة تقارير في الواجهة",
+          "evidence": []
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "name": "الإعدادات",
+      "weight": 8.33,
+      "source": "R002 §4.2 (وحدة الإعدادات)",
+      "capabilities": [
+        {
+          "id": "set-config",
+          "title": "إعدادات الخادم",
+          "evidence": [
+            "server/config.ts"
+          ]
+        },
+        {
+          "id": "set-retention",
+          "title": "إعدادات المستأجر (الحدود · الاحتفاظ)",
+          "evidence": [
+            "server/db/migrations/002_deletion_evidence.sql",
+            "tests/server/foundation-deletion-evidence.test.ts"
+          ]
+        },
+        {
+          "id": "set-roles",
+          "title": "إعدادات الأدوار",
+          "evidence": [
+            "tests/server/foundation-auth-grading.test.ts"
+          ]
+        },
+        {
+          "id": "set-screen",
+          "title": "شاشة إعدادات في الواجهة",
+          "evidence": []
+        }
+      ]
+    }
+  ],
+  "commercial_domains_baseline": {
+    "sha": "e86b93ed7aa49bc9373ae14fe4e0788710202e3c",
+    "round": "ردّ #٥٨ (قبل M126 · M127 · M130)",
+    "note": "خط الأساس لجدول المجالات الاثني عشر ⇒ الأرقام تُحسب من الملفات نفسها (على القرص اليوم) ومن نفس الملفات على خط الأساس (عبر git) ⇒ لا رقم مكتوب باليد."
   }
 }
