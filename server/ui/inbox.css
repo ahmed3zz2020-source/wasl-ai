@@ -477,6 +477,32 @@ button.ghost:hover:not(:disabled) {
    ⭐⭐⭐ Every colour is a variable of the theme ⇒ ⇒ ⇒ the section
    ⭐⭐⭐ is readable in the light theme AND in the dark one.
    ============================================================ */
+/* ⭐⭐⭐ ui-19: the strip of the retry (the draft that did not go out). */
+.draft-retry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 12px;
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.draft-retry-actions {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.draft-retry-actions .ghost {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
 .quick-replies {
   padding: 10px 16px 0;
   background: var(--surface);

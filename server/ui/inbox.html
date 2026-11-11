@@ -180,6 +180,19 @@
               </div>
             </section>
 
+            <!-- ⭐⭐⭐ ui-19: ⭐⭐⭐ the draft that waits for a network that
+                 ⭐⭐⭐ came back ⇒ ⇒ ⇒ the employee sees it and he retries
+                 ⭐⭐⭐ BY HAND ⇒ ⇒ ⇒ (the retry carries the SAME
+                 ⭐⭐⭐ reference ⇒ ⇒ ⇒ ⇒ the server refuses the duplicate
+                 ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ the reply is NEVER stored twice). -->
+            <div class="draft-retry" id="draft-retry" hidden role="status" aria-live="polite">
+              <span id="draft-retry-text">الرد اتحفظ عندك وما اتبعتش — الشبكة كانت مقفولة.</span>
+              <span class="draft-retry-actions">
+                <button class="ghost" id="btn-draft-retry" type="button">إعادة المحاولة</button>
+                <button class="ghost" id="btn-draft-discard" type="button">امسح المسودة</button>
+              </span>
+            </div>
+
             <form class="composer" id="composer">
               <label class="field grow">
                 <span class="sr-only">نص الرد</span>

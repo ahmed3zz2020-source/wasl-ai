@@ -87,6 +87,12 @@ const state = {
   offline: false,
   /** ⭐⭐⭐ M-127: the status of the last answer of the list. */
   listStatus: null,
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the draft that waits for a network that came back
+  // ⭐⭐⭐ ui-19 ⇒ ⇒ ⇒ ⇒ it is kept in the storage of the tab ⇒ ⇒ ⇒ ⇒ it
+  // ⭐⭐⭐ ui-19 survives a reload ⇒ ⇒ ⇒ ⇒ and the reference of the reply
+  // ⭐⭐⭐ ui-19 travels with it ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ the retry sends the
+  // ⭐⭐⭐ ui-19 SAME reply ⇒ ⇒ ⇒ ⇒ and the server refuses the duplicate).
+  draftPending: null,
   /** ⭐⭐⭐ M-125: the place of the list before the conversation. */
   listScroll: 0,
   /**
@@ -169,7 +175,10 @@ function newDraftRef() {
 function draftOf(ref) {
   let draft = state.drafts.get(ref);
   if (!draft) {
-    draft = { messageRef: null, text: '', sending: false };
+    // ⭐⭐⭐ ui-19: ⭐⭐⭐ the flag ⇐ the reply of this conversation did
+    // ⭐⭐⭐ ui-19 NOT go out (the network died) ⇒ ⇒ ⇒ ⇒ the employee
+    // ⭐⭐⭐ ui-19 is told and he retries BY HAND.
+    draft = { messageRef: null, text: '', sending: false, pending: false };
     state.drafts.set(ref, draft);
   }
   return draft;
@@ -188,6 +197,9 @@ function saveComposerToDraft() {
   const box = $('reply-body');
   if (!box) return;
   draftOf(ref).text = box.value;
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the draft is kept in the storage of the tab ⇒
+  // ⭐⭐⭐ ui-19 a RELOAD does not throw the text of the employee away.
+  saveDraftsToStorage();
 }
 
 /**
@@ -199,6 +211,80 @@ function restoreDraftToComposer(ref) {
   const box = $('reply-body');
   if (!box) return;
   box.value = draftOf(ref).text;
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the strip of the retry belongs to the
+  // ⭐⭐⭐ ui-19 conversation that is on the screen.
+  renderDraftRetry(ref);
+}
+
+/**
+ * ⭐⭐⭐ ui-19: ⭐⭐⭐ the drafts live in the storage of the tab ⇒ ⇒ ⇒ ⇒
+ * ⭐⭐⭐ ui-19 the text of the employee survives a RELOAD and a network
+ * ⭐⭐⭐ ui-19 that died ⇒ ⇒ ⇒ ⇒ and the REFERENCE of the reply travels
+ * ⭐⭐⭐ ui-19 with it ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ the retry after the reload is
+ * ⭐⭐⭐ ui-19 the SAME reply ⇒ ⇒ ⇒ ⇒ the server refuses the duplicate ⇒
+ * ⭐⭐⭐ ui-19 ⇒ ⇒ ⇒ ⇒ the reply is NEVER stored twice).
+ * ⛔ LOCAL ONLY: the storage of the tab (⇒ ⇒ ⇒ it dies with the tab and
+ * ⛔ it is NOT a server ⇒ ⇒ ⇒ ⛔ nothing is stored on the server).
+ */
+const DRAFTS_STORAGE_KEY = 'wasl_inbox_drafts_v1';
+
+function saveDraftsToStorage() {
+  try {
+    const payload = {};
+    for (const [ref, draft] of state.drafts) {
+      if (draft.text || draft.messageRef) {
+        payload[ref] = { text: draft.text ?? '', messageRef: draft.messageRef ?? null };
+      }
+    }
+    sessionStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // ⭐⭐⭐ ui-19: ⭐⭐⭐ the storage may be refused (private mode) ⇒
+    // ⭐⭐⭐ ui-19 the page keeps working (the drafts stay in memory).
+  }
+}
+
+function loadDraftsFromStorage() {
+  try {
+    const raw = sessionStorage.getItem(DRAFTS_STORAGE_KEY);
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+    if (!payload || typeof payload !== 'object') return;
+    for (const [ref, draft] of Object.entries(payload)) {
+      if (!draft || typeof draft !== 'object') continue;
+      state.drafts.set(ref, {
+        messageRef: draft.messageRef ?? null,
+        text: String(draft.text ?? ''),
+        sending: false,
+      });
+    }
+  } catch {
+    // ⭐⭐⭐ ui-19: ⭐⭐⭐ a broken storage never breaks the page.
+  }
+}
+
+function clearDraftsFromStorage() {
+  try {
+    sessionStorage.removeItem(DRAFTS_STORAGE_KEY);
+  } catch {
+    // nothing to do
+  }
+}
+
+/**
+ * ⭐⭐⭐ ui-19: ⭐⭐⭐ the strip of the retry ⇒ ⇒ ⇒ ⇒ it appears ONLY when
+ * ⭐⭐⭐ ui-19 there is a draft of THIS conversation that did not go out
+ * ⭐⭐⭐ ui-19 ⇒ ⇒ ⇒ ⇒ and it disappears the moment the reply is stored.
+ */
+function renderDraftRetry(ref) {
+  const strip = $('draft-retry');
+  if (!strip) return;
+  const draft = ref ? state.drafts.get(ref) : null;
+  const waiting = Boolean(draft && draft.text && draft.pending);
+  strip.hidden = !waiting;
+  if (waiting) {
+    const text = $('draft-retry-text');
+    if (text) text.textContent = 'الرد اتحفظ عندك وما اتبعتش — الشبكة كانت مقفولة.';
+  }
 }
 
 /**
@@ -1177,6 +1263,16 @@ async function sendReply(event) {
   });
 
   draft.sending = false;
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the network died before the answer ⇒ ⇒ ⇒ ⇒ the
+  // ⭐⭐⭐ ui-19 reply did NOT go out (or it did and the confirmation
+  // ⭐⭐⭐ ui-19 was lost) ⇒ ⇒ ⇒ ⇒ the draft WAITS ⇒ ⇒ ⇒ ⇒ and the
+  // ⭐⭐⭐ ui-19 employee retries BY HAND (⇒ ⇒ ⇒ ⇒ with the SAME
+  // ⭐⭐⭐ ui-19 reference ⇒ ⇒ ⇒ ⇒ ⇒ the server refuses the duplicate).
+  if (answer.status === 0) {
+    draft.pending = true;
+    saveDraftsToStorage();
+    renderDraftRetry(ref);
+  }
   // ⭐⭐⭐ M-126: ⭐⭐⭐ the button belongs to the conversation that is
   // ⭐⭐⭐ M-126 on the screen NOW ⇒ ⇒ ⇒ (the answer of a reply that
   // ⭐⭐⭐ M-126 is in the air does not touch the composer of another
@@ -1218,21 +1314,32 @@ async function sendReply(event) {
       if (stored) {
         draft.messageRef = null;
         draft.text = '';
+        draft.pending = false;
+        saveDraftsToStorage();
+        renderDraftRetry(ref);
         if (stillOpenNow) $('reply-body').value = '';
         toast('الرد اتحفظ — الشبكة وقعت قبل ما يوصل التأكيد. مش محتاج تبعت تاني.');
         if (stillOpenNow) await openConversation(ref);
         await loadConversations();
         return;
       }
-      // ⭐ The text and the reference STAY ⇒ the retry sends the same
-      //   reply and the server refuses the duplicate.
-      toast('مقدرناش نتأكد إن الرد اتحفظ. ابعت تاني بنفس المرجع — التكرار ممنوع.', true);
+      // ⭐⭐⭐ ui-19: ⭐⭐⭐ the text and the reference STAY ⇒ ⇒ ⇒ ⇒ the
+      // ⭐⭐⭐ ui-19 retry sends the SAME reply ⇒ ⇒ ⇒ ⇒ and the server
+      // ⭐⭐⭐ ui-19 refuses the duplicate ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ the reply is
+      // ⭐⭐⭐ ui-19 never stored twice).
+      draft.pending = true;
+      saveDraftsToStorage();
+      renderDraftRetry(ref);
+      toast('مقدرناش نتأكد إن الرد اتحفظ — اتحفظ عندك. جرّب تاني، التكرار ممنوع.', true);
       return;
     }
     if (answer.status === 409) {
       // ⭐⭐ The server refused the duplicate ⇒ the FIRST one is stored.
       draft.messageRef = null;
       draft.text = '';
+      draft.pending = false;
+      saveDraftsToStorage();
+      renderDraftRetry(ref);
       if (stillOpen) $('reply-body').value = '';
       toast('الرد كان متحفظ من قبل — مش تكرار.');
       if (stillOpen) await openConversation(ref);
@@ -1250,6 +1357,9 @@ async function sendReply(event) {
   // ⭐⭐⭐ M-126 the employee is never pulled back to another one.
   draft.messageRef = null;
   draft.text = '';
+  draft.pending = false;
+  saveDraftsToStorage();
+  renderDraftRetry(ref);
   if (stillOpen) $('reply-body').value = '';
   toast('تم إرسال الرد وحفظه.');
   if (stillOpen) await openConversation(ref);
@@ -1334,6 +1444,10 @@ async function login() {
   state.drafts.clear();
   // ⭐⭐⭐ M-132: ⭐⭐⭐ the confirmations die with the session too.
   pendingQuickReplies.clear();
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the drafts of the OLD session do not leak into
+  // ⭐⭐⭐ ui-19 the new one.
+  state.drafts.clear();
+  clearDraftsFromStorage();
   state.retry = null;
   saveSession();
   $('login-row').hidden = true;
@@ -1360,6 +1474,9 @@ async function logout() {
   state.drafts.clear();
   // ⭐⭐⭐ M-132: ⭐⭐⭐ the confirmations die with the session too.
   pendingQuickReplies.clear();
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the drafts die with the session (and they leave
+  // ⭐⭐⭐ ui-19 the storage of the tab).
+  clearDraftsFromStorage();
   clearSession();
   await api('DELETE', '/api/session');
   state.token = null;
@@ -1404,6 +1521,36 @@ $('btn-refresh-thread').addEventListener('click', () => {
 });
 $('composer').addEventListener('submit', (event) => {
   void sendReply(event);
+});
+// ⭐⭐⭐ ui-19: ⭐⭐⭐ the retry is BY HAND ⇒ ⇒ ⇒ ⇒ (the employee decides)
+// ⭐⭐⭐ ui-19 ⇒ ⇒ ⇒ ⇒ and it carries the SAME reference ⇒ ⇒ ⇒ ⇒ (⇒ ⇒
+// ⭐⭐⭐ ui-19 ⇒ ⇒ ⇒ the server refuses the duplicate ⇒ ⇒ ⇒ ⇒ ⇒ the
+// ⭐⭐⭐ ui-19 reply is never stored twice).
+$('btn-draft-retry').addEventListener('click', () => {
+  void sendReply({ preventDefault() {} });
+});
+// ⭐⭐⭐ ui-19: ⭐⭐⭐ the employee throws his draft away on purpose.
+$('btn-draft-discard').addEventListener('click', () => {
+  const ref = state.selected?.ref;
+  if (!ref) return;
+  state.drafts.delete(ref);
+  saveDraftsToStorage();
+  $('reply-body').value = '';
+  renderDraftRetry(ref);
+  toast('المسودة اتمسحت.');
+});
+// ⭐⭐⭐ ui-19: ⭐⭐⭐ every keystroke is kept in the storage of the tab
+// ⭐⭐⭐ ui-19 ⇒ ⇒ ⇒ ⇒ a reload does not throw the text away.
+$('reply-body').addEventListener('input', () => {
+  const ref = state.selected?.ref;
+  if (!ref) return;
+  const draft = draftOf(ref);
+  draft.text = $('reply-body').value;
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the text changed ⇒ ⇒ ⇒ ⇒ the flag of the waiting
+  // ⭐⭐⭐ ui-19 retry is stale (the text of the retry is the new one).
+  draft.pending = false;
+  saveDraftsToStorage();
+  renderDraftRetry(ref);
 });
 // ⭐⭐⭐ M-130: ⭐⭐⭐ the confirmation of the replacement ⇒ ⇒ ⇒ (the
 // ⭐⭐⭐ M-130 text of the employee is replaced ONLY when he says so).
@@ -1517,6 +1664,11 @@ renderQuickReplies();
  */
 async function bootSession() {
   if (!restoreSession()) return;
+  // ⭐⭐⭐ ui-19: ⭐⭐⭐ the drafts of the session come back ⇒ ⇒ ⇒ ⇒ (the
+  // ⭐⭐⭐ ui-19 text of the employee survives a reload ⇒ ⇒ ⇒ ⇒ and the
+  // ⭐⭐⭐ ui-19 reference of a reply that was not confirmed travels with
+  // ⭐⭐⭐ ui-19 it ⇒ ⇒ ⇒ ⇒ ⇒ the retry is safe).
+  loadDraftsFromStorage();
   // ⭐⭐⭐ M-127: ⭐⭐⭐ the state of the list comes back as it was ⇒ ⇒ ⇒
   // ⭐⭐⭐ M-127 (the search · the filters · the page · the place).
   loadListViewFromStorage();
