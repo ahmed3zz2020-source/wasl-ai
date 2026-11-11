@@ -31,13 +31,15 @@
 
 ### ⭐⭐⭐ المصادر الحيّة (الأهم — اقرأها قبل أي ردّ)
 
-> ⭐⭐⭐ **ملف `REVIEWS/R007-*.md` داخل الـbridge تاريخ (٣ نوفمبر) ⇐ والردّ الحالي = #٥٩ (١١ نوفمبر)** ⇐ ⭐ **فلا تبني ردّك على R007**.
+> ⭐⭐⭐ **ملف `REVIEWS/R007-*.md` داخل الـbridge تاريخ (٣ نوفمبر) ⇐ والردّ الحالي = #٦٠ (١١ نوفمبر)**
+>
+> ⭐⭐⭐ **تنبيه مهم (١١ نوفمبر ٢٠٢٦)**: ⭐ **الرابط الحيّ `/bridge` ما زال يقدّم محتوى R007 (٣ نوفمبر)** ⇒ ⭐ **وذلك لأن قائمة الملفات في العامل المنشور ثابتة داخل الكود، وتغييرها يحتاج نشراً على الإنتاج (غير مُنفَّذ عمداً)** ⇒ ⭐ **⇒ فالروابط الخام (GitHub) هي المصدر الحقيقي والحالي، والـbridge الحيّ تاريخ** ⇒ ⭐ **والحزمة التي تُرسَل للمهندس المعماري هي `docs/GPT-REVIEW-060-REQUEST.md`** ⇐ ⭐ **فلا تبني ردّك على R007**.
 
 | # | الملف | الرابط الخام | فيه إيه |
 |:-:|---|---|---|
 | ١ | ⭐ **`CURRENT-STATE.md`** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/CURRENT-STATE.md` | ⭐ **المصدر الأساسي للحالة** · آخر جولة في أوله · الأرقام الحالية |
 | ٢ | ⭐ **`docs/COMPLETION-BOARD.md`** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/COMPLETION-BOARD.md` | ⭐ **لوحة الإنجاز** · القائمة الـ75 · المقياس الثالث (١٢ مجالاً) |
-| ٣ | ⭐ **`docs/GPT-REVIEW-059-REQUEST.md`** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/GPT-REVIEW-059-REQUEST.md` | ⭐ **آخر حزمة مُرسلة لك** (ردّ #٥٩) · وبها §٨ = الطلب المحدد من المنفِّذ |
+| ٣ | ⭐ **`docs/GPT-REVIEW-060-REQUEST.md`** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/GPT-REVIEW-060-REQUEST.md` | ⭐ **آخر حزمة مُرسلة لك** (ردّ #٥٩) · وبها §٨ = الطلب المحدد من المنفِّذ |
 | ٤ | ⭐ **`docs/CHATGPT-REVIEW-LOG.md`** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/CHATGPT-REVIEW-LOG.md` | ⭐ **السجل المجمّع لكل الجولات** (ردّ #٥٩ في §٣) · ملف كبير ⇒ اقرأ §٣ بحده |
 | ٥ | ⭐ **`docs/OPEN-DECISIONS.md`** | `https://raw.githubusercontent.com/ahmed3zz2020-source/wasl-ai/main/docs/OPEN-DECISIONS.md` | ⭐ **القرارات المفتوحة** (بندان جديدان بانتظار المالك) |
 
