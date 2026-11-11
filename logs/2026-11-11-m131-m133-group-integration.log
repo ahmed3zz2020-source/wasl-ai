@@ -1,0 +1,1767 @@
+
+> wasl-ai@0.1.0 test:integration
+> node --experimental-strip-types --test tests/server/foundation-isolation.test.ts tests/server/foundation-api.test.ts tests/server/foundation-identity.test.ts tests/server/foundation-privacy.test.ts tests/server/foundation-deletion.test.ts tests/server/foundation-concurrency.test.ts tests/server/foundation-multi-instance.test.ts tests/server/foundation-consistency.test.ts tests/server/foundation-hosting.test.ts tests/server/foundation-inbox.test.ts tests/server/foundation-docker-hosting.test.ts tests/ui/inbox-ui.test.ts tests/ui/inbox-draft-safety.test.ts tests/ui/inbox-mobile-ux.test.ts tests/ui/inbox-quick-replies.test.ts tests/server/foundation-crm.test.ts tests/server/foundation-sync.test.ts tests/ui/crm-ui.test.ts tests/server/foundation-crm-isolation.test.ts tests/server/foundation-tickets.test.ts tests/ui/tickets-ui.test.ts tests/server/foundation-tickets-assign.test.ts tests/server/foundation-tickets-queue.test.ts tests/server/foundation-tickets-snapshot.test.ts tests/tools/port-reservation.test.ts tests/tools/port-reservation-race.test.ts tests/tools/admin-timeout.test.ts tests/tools/port-reservation-m109.test.ts tests/ui/inbox-session-isolation.test.ts tests/ui/inbox-draft-offline.test.ts tests/ui/tickets-capabilities.test.ts
+
+TAP version 13
+# Subtest: FOUNDATION 2) API contract, durability and the end to end journey
+    # Subtest: ⭐ AC-09a: the accepted journey passes every step
+    ok 1 - ⭐ AC-09a: the accepted journey passes every step
+      ---
+      duration_ms: 576.519994
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-09b: the rejected journey is refused
+    ok 2 - ⭐ AC-09b: the rejected journey is refused
+      ---
+      duration_ms: 112.957891
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-02: a write survives a service restart and a new connection
+    ok 3 - ⭐ AC-02: a write survives a service restart and a new connection
+      ---
+      duration_ms: 163.632997
+      type: 'test'
+      ...
+    # Subtest: ⭐ input validation: the API refuses malformed requests
+    ok 4 - ⭐ input validation: the API refuses malformed requests
+      ---
+      duration_ms: 109.637231
+      type: 'test'
+      ...
+    # Subtest: ⭐ errors are safe: no SQL text and no secrets in the answers
+    ok 5 - ⭐ errors are safe: no SQL text and no secrets in the answers
+      ---
+      duration_ms: 84.547962
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-01: the health endpoint reports the local scope
+    ok 6 - ⭐ AC-01: the health endpoint reports the local scope
+      ---
+      duration_ms: 4.100376
+      type: 'test'
+      ...
+    1..6
+ok 1 - FOUNDATION 2) API contract, durability and the end to end journey
+  ---
+  duration_ms: 2251.059763
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 7) the concurrent operations (D-067 remediation)
+    # Subtest: ⭐ R-04a: two concurrent transitions, one valid update, no silent loss
+    ok 1 - ⭐ R-04a: two concurrent transitions, one valid update, no silent loss
+      ---
+      duration_ms: 80.53298
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04b: a stale expected version is a reported conflict
+    ok 2 - ⭐ R-04b: a stale expected version is a reported conflict
+      ---
+      duration_ms: 47.977799
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04c: an illegal transition is refused under a race
+    ok 3 - ⭐ R-04c: an illegal transition is refused under a race
+      ---
+      duration_ms: 74.930054
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04d: two concurrent messages are both kept
+    ok 4 - ⭐ R-04d: two concurrent messages are both kept
+      ---
+      duration_ms: 66.640194
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-04e: the memory matches the database and survives a restart
+    ok 5 - ⭐ R-04e: the memory matches the database and survives a restart
+      ---
+      duration_ms: 233.230333
+      type: 'test'
+      ...
+    1..5
+ok 2 - FOUNDATION 7) the concurrent operations (D-067 remediation)
+  ---
+  duration_ms: 1368.1165
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 12) the consistency between two backend instances (M-66)
+    # Subtest: ⭐⭐⭐ M-66a: the same message reference is refused, not dropped
+    ok 1 - ⭐⭐⭐ M-66a: the same message reference is refused, not dropped
+      ---
+      duration_ms: 89.446885
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-66b: a write of one instance is visible to the other at once
+    ok 2 - ⭐⭐⭐ M-66b: a write of one instance is visible to the other at once
+      ---
+      duration_ms: 74.340279
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-66c: a new operation never reads a stale conversation
+    ok 3 - ⭐⭐⭐ M-66c: a new operation never reads a stale conversation
+      ---
+      duration_ms: 77.262643
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-66d: a restarted instance reads the committed state
+    ok 4 - ⭐⭐⭐ M-66d: a restarted instance reads the committed state
+      ---
+      duration_ms: 165.144066
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-66e: two companies run in parallel and never mix
+    ok 5 - ⭐⭐ M-66e: two companies run in parallel and never mix
+      ---
+      duration_ms: 149.923742
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-66f: the append is based on the committed version
+    ok 6 - ⭐⭐ M-66f: the append is based on the committed version
+      ---
+      duration_ms: 54.85372
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-66g: read your writes on the same instance
+    ok 7 - ⭐⭐ M-66g: read your writes on the same instance
+      ---
+      duration_ms: 45.688928
+      type: 'test'
+      ...
+    1..7
+ok 3 - FOUNDATION 12) the consistency between two backend instances (M-66)
+  ---
+  duration_ms: 1426.963039
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 24) the CRM never shows what belongs to another employee (M-83)
+    # Subtest: ⭐⭐⭐ M-83a: the list does not leak the count of the conversations of the other employee
+    ok 1 - ⭐⭐⭐ M-83a: the list does not leak the count of the conversations of the other employee
+      ---
+      duration_ms: 35.032598
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83b: the list does not leak the TEXT of the last message of the other employee
+    ok 2 - ⭐⭐⭐ M-83b: the list does not leak the TEXT of the last message of the other employee
+      ---
+      duration_ms: 16.568833
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83c: the list does not leak the moment of the last interaction of the other employee
+    ok 3 - ⭐⭐⭐ M-83c: the list does not leak the moment of the last interaction of the other employee
+      ---
+      duration_ms: 21.304402
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83d: the ORDER of the list does not leak the activity of the other employee
+    ok 4 - ⭐⭐⭐ M-83d: the ORDER of the list does not leak the activity of the other employee
+      ---
+      duration_ms: 33.572663
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83e: the profile of the customer shows only the conversations of the agent
+    ok 5 - ⭐⭐⭐ M-83e: the profile of the customer shows only the conversations of the agent
+      ---
+      duration_ms: 20.000865
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83f: the SEARCH of the agent does not find the secret of the other employee
+    ok 6 - ⭐⭐⭐ M-83f: the SEARCH of the agent does not find the secret of the other employee
+      ---
+      duration_ms: 26.541055
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83g: the owner and the supervisor keep their approved scope
+    ok 7 - ⭐⭐⭐ M-83g: the owner and the supervisor keep their approved scope
+      ---
+      duration_ms: 53.633077
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83h: the scope follows the assignment WHILE the CRM is used
+    ok 8 - ⭐⭐⭐ M-83h: the scope follows the assignment WHILE the CRM is used
+      ---
+      duration_ms: 81.884305
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-83i: the viewer reads the whole company (the scope of the core)
+    ok 9 - ⭐⭐⭐ M-83i: the viewer reads the whole company (the scope of the core)
+      ---
+      duration_ms: 11.869891
+      type: 'test'
+      ...
+    1..9
+ok 4 - FOUNDATION 24) the CRM never shows what belongs to another employee (M-83)
+  ---
+  duration_ms: 1787.556562
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 20) the customer CRM works on the real backend (D-071)
+    # Subtest: ⭐⭐⭐ CRM-01: the list is PAGINATED and the total is real
+    ok 1 - ⭐⭐⭐ CRM-01: the list is PAGINATED and the total is real
+      ---
+      duration_ms: 95.067153
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-02: the search narrows the list and works with the pages
+    ok 2 - ⭐⭐⭐ CRM-02: the search narrows the list and works with the pages
+      ---
+      duration_ms: 60.946655
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-03: the profile carries the customer and its conversations
+    ok 3 - ⭐⭐⭐ CRM-03: the profile carries the customer and its conversations
+      ---
+      duration_ms: 18.814573
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-04: the edit needs the capability of the core
+    ok 4 - ⭐⭐⭐ CRM-04: the edit needs the capability of the core
+      ---
+      duration_ms: 52.628359
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-05: the edit refuses the invalid input
+    ok 5 - ⭐⭐⭐ CRM-05: the edit refuses the invalid input
+      ---
+      duration_ms: 21.989195
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-06: the edit refuses a customer of another company
+    ok 6 - ⭐⭐⭐ CRM-06: the edit refuses a customer of another company
+      ---
+      duration_ms: 20.2879
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-07: the edit refuses a stale version (no lost update)
+    ok 7 - ⭐⭐⭐ CRM-07: the edit refuses a stale version (no lost update)
+      ---
+      duration_ms: 62.520002
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-08: the edit is audited
+    ok 8 - ⭐⭐⭐ CRM-08: the edit is audited
+      ---
+      duration_ms: 6.223917
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-09: an agent reaches only the customers of their conversations
+    ok 9 - ⭐⭐⭐ CRM-09: an agent reaches only the customers of their conversations
+      ---
+      duration_ms: 29.907779
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-77: the refresh asks only for what is new
+    ok 10 - ⭐⭐⭐ M-77: the refresh asks only for what is new
+      ---
+      duration_ms: 56.974227
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ CRM-10: the data survives a RESTART of the server
+    ok 11 - ⭐⭐⭐ CRM-10: the data survives a RESTART of the server
+      ---
+      duration_ms: 167.722318
+      type: 'test'
+      ...
+    1..11
+ok 5 - FOUNDATION 20) the customer CRM works on the real backend (D-071)
+  ---
+  duration_ms: 2242.898859
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 6) the deletion of a tenant (D-067 remediation)
+    # Subtest: ⭐ D-01: the full deletion completes and leaves a durable evidence
+    ok 1 - ⭐ D-01: the full deletion completes and leaves a durable evidence
+      ---
+      duration_ms: 483.204762
+      type: 'test'
+      ...
+    # Subtest: ⭐ D-02: the partial deletion keeps the tenant and the audit trail
+    ok 2 - ⭐ D-02: the partial deletion keeps the tenant and the audit trail
+      ---
+      duration_ms: 240.440475
+      type: 'test'
+      ...
+    # Subtest: ⭐ D-03: a failing step rolls the whole deletion back
+    ok 3 - ⭐ D-03: a failing step rolls the whole deletion back
+      ---
+      duration_ms: 218.818237
+      type: 'test'
+      ...
+    # Subtest: ⭐ D-04: an unknown or foreign request never reports a success
+    ok 4 - ⭐ D-04: an unknown or foreign request never reports a success
+      ---
+      duration_ms: 356.696385
+      type: 'test'
+      ...
+    1..4
+ok 6 - FOUNDATION 6) the deletion of a tenant (D-067 remediation)
+  ---
+  duration_ms: 1819.242673
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 20) the image definition and the local compose (M-75)
+    # Subtest: ⭐⭐⭐ M-75a: the image holds no secret and it is not a root image
+    ok 1 - ⭐⭐⭐ M-75a: the image holds no secret and it is not a root image
+      ---
+      duration_ms: 4.072036
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-75b: the compose file publishes the backend on the loopback only
+    ok 2 - ⭐⭐⭐ M-75b: the compose file publishes the backend on the loopback only
+      ---
+      duration_ms: 3.105546
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-75c: the dynamic drill (build, compose, health, readiness, shutdown)
+    ok 3 - ⭐⭐⭐ M-75c: the dynamic drill (build, compose, health, readiness, shutdown) # SKIP the dynamic drill is BLOCKED in this environment - no Docker daemon answers: spawnSync docker ENOENT
+      ---
+      duration_ms: 3.522192
+      type: 'test'
+      ...
+    1..3
+ok 7 - FOUNDATION 20) the image definition and the local compose (M-75)
+  ---
+  duration_ms: 12.304105
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 16) the preparation of a host (M-70)
+    # Subtest: ⭐⭐⭐ M-70a: the roles of the database are separated
+    ok 1 - ⭐⭐⭐ M-70a: the roles of the database are separated
+      ---
+      duration_ms: 30.342243
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70b: the liveness and the readiness are two answers
+    ok 2 - ⭐⭐⭐ M-70b: the liveness and the readiness are two answers
+      ---
+      duration_ms: 18.204313
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70c: SIGTERM stops the server cleanly
+    ok 3 - ⭐⭐⭐ M-70c: SIGTERM stops the server cleanly
+      ---
+      duration_ms: 877.609388
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70d: the configuration files of the host hold no secret
+    ok 4 - ⭐⭐⭐ M-70d: the configuration files of the host hold no secret
+      ---
+      duration_ms: 6.054449
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-70e: the TLS termination works locally
+    ok 5 - ⭐⭐⭐ M-70e: the TLS termination works locally
+      ---
+      duration_ms: 251.390946
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-70f: a broken sensitive configuration fails safely
+    ok 6 - ⭐⭐ M-70f: a broken sensitive configuration fails safely
+      ---
+      duration_ms: 3.680039
+      type: 'test'
+      ...
+    1..6
+ok 8 - FOUNDATION 16) the preparation of a host (M-70)
+  ---
+  duration_ms: 1736.505009
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 3) identity, roles and sessions
+    # Subtest: ⭐ AC-05a: the owner can do the owner things
+    ok 1 - ⭐ AC-05a: the owner can do the owner things
+      ---
+      duration_ms: 200.856242
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05b: the supervisor can write but not delete
+    ok 2 - ⭐ AC-05b: the supervisor can write but not delete
+      ---
+      duration_ms: 187.412091
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05c: the agent can write but not create or export
+    ok 3 - ⭐ AC-05c: the agent can write but not create or export
+      ---
+      duration_ms: 126.81077
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05d: the viewer can only read
+    ok 4 - ⭐ AC-05d: the viewer can only read
+      ---
+      duration_ms: 103.916952
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05e: a role sent by the client changes nothing
+    ok 5 - ⭐ AC-05e: a role sent by the client changes nothing
+      ---
+      duration_ms: 104.604359
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-05f: the tenant of a session cannot be switched by the client
+    ok 6 - ⭐ AC-05f: the tenant of a session cannot be switched by the client
+      ---
+      duration_ms: 168.293562
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-06a: an expired session is refused
+    ok 7 - ⭐ AC-06a: an expired session is refused
+      ---
+      duration_ms: 2683.993624
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-06b: a revoked session is refused
+    ok 8 - ⭐ AC-06b: a revoked session is refused
+      ---
+      duration_ms: 109.408528
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-06c: a disabled membership stops the next operation
+    ok 9 - ⭐ AC-06c: a disabled membership stops the next operation
+      ---
+      duration_ms: 104.956844
+      type: 'test'
+      ...
+    # Subtest: ⭐ M59: a role change in the database is effective on the next request
+    ok 10 - ⭐ M59: a role change in the database is effective on the next request
+      ---
+      duration_ms: 170.957495
+      type: 'test'
+      ...
+    # Subtest: ⭐ M59b: a token of one company cannot be replayed in another
+    ok 11 - ⭐ M59b: a token of one company cannot be replayed in another
+      ---
+      duration_ms: 73.204988
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-01: the migration connection uses the owner role and its own password
+    ok 12 - ⭐ R-01: the migration connection uses the owner role and its own password
+      ---
+      duration_ms: 22.182079
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02: the seed restores the identity rows after a tenant wipe
+    ok 13 - ⭐ R-02: the seed restores the identity rows after a tenant wipe
+      ---
+      duration_ms: 648.667909
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-03a: a disabled account stops the next request
+    ok 14 - ⭐ R-03a: a disabled account stops the next request
+      ---
+      duration_ms: 103.829883
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-03b: an old session stays dead after a new login
+    ok 15 - ⭐ R-03b: an old session stays dead after a new login
+      ---
+      duration_ms: 176.634797
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-03c: a tampered token is refused
+    ok 16 - ⭐ R-03c: a tampered token is refused
+      ---
+      duration_ms: 87.45283
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ R-03d: the local passcode uses a dedicated KDF (scrypt), salted and never stored in clear
+    ok 17 - ⭐⭐ R-03d: the local passcode uses a dedicated KDF (scrypt), salted and never stored in clear
+      ---
+      duration_ms: 220.593828
+      type: 'test'
+      ...
+    1..17
+ok 9 - FOUNDATION 3) identity, roles and sessions
+  ---
+  duration_ms: 6343.810641
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 18) the customer inbox works on the real backend (D-070)
+    # Subtest: ⭐⭐⭐ IN-01: the list carries the customer, the state and the last message
+    ok 1 - ⭐⭐⭐ IN-01: the list carries the customer, the state and the last message
+      ---
+      duration_ms: 37.638251
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-02: the detail carries the messages in their order
+    ok 2 - ⭐⭐⭐ IN-02: the detail carries the messages in their order
+      ---
+      duration_ms: 39.925768
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-03: a reply is stored as an OUTBOUND message of the employee
+    ok 3 - ⭐⭐⭐ IN-03: a reply is stored as an OUTBOUND message of the employee
+      ---
+      duration_ms: 44.783763
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-04: the same reply twice is REFUSED, never stored twice
+    ok 4 - ⭐⭐⭐ IN-04: the same reply twice is REFUSED, never stored twice
+      ---
+      duration_ms: 57.959864
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-05: the state changes only through the transitions of the core
+    ok 5 - ⭐⭐⭐ IN-05: the state changes only through the transitions of the core
+      ---
+      duration_ms: 36.994904
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-06: the assignment refuses an employee of another company
+    ok 6 - ⭐⭐⭐ IN-06: the assignment refuses an employee of another company
+      ---
+      duration_ms: 32.378483
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-07: the search and the filters narrow the list
+    ok 7 - ⭐⭐⭐ IN-07: the search and the filters narrow the list
+      ---
+      duration_ms: 63.890686
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-08: a company cannot read the conversations of another one
+    ok 8 - ⭐⭐⭐ IN-08: a company cannot read the conversations of another one
+      ---
+      duration_ms: 29.899694
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-09: the capabilities are respected (the viewer and the agent)
+    ok 9 - ⭐⭐⭐ IN-09: the capabilities are respected (the viewer and the agent)
+      ---
+      duration_ms: 41.704981
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-10: the scope of an agent is the conversations that are assigned to them
+    ok 10 - ⭐⭐⭐ IN-10: the scope of an agent is the conversations that are assigned to them
+      ---
+      duration_ms: 27.353582
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-11: a session that is over cannot change anything
+    ok 11 - ⭐⭐⭐ IN-11: a session that is over cannot change anything
+      ---
+      duration_ms: 87.254916
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-12: the messages survive a restart of the server
+    ok 12 - ⭐⭐⭐ IN-12: the messages survive a restart of the server
+      ---
+      duration_ms: 73.558314
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-13: two backends on one database see the same thing
+    ok 13 - ⭐⭐⭐ IN-13: two backends on one database see the same thing
+      ---
+      duration_ms: 122.12176
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ IN-14: the journey from the login to the closed conversation
+    ok 14 - ⭐⭐⭐ IN-14: the journey from the login to the closed conversation
+      ---
+      duration_ms: 439.748133
+      type: 'test'
+      ...
+    1..14
+ok 10 - FOUNDATION 18) the customer inbox works on the real backend (D-070)
+  ---
+  duration_ms: 2168.620798
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 1) isolation, RLS protection and atomicity
+    # Subtest: ⭐ AC-03a: the two companies do not share conversations
+    ok 1 - ⭐ AC-03a: the two companies do not share conversations
+      ---
+      duration_ms: 86.785815
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-03b: writes of another company are refused
+    ok 2 - ⭐ AC-03b: writes of another company are refused
+      ---
+      duration_ms: 30.975146
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-03c: the export and the deletion of another company are refused
+    ok 3 - ⭐ AC-03c: the export and the deletion of another company are refused
+      ---
+      duration_ms: 25.041689
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-04a: the request role cannot bypass the row level security
+    ok 4 - ⭐ AC-04a: the request role cannot bypass the row level security
+      ---
+      duration_ms: 11.553315
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-04b: no tenant context means no rows
+    ok 5 - ⭐ AC-04b: no tenant context means no rows
+      ---
+      duration_ms: 3.75458
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-04c: the isolation policy is enabled and forced
+    ok 6 - ⭐ AC-04c: the isolation policy is enabled and forced
+      ---
+      duration_ms: 4.401281
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-07: a failed composite operation leaves nothing behind
+    ok 7 - ⭐ AC-07: a failed composite operation leaves nothing behind
+      ---
+      duration_ms: 13.386664
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-07b: a thrown error inside a unit of work rolls everything back
+    ok 8 - ⭐ AC-07b: a thrown error inside a unit of work rolls everything back
+      ---
+      duration_ms: 4.521836
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02a: three companies, every operation, no cross talk
+    ok 9 - ⭐ R-02a: three companies, every operation, no cross talk
+      ---
+      duration_ms: 977.540768
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02b: the client cannot choose the tenant
+    ok 10 - ⭐ R-02b: the client cannot choose the tenant
+      ---
+      duration_ms: 108.068557
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02c: the database itself refuses a foreign row
+    ok 11 - ⭐ R-02c: the database itself refuses a foreign row
+      ---
+      duration_ms: 85.947432
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02d: concurrent requests of two companies do not mix
+    ok 12 - ⭐ R-02d: concurrent requests of two companies do not mix
+      ---
+      duration_ms: 225.381751
+      type: 'test'
+      ...
+    # Subtest: ⭐ R-02e: the audit trails of the companies are separated
+    ok 13 - ⭐ R-02e: the audit trails of the companies are separated
+      ---
+      duration_ms: 289.091202
+      type: 'test'
+      ...
+    1..13
+ok 11 - FOUNDATION 1) isolation, RLS protection and atomicity
+  ---
+  duration_ms: 3233.678222
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 8) two backend instances on one database (M-01)
+    # Subtest: ⭐⭐ M-01a: a write of one instance is visible to the other
+    ok 1 - ⭐⭐ M-01a: a write of one instance is visible to the other
+      ---
+      duration_ms: 57.208962
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-01b: two instances update at the same time, no update is lost
+    ok 2 - ⭐⭐ M-01b: two instances update at the same time, no update is lost
+      ---
+      duration_ms: 54.981457
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-01c: the second instance sees the committed state (no stale memory)
+    ok 3 - ⭐⭐⭐ M-01c: the second instance sees the committed state (no stale memory)
+      ---
+      duration_ms: 63.784375
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-01d: the instances never mix the companies
+    ok 4 - ⭐⭐ M-01d: the instances never mix the companies
+      ---
+      duration_ms: 25.822944
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-01e: a message written by one instance is stored once and seen by the other
+    ok 5 - ⭐⭐ M-01e: a message written by one instance is stored once and seen by the other
+      ---
+      duration_ms: 39.311923
+      type: 'test'
+      ...
+    1..5
+ok 12 - FOUNDATION 8) two backend instances on one database (M-01)
+  ---
+  duration_ms: 1110.189465
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) privacy, retention and deletion
+    # Subtest: ⭐ the retention policies round trip and are per class
+    ok 1 - ⭐ the retention policies round trip and are per class
+      ---
+      duration_ms: 180.460536
+      type: 'test'
+      ...
+    # Subtest: ⭐ an unknown data class is refused
+    ok 2 - ⭐ an unknown data class is refused
+      ---
+      duration_ms: 105.399399
+      type: 'test'
+      ...
+    # Subtest: ⭐ the export contains the tenant data and nothing else
+    ok 3 - ⭐ the export contains the tenant data and nothing else
+      ---
+      duration_ms: 274.94763
+      type: 'test'
+      ...
+    # Subtest: ⭐ the deletion preview changes nothing
+    ok 4 - ⭐ the deletion preview changes nothing
+      ---
+      duration_ms: 99.132365
+      type: 'test'
+      ...
+    # Subtest: ⭐ the deletion removes the data and keeps the audit trail
+    ok 5 - ⭐ the deletion removes the data and keeps the audit trail
+      ---
+      duration_ms: 171.762978
+      type: 'test'
+      ...
+    # Subtest: ⭐ a deletion request of another company cannot be executed here
+    ok 6 - ⭐ a deletion request of another company cannot be executed here
+      ---
+      duration_ms: 699.269656
+      type: 'test'
+      ...
+    # Subtest: ⭐ the deletion request cannot be executed twice
+    ok 7 - ⭐ the deletion request cannot be executed twice
+      ---
+      duration_ms: 139.245706
+      type: 'test'
+      ...
+    1..7
+ok 13 - FOUNDATION 4) privacy, retention and deletion
+  ---
+  duration_ms: 2732.18926
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 23) the refresh and the lost answer on two instances (D-071)
+    # Subtest: ⭐⭐⭐ SY-01: M-77 — the second instance sees the new message of the first
+    ok 1 - ⭐⭐⭐ SY-01: M-77 — the second instance sees the new message of the first
+      ---
+      duration_ms: 117.297602
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SY-02: M-80 — the same reference through the two instances is stored ONCE
+    ok 2 - ⭐⭐⭐ SY-02: M-80 — the same reference through the two instances is stored ONCE
+      ---
+      duration_ms: 36.901088
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SY-03: the CRM of the two instances carries the same customers
+    ok 3 - ⭐⭐⭐ SY-03: the CRM of the two instances carries the same customers
+      ---
+      duration_ms: 39.206321
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SY-04: the lock of the customer is shared by the two instances
+    ok 4 - ⭐⭐⭐ SY-04: the lock of the customer is shared by the two instances
+      ---
+      duration_ms: 60.611416
+      type: 'test'
+      ...
+    1..4
+ok 14 - FOUNDATION 23) the refresh and the lost answer on two instances (D-071)
+  ---
+  duration_ms: 1135.448558
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) the regression of M-89 and M-90 (the assignment and the customer)
+    # Subtest: ⭐⭐⭐ M-89 — the supervisor may create BUT may NOT assign at the creation
+    ok 1 - ⭐⭐⭐ M-89 — the supervisor may create BUT may NOT assign at the creation
+      ---
+      duration_ms: 24.561047
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-89 — the assignee of another company is refused
+    ok 2 - ⭐⭐⭐ M-89 — the assignee of another company is refused
+      ---
+      duration_ms: 16.705917
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-89 — an assignee who does not exist is refused
+    ok 3 - ⭐⭐⭐ M-89 — an assignee who does not exist is refused
+      ---
+      duration_ms: 11.345498
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-89 — a SUSPENDED member is refused
+    ok 4 - ⭐⭐⭐ M-89 — a SUSPENDED member is refused
+      ---
+      duration_ms: 25.582778
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-89 — the OWNER may assign at the creation (the right stays)
+    ok 5 - ⭐⭐ M-89 — the OWNER may assign at the creation (the right stays)
+      ---
+      duration_ms: 38.450714
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-90 — the customer of the ticket and of the conversation must be the same
+    ok 6 - ⭐⭐⭐ M-90 — the customer of the ticket and of the conversation must be the same
+      ---
+      duration_ms: 34.781832
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the correct creation with a conversation of the SAME customer still works
+    ok 7 - ⭐⭐ the correct creation with a conversation of the SAME customer still works
+      ---
+      duration_ms: 31.71602
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the creation without an assignee and without a conversation still works
+    ok 8 - ⭐⭐ the creation without an assignee and without a conversation still works
+      ---
+      duration_ms: 29.776879
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the agent may NOT create a ticket (the rights did not move)
+    ok 9 - ⭐⭐ the agent may NOT create a ticket (the rights did not move)
+      ---
+      duration_ms: 13.177097
+      type: 'test'
+      ...
+    1..9
+ok 15 - FOUNDATION 4) the regression of M-89 and M-90 (the assignment and the customer)
+  ---
+  duration_ms: 1632.889613
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) M-119 — the queue of the tickets that have no assignee
+    # Subtest: ⭐⭐⭐ M-119-1: the queue returns ONLY the tickets that have no assignee
+    ok 1 - ⭐⭐⭐ M-119-1: the queue returns ONLY the tickets that have no assignee
+      ---
+      duration_ms: 15.621129
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-2: the counter is EXACTLY the number of the queue
+    ok 2 - ⭐⭐⭐ M-119-2: the counter is EXACTLY the number of the queue
+      ---
+      duration_ms: 29.256987
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-3: the counter follows the SAME filters as the list
+    ok 3 - ⭐⭐⭐ M-119-3: the counter follows the SAME filters as the list
+      ---
+      duration_ms: 48.324518
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-4: the isolation of the queue (another company)
+    ok 4 - ⭐⭐⭐ M-119-4: the isolation of the queue (another company)
+      ---
+      duration_ms: 16.232896
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-5: the queue of the EMPLOYEE is empty (the scope of the role)
+    ok 5 - ⭐⭐⭐ M-119-5: the queue of the EMPLOYEE is empty (the scope of the role)
+      ---
+      duration_ms: 27.219587
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-6: NO new right of assignment (the supervisor, the employee, the viewer)
+    ok 6 - ⭐⭐⭐ M-119-6: NO new right of assignment (the supervisor, the employee, the viewer)
+      ---
+      duration_ms: 79.170666
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-7: the owner assigns from the queue ⇒ the ticket LEAVES it
+    ok 7 - ⭐⭐⭐ M-119-7: the owner assigns from the queue ⇒ the ticket LEAVES it
+      ---
+      duration_ms: 55.983675
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-8: the queue and the ordinary list agree
+    ok 8 - ⭐⭐⭐ M-119-8: the queue and the ordinary list agree
+      ---
+      duration_ms: 31.583629
+      type: 'test'
+      ...
+    1..8
+ok 16 - FOUNDATION 4) M-119 — the queue of the tickets that have no assignee
+  ---
+  duration_ms: 2073.925157
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) M-121 — the counter of the queue and its list are ONE snapshot
+ok 17 - FOUNDATION 4) M-121 — the counter of the queue and its list are ONE snapshot
+  ---
+  duration_ms: 1728.172197
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) the support tickets and their permissions (D-073)
+    # Subtest: ⭐ the owner creates a ticket and the database really holds it
+    ok 1 - ⭐ the owner creates a ticket and the database really holds it
+      ---
+      duration_ms: 46.561016
+      type: 'test'
+      ...
+    # Subtest: ⭐ the creation is idempotent (the same reference ⇒ the first ticket)
+    ok 2 - ⭐ the creation is idempotent (the same reference ⇒ the first ticket)
+      ---
+      duration_ms: 16.601574
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the supervisor may create and edit (the decision of D-071)
+    ok 3 - ⭐⭐ the supervisor may create and edit (the decision of D-071)
+      ---
+      duration_ms: 27.50414
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the agent may NOT create or edit (the rights of the core)
+    ok 4 - ⭐⭐⭐ the agent may NOT create or edit (the rights of the core)
+      ---
+      duration_ms: 23.919612
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the viewer may NOT create or edit (read only)
+    ok 5 - ⭐⭐⭐ the viewer may NOT create or edit (read only)
+      ---
+      duration_ms: 10.510233
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the assignment is the OWNER alone (the fact M-84 corrected)
+    ok 6 - ⭐⭐⭐ the assignment is the OWNER alone (the fact M-84 corrected)
+      ---
+      duration_ms: 27.442062
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the assignee must be an employee of THIS company
+    ok 7 - ⭐⭐ the assignee must be an employee of THIS company
+      ---
+      duration_ms: 29.389771
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the scope of the employee holds on the tickets
+    ok 8 - ⭐⭐ the scope of the employee holds on the tickets
+      ---
+      duration_ms: 19.365124
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the DERIVED count follows the same scope (the lesson of M-83)
+    ok 9 - ⭐⭐⭐ the DERIVED count follows the same scope (the lesson of M-83)
+      ---
+      duration_ms: 113.814428
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the company of another tenant is INVISIBLE (not forbidden)
+    ok 10 - ⭐⭐⭐ the company of another tenant is INVISIBLE (not forbidden)
+      ---
+      duration_ms: 22.110616
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the lock of the concurrent edit holds (no lost update)
+    ok 11 - ⭐⭐ the lock of the concurrent edit holds (no lost update)
+      ---
+      duration_ms: 112.063298
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the state machine of the tickets is closed
+    ok 12 - ⭐⭐ the state machine of the tickets is closed
+      ---
+      duration_ms: 128.618172
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ closing a ticket does NOT close the conversation (they are not coupled)
+    ok 13 - ⭐⭐⭐ closing a ticket does NOT close the conversation (they are not coupled)
+      ---
+      duration_ms: 53.583127
+      type: 'test'
+      ...
+    # Subtest: ⭐ the activity of the ticket is a fact of the database
+    ok 14 - ⭐ the activity of the ticket is a fact of the database
+      ---
+      duration_ms: 13.584156
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the list is filtered, ordered and paginated
+    ok 15 - ⭐⭐ the list is filtered, ordered and paginated
+      ---
+      duration_ms: 29.112012
+      type: 'test'
+      ...
+    1..15
+ok 18 - FOUNDATION 4) the support tickets and their permissions (D-073)
+  ---
+  duration_ms: 2243.917352
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 04) the timeout of the statements (M-102)
+    # Subtest: ⭐⭐⭐ M-102a: the API pool keeps the 15 seconds
+    ok 1 - ⭐⭐⭐ M-102a: the API pool keeps the 15 seconds
+      ---
+      duration_ms: 10.612781
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-102b: the administrative pool asks for 120 seconds
+    ok 2 - ⭐⭐⭐ M-102b: the administrative pool asks for 120 seconds
+      ---
+      duration_ms: 9.844678
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-102c: a POOLED connection keeps its timeout when it is REUSED
+    ok 3 - ⭐⭐⭐ M-102c: a POOLED connection keeps its timeout when it is REUSED
+      ---
+      duration_ms: 18.637612
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-102d: a FAILURE does not change the timeout of the pool
+    ok 4 - ⭐⭐⭐ M-102d: a FAILURE does not change the timeout of the pool
+      ---
+      duration_ms: 33.326782
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-102e: the timeout really cuts a long statement
+    ok 5 - ⭐⭐⭐ M-102e: the timeout really cuts a long statement
+      ---
+      duration_ms: 1510.121118
+      type: 'test'
+      ...
+    1..5
+ok 19 - FOUNDATION 04) the timeout of the statements (M-102)
+  ---
+  duration_ms: 2189.721507
+  type: 'test'
+  ...
+# ACTIVE RESOURCES AT THE END: ["PipeWrap","PipeWrap"]
+# [M-109a] impl=m105 owners=2 tokens=17637-570853-5zqg1x0h:true, 17630-570786-urbhpypr:false, 17644-570923-mkg0nxpm:true windowOpen=true
+# [M-109a] impl=new owners=1 tokens=17658-571102-u19fd3u7:true, 17651-571034-y4tz2v9e:false, 17666-571673-yiyc6077:false windowOpen=false
+# Subtest: FOUNDATION 04) the window of the takeover of a claim (M-109)
+    # Subtest: M-109a: THREE processes ⇒ ⇒ ONE owner (the window is never open)
+    ok 1 - M-109a: THREE processes ⇒ ⇒ ONE owner (the window is never open)
+      ---
+      duration_ms: 9598.73296
+      type: 'test'
+      ...
+    # Subtest: M-109b: the RELEASE never touches the claim of another process
+    ok 2 - M-109b: the RELEASE never touches the claim of another process
+      ---
+      duration_ms: 10.43252
+      type: 'test'
+      ...
+    # Subtest: M-109c: the DEATH of the owner frees the block at once
+    ok 3 - M-109c: the DEATH of the owner frees the block at once
+      ---
+      duration_ms: 1377.804698
+      type: 'test'
+      ...
+# [M-109d] impl=m105 owners=2 of 8
+# [M-109d] impl=new owners=1 of 8
+    # Subtest: M-109d: the COMPETITION of eight processes ⇒ ⇒ ONE owner
+    ok 4 - M-109d: the COMPETITION of eight processes ⇒ ⇒ ONE owner
+      ---
+      duration_ms: 16695.751253
+      type: 'test'
+      ...
+    # Subtest: M-109e: the RELEASE after a FAILED take never touches the live claim
+    ok 5 - M-109e: the RELEASE after a FAILED take never touches the live claim
+      ---
+      duration_ms: 2.721056
+      type: 'test'
+      ...
+    # Subtest: M-109f: the REPEATED release is safe and never touches a new owner
+    ok 6 - M-109f: the REPEATED release is safe and never touches a new owner
+      ---
+      duration_ms: 2.929609
+      type: 'test'
+      ...
+    1..6
+ok 20 - FOUNDATION 04) the window of the takeover of a claim (M-109)
+  ---
+  duration_ms: 27691.741175
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 04) the race of the reclaim of a claim (M-105)
+    # Subtest: M-105a: TWO processes that reclaim the SAME stale claim => only ONE owns it
+    ok 1 - M-105a: TWO processes that reclaim the SAME stale claim => only ONE owns it
+      ---
+      duration_ms: 3443.402691
+      type: 'test'
+      ...
+    # Subtest: M-105b: the release of a process does NOT delete the claim of another one
+    ok 2 - M-105b: the release of a process does NOT delete the claim of another one
+      ---
+      duration_ms: 1354.860262
+      type: 'test'
+      ...
+    # Subtest: M-105c: the reclaim keeps the SAME claim (the same block of ports)
+    ok 3 - M-105c: the reclaim keeps the SAME claim (the same block of ports)
+      ---
+      duration_ms: 4.091159
+      type: 'test'
+      ...
+    1..3
+ok 21 - FOUNDATION 04) the race of the reclaim of a claim (M-105)
+  ---
+  duration_ms: 4804.213572
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 04) the reservation of the ports (M-101)
+    # Subtest: ⭐⭐⭐ M-101a: MANY CONCURRENT PROCESSES never share a block
+    ok 1 - ⭐⭐⭐ M-101a: MANY CONCURRENT PROCESSES never share a block
+      ---
+      duration_ms: 7231.993149
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-101b: the release of one process does NOT release the reservation of another
+    ok 2 - ⭐⭐⭐ M-101b: the release of one process does NOT release the reservation of another
+      ---
+      duration_ms: 4681.392416
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-101c: an ABRUPT DEATH leaves a marker that is reclaimed
+    ok 3 - ⭐⭐⭐ M-101c: an ABRUPT DEATH leaves a marker that is reclaimed
+      ---
+      duration_ms: 4016.999929
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-101d: a STALE MARKER WITH A REUSED PID is reclaimed
+    ok 4 - ⭐⭐⭐ M-101d: a STALE MARKER WITH A REUSED PID is reclaimed
+      ---
+      duration_ms: 4.433271
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-101e: a port taken OUTSIDE the marker system is refused
+    ok 5 - ⭐⭐⭐ M-101e: a port taken OUTSIDE the marker system is refused
+      ---
+      duration_ms: 5.26889
+      type: 'test'
+      ...
+    1..5
+ok 22 - FOUNDATION 04) the reservation of the ports (M-101)
+  ---
+  duration_ms: 15942.910478
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 22) the CRM and the refresh in a real browser (D-071)
+    # Subtest: ⭐⭐⭐ UI-10: the login of the drill works
+    ok 1 - ⭐⭐⭐ UI-10: the login of the drill works
+      ---
+      duration_ms: 1076.007782
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-78 (UI-11): the list really pages and nothing disappears
+    ok 2 - ⭐⭐⭐ M-78 (UI-11): the list really pages and nothing disappears
+      ---
+      duration_ms: 757.673434
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-77 (UI-12): the thread receives the new messages by itself
+    ok 3 - ⭐⭐⭐ M-77 (UI-12): the thread receives the new messages by itself
+      ---
+      duration_ms: 12478.803117
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-79 (UI-13): the data of an old conversation never stays on the screen
+    ok 4 - ⭐⭐⭐ M-79 (UI-13): the data of an old conversation never stays on the screen
+      ---
+      duration_ms: 1222.936318
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-80 (UI-14): a lost answer does NOT store the reply twice
+    ok 5 - ⭐⭐⭐ M-80 (UI-14): a lost answer does NOT store the reply twice
+      ---
+      duration_ms: 7549.801072
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-071 (UI-15): the CRM shows the real customers of PostgreSQL
+    ok 6 - ⭐⭐⭐ D-071 (UI-15): the CRM shows the real customers of PostgreSQL
+      ---
+      duration_ms: 1362.025999
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-071 (UI-16): the profile of a customer and its conversations
+    ok 7 - ⭐⭐⭐ D-071 (UI-16): the profile of a customer and its conversations
+      ---
+      duration_ms: 921.123329
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-071 (UI-17): the edit is real and it is audited
+    ok 8 - ⭐⭐⭐ D-071 (UI-17): the edit is real and it is audited
+      ---
+      duration_ms: 1589.363655
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-071 (UI-18): the two pages carry each other
+    ok 9 - ⭐⭐⭐ D-071 (UI-18): the two pages carry each other
+      ---
+      duration_ms: 3673.725281
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-19: the CRM on a phone width
+    ok 10 - ⭐⭐⭐ UI-19: the CRM on a phone width
+      ---
+      duration_ms: 1685.670677
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-120-1: the search waits (ONE request for the whole word)
+    ok 11 - ⭐⭐⭐ M-120-1: the search waits (ONE request for the whole word)
+      ---
+      duration_ms: 2886.804988
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-120-2: an OLD reply inside the debounce window is dropped
+    ok 12 - ⭐⭐⭐ M-120-2: an OLD reply inside the debounce window is dropped
+      ---
+      duration_ms: 2827.564103
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-120-3: the mobile swaps the list for the profile, and the way back keeps the state
+    ok 13 - ⭐⭐⭐ M-120-3: the mobile swaps the list for the profile, and the way back keeps the state
+      ---
+      duration_ms: 5521.439459
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-120-4: the button of the BROWSER comes back to the list
+    ok 14 - ⭐⭐⭐ M-120-4: the button of the BROWSER comes back to the list
+      ---
+      duration_ms: 3343.809973
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-120-5: the empty state explains itself
+    ok 15 - ⭐⭐⭐ M-120-5: the empty state explains itself
+      ---
+      duration_ms: 3535.635993
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-120-6: the loss of the connection is said out loud
+    ok 16 - ⭐⭐⭐ M-120-6: the loss of the connection is said out loud
+      ---
+      duration_ms: 3670.260455
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-120-7: the rights and the isolation of the CRM on the mobile
+    ok 17 - ⭐⭐⭐ M-120-7: the rights and the isolation of the CRM on the mobile
+      ---
+      duration_ms: 2318.10317
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-79 (UI-13b): the refresh stops when the session is over
+    ok 18 - ⭐⭐⭐ M-79 (UI-13b): the refresh stops when the session is over
+      ---
+      duration_ms: 13371.281635
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-122: each role sees what the core lets it see (and nothing more)
+    ok 19 - ⭐⭐⭐ M-122: each role sees what the core lets it see (and nothing more)
+      ---
+      duration_ms: 21054.109614
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-122: a DIRECT change without the right is refused (and the row is untouched)
+    ok 20 - ⭐⭐⭐ M-122: a DIRECT change without the right is refused (and the row is untouched)
+      ---
+      duration_ms: 4501.187331
+      type: 'test'
+      ...
+    1..20
+ok 23 - FOUNDATION 22) the CRM and the refresh in a real browser (D-071)
+  ---
+  duration_ms: 98917.915558
+  type: 'test'
+  ...
+# Subtest: ui-19) the draft of the reply when the network dies (the real browser)
+    # Subtest: ui-19-0: the login of the company of the drill
+    ok 1 - ui-19-0: the login of the company of the drill
+      ---
+      duration_ms: 3877.280522
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ui-19-1: the text of the employee survives a RELOAD
+    ok 2 - ⭐⭐⭐ ui-19-1: the text of the employee survives a RELOAD
+      ---
+      duration_ms: 6309.111895
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ui-19-2: the network dies ⇒ the page keeps the draft and says so
+    ok 3 - ⭐⭐⭐ ui-19-2: the network dies ⇒ the page keeps the draft and says so
+      ---
+      duration_ms: 5281.514481
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ui-19-3: the retry is BY HAND and it stores the reply ONCE
+    ok 4 - ⭐⭐⭐ ui-19-3: the retry is BY HAND and it stores the reply ONCE
+      ---
+      duration_ms: 7093.711164
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ui-19-4: the employee throws the draft away on purpose
+    ok 5 - ⭐⭐⭐ ui-19-4: the employee throws the draft away on purpose
+      ---
+      duration_ms: 6690.320741
+      type: 'test'
+      ...
+    1..5
+ok 24 - ui-19) the draft of the reply when the network dies (the real browser)
+  ---
+  duration_ms: 31409.046431
+  type: 'test'
+  ...
+# Subtest: M-126) the reply belongs to its conversation (the real browser)
+    # Subtest: M-126-0: the login of the company of the drill
+    ok 1 - M-126-0: the login of the company of the drill
+      ---
+      duration_ms: 956.441219
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-126-1: the answer of a reply NEVER clears the text of another conversation
+    ok 2 - ⭐⭐⭐ M-126-1: the answer of a reply NEVER clears the text of another conversation
+      ---
+      duration_ms: 5448.374894
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-126-2: the reference of one reply is NEVER used for another conversation
+    ok 3 - ⭐⭐⭐ M-126-2: the reference of one reply is NEVER used for another conversation
+      ---
+      duration_ms: 5752.222136
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-126-3: the draft of a conversation comes back with it
+    ok 4 - ⭐⭐⭐ M-126-3: the draft of a conversation comes back with it
+      ---
+      duration_ms: 3799.354701
+      type: 'test'
+      ...
+    1..4
+ok 25 - M-126) the reply belongs to its conversation (the real browser)
+  ---
+  duration_ms: 19150.735928
+  type: 'test'
+  ...
+# Subtest: M-127) the mobile experience of the inbox (the real browser)
+    # Subtest: M-127-0: the login of the company of the drill
+    ok 1 - M-127-0: the login of the company of the drill
+      ---
+      duration_ms: 3453.034348
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-127-1: the BACK BUTTON OF THE BROWSER returns to the list (it never leaves the page)
+    ok 2 - ⭐⭐⭐ M-127-1: the BACK BUTTON OF THE BROWSER returns to the list (it never leaves the page)
+      ---
+      duration_ms: 3879.180335
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-127-2: the answer of the OLD search never lands under the new text
+    ok 3 - ⭐⭐⭐ M-127-2: the answer of the OLD search never lands under the new text
+      ---
+      duration_ms: 3822.698551
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-127-3: the waiting search is cancelled (the page · the filter · the logout)
+    ok 4 - ⭐⭐⭐ M-127-3: the waiting search is cancelled (the page · the filter · the logout)
+      ---
+      duration_ms: 4959.804769
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-127-4: the state of the list is KEPT (the search · the filters · the page)
+    ok 5 - ⭐⭐⭐ M-127-4: the state of the list is KEPT (the search · the filters · the page)
+      ---
+      duration_ms: 10322.023743
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-127-5: the answer of an OLD session never paints after the session changed
+    ok 6 - ⭐⭐⭐ M-127-5: the answer of an OLD session never paints after the session changed
+      ---
+      duration_ms: 5106.185859
+      type: 'test'
+      ...
+    1..6
+ok 26 - M-127) the mobile experience of the inbox (the real browser)
+  ---
+  duration_ms: 33972.678078
+  type: 'test'
+  ...
+# Subtest: M-130) the quick replies of the inbox (the real browser)
+    # Subtest: M-130-0: the login of the company of the drill
+    ok 1 - M-130-0: the login of the company of the drill
+      ---
+      duration_ms: 4166.031622
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-130-1: the section of the quick replies is inside the conversation
+    ok 2 - ⭐⭐⭐ M-130-1: the section of the quick replies is inside the conversation
+      ---
+      duration_ms: 9.445745
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-130-2: choosing a template puts the text in the box and NEVER sends it
+    ok 3 - ⭐⭐⭐ M-130-2: choosing a template puts the text in the box and NEVER sends it
+      ---
+      duration_ms: 4273.447215
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-130-3: the text of the employee is NEVER replaced without a confirmation
+    ok 4 - ⭐⭐⭐ M-130-3: the text of the employee is NEVER replaced without a confirmation
+      ---
+      duration_ms: 5552.299965
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-130-4: the reply is edited, sent ONCE and it is REALLY in PostgreSQL
+    ok 5 - ⭐⭐⭐ M-130-4: the reply is edited, sent ONCE and it is REALLY in PostgreSQL
+      ---
+      duration_ms: 5459.2152
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-130-5: a template does NOT reuse the reference of the previous reply
+    ok 6 - ⭐⭐⭐ M-130-5: a template does NOT reuse the reference of the previous reply
+      ---
+      duration_ms: 6646.571545
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-130-6: the role that may only READ does not see the quick replies
+    ok 7 - ⭐⭐⭐ M-130-6: the role that may only READ does not see the quick replies
+      ---
+      duration_ms: 3702.140581
+      type: 'test'
+      ...
+    1..7
+ok 27 - M-130) the quick replies of the inbox (the real browser)
+  ---
+  duration_ms: 32437.478602
+  type: 'test'
+  ...
+# Subtest: M-131 · M-132 · M-133) the isolation of the session and of the drafts (the real browser)
+    # Subtest: ⭐⭐⭐ M-131-1: the session of a company with NO conversations is NOT closed
+    ok 1 - ⭐⭐⭐ M-131-1: the session of a company with NO conversations is NOT closed
+      ---
+      duration_ms: 4480.939301
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-132-1: the template of A does NOT replace the draft of B
+    ok 2 - ⭐⭐⭐ M-132-1: the template of A does NOT replace the draft of B
+      ---
+      duration_ms: 7441.298486
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-133-1: a late verification does NOT touch another conversation
+    ok 3 - ⭐⭐⭐ M-133-1: a late verification does NOT touch another conversation
+      ---
+      duration_ms: 8510.102258
+      type: 'test'
+      ...
+    1..3
+ok 28 - M-131 · M-132 · M-133) the isolation of the session and of the drafts (the real browser)
+  ---
+  duration_ms: 22683.900694
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 21) the customer inbox in a real browser (D-070)
+    # Subtest: ⭐⭐⭐ UI-01: the page is Arabic and the direction is from the right
+    ok 1 - ⭐⭐⭐ UI-01: the page is Arabic and the direction is from the right
+      ---
+      duration_ms: 32.971528
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-02: the login fills the list of the conversations
+    ok 2 - ⭐⭐⭐ UI-02: the login fills the list of the conversations
+      ---
+      duration_ms: 893.957169
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-02b: the states that must be hidden ARE hidden
+    ok 3 - ⭐⭐⭐ UI-02b: the states that must be hidden ARE hidden
+      ---
+      duration_ms: 4.999287
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-03: opening a conversation shows the messages in their order
+    ok 4 - ⭐⭐⭐ UI-03: opening a conversation shows the messages in their order
+      ---
+      duration_ms: 669.375993
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-04: sending a reply stores it in PostgreSQL
+    ok 5 - ⭐⭐⭐ UI-04: sending a reply stores it in PostgreSQL
+      ---
+      duration_ms: 1056.29553
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-05: the double send is refused by the server
+    ok 6 - ⭐⭐⭐ UI-05: the double send is refused by the server
+      ---
+      duration_ms: 964.921863
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-06: the page offers the states that the core allows
+    ok 7 - ⭐⭐⭐ UI-06: the page offers the states that the core allows
+      ---
+      duration_ms: 3.384155
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-07: the search shows the empty state when nothing matches
+    ok 8 - ⭐⭐⭐ UI-07: the search shows the empty state when nothing matches
+      ---
+      duration_ms: 1661.761293
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ UI-08: the page works on a phone width
+    ok 9 - ⭐⭐⭐ UI-08: the page works on a phone width
+      ---
+      duration_ms: 796.616845
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-125-1: the phone shows EITHER the list OR the conversation, and «رجوع» keeps the state
+    ok 10 - ⭐⭐⭐ M-125-1: the phone shows EITHER the list OR the conversation, and «رجوع» keeps the state
+      ---
+      duration_ms: 5277.276507
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-125-2: the search waits (ONE request) and an OLD reply is dropped
+    ok 11 - ⭐⭐⭐ M-125-2: the search waits (ONE request) and an OLD reply is dropped
+      ---
+      duration_ms: 5955.454694
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-125-3: the loss of the connection is said out loud, and the retry works
+    ok 12 - ⭐⭐⭐ M-125-3: the loss of the connection is said out loud, and the retry works
+      ---
+      duration_ms: 4773.90521
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-125-4: the double send is refused (the button is closed while the reply flies)
+    ok 13 - ⭐⭐⭐ M-125-4: the double send is refused (the button is closed while the reply flies)
+      ---
+      duration_ms: 5800.176118
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-125-5: the rights of the roles and the isolation of the company
+    ok 14 - ⭐⭐⭐ M-125-5: the rights of the roles and the isolation of the company
+      ---
+      duration_ms: 6082.652687
+      type: 'test'
+      ...
+    1..14
+ok 29 - FOUNDATION 21) the customer inbox in a real browser (D-070)
+  ---
+  duration_ms: 38265.130297
+  type: 'test'
+  ...
+# Subtest: tk-16 · tk-17 · tk-19 · tk-20) the package of the tickets (the real browser)
+    # Subtest: tk-16-1: the first reply is MEASURED from the data that exists
+    ok 1 - tk-16-1: the first reply is MEASURED from the data that exists
+      ---
+      duration_ms: 3455.906898
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-16-2: a ticket without a reply says «غير متاح» (NO invented number)
+    ok 2 - ⭐⭐⭐ tk-16-2: a ticket without a reply says «غير متاح» (NO invented number)
+      ---
+      duration_ms: 3789.822072
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-17-1: the ready phrase writes in the description and NEVER saves
+    ok 3 - ⭐⭐⭐ tk-17-1: the ready phrase writes in the description and NEVER saves
+      ---
+      duration_ms: 4360.368334
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-17-2: the text that is there is NEVER replaced without a confirmation
+    ok 4 - ⭐⭐⭐ tk-17-2: the text that is there is NEVER replaced without a confirmation
+      ---
+      duration_ms: 4764.178102
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-19-1: the export holds the tickets of the company ONLY
+    ok 5 - ⭐⭐⭐ tk-19-1: the export holds the tickets of the company ONLY
+      ---
+      duration_ms: 2655.634251
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-19-2: the cells of the file are protected against the formulas
+    ok 6 - ⭐⭐⭐ tk-19-2: the cells of the file are protected against the formulas
+      ---
+      duration_ms: 2625.505929
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-19-3: the employee exports HIS tickets only
+    ok 7 - ⭐⭐⭐ tk-19-3: the employee exports HIS tickets only
+      ---
+      duration_ms: 2720.523362
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-20-1: the reminder lives on the DEVICE and not on the server
+    ok 8 - ⭐⭐⭐ tk-20-1: the reminder lives on the DEVICE and not on the server
+      ---
+      duration_ms: 7587.682883
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ tk-20-2: the employee throws the reminder away
+    ok 9 - ⭐⭐⭐ tk-20-2: the employee throws the reminder away
+      ---
+      duration_ms: 4314.382895
+      type: 'test'
+      ...
+    1..9
+ok 30 - tk-16 · tk-17 · tk-19 · tk-20) the package of the tickets (the real browser)
+  ---
+  duration_ms: 38592.003746
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) the support tickets in a real browser (D-073)
+    # Subtest: ⭐⭐⭐ D-073-1: the page shows the real tickets of the company
+    ok 1 - ⭐⭐⭐ D-073-1: the page shows the real tickets of the company
+      ---
+      duration_ms: 1970.99919
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-073-2: the creation through the form really writes a ticket
+    ok 2 - ⭐⭐⭐ D-073-2: the creation through the form really writes a ticket
+      ---
+      duration_ms: 2026.645758
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-073-3: the detail shows the activity of the ticket
+    ok 3 - ⭐⭐⭐ D-073-3: the detail shows the activity of the ticket
+      ---
+      duration_ms: 915.569346
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-073-4: the role decides what the page shows
+    ok 4 - ⭐⭐⭐ D-073-4: the role decides what the page shows
+      ---
+      duration_ms: 2419.98252
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-073-5: the scope of the employee holds in the browser
+    ok 5 - ⭐⭐⭐ D-073-5: the scope of the employee holds in the browser
+      ---
+      duration_ms: 3.08452
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-073-6: the CRM carries the tickets of the customer
+    ok 6 - ⭐⭐⭐ D-073-6: the CRM carries the tickets of the customer
+      ---
+      duration_ms: 2942.59067
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ D-073-7: the inbox points at the page of the tickets
+    ok 7 - ⭐⭐⭐ D-073-7: the inbox points at the page of the tickets
+      ---
+      duration_ms: 4938.132988
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the page works on a small screen (390px)
+    ok 8 - ⭐⭐⭐ the page works on a small screen (390px)
+      ---
+      duration_ms: 1453.456017
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-114-1: the search is NOT a call for every letter
+    ok 9 - ⭐⭐⭐ M-114-1: the search is NOT a call for every letter
+      ---
+      duration_ms: 2911.573464
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-114-2: a LATE reply of an old search is dropped
+    ok 10 - ⭐⭐⭐ M-114-2: a LATE reply of an old search is dropped
+      ---
+      duration_ms: 4413.178739
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-114-3: the way back keeps the state of the list
+    ok 11 - ⭐⭐⭐ M-114-3: the way back keeps the state of the list
+      ---
+      duration_ms: 4037.675854
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-114-4: the small screen shows the list OR the detail
+    ok 12 - ⭐⭐⭐ M-114-4: the small screen shows the list OR the detail
+      ---
+      duration_ms: 3145.023335
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-114-5: the loss of the connection is said out loud
+    ok 13 - ⭐⭐⭐ M-114-5: the loss of the connection is said out loud
+      ---
+      duration_ms: 3605.9624
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-114-6: the note of the rights comes from the server
+    ok 14 - ⭐⭐⭐ M-114-6: the note of the rights comes from the server
+      ---
+      duration_ms: 2597.45913
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-116-1: the debounce sends THE INTENDED request (not "calls <= 2")
+    ok 15 - ⭐⭐⭐ M-116-1: the debounce sends THE INTENDED request (not "calls <= 2")
+      ---
+      duration_ms: 4234.147725
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-116-2: an OLD reply that lands inside the debounce window is dropped
+    ok 16 - ⭐⭐⭐ M-116-2: an OLD reply that lands inside the debounce window is dropped
+      ---
+      duration_ms: 2891.964779
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-116-3: a change of the filter during a deferred search ⇒ NO deferred request comes back
+    ok 17 - ⭐⭐⭐ M-116-3: a change of the filter during a deferred search ⇒ NO deferred request comes back
+      ---
+      duration_ms: 2760.508128
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-116-4: a deferred search does NOT throw the user back to the first page
+    ok 18 - ⭐⭐⭐ M-116-4: a deferred search does NOT throw the user back to the first page
+      ---
+      duration_ms: 5039.478238
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-117-1: the way back keeps the SEARCH, the FILTERS and the ORDER
+    ok 19 - ⭐⭐⭐ M-117-1: the way back keeps the SEARCH, the FILTERS and the ORDER
+      ---
+      duration_ms: 6252.762602
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-117-2: the button of the BROWSER comes back to the list
+    ok 20 - ⭐⭐⭐ M-117-2: the button of the BROWSER comes back to the list
+      ---
+      duration_ms: 3172.195414
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-117-3: the PAGE and the PLACE of the screen survive the way back
+    ok 21 - ⭐⭐⭐ M-117-3: the PAGE and the PLACE of the screen survive the way back
+      ---
+      duration_ms: 5358.822024
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-117-4: a FAST switch between two tickets shows NO old details
+    ok 22 - ⭐⭐⭐ M-117-4: a FAST switch between two tickets shows NO old details
+      ---
+      duration_ms: 4826.033493
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-1: the whole trip of the queue on the mobile (create ⇒ assign ⇒ gone)
+    ok 23 - ⭐⭐⭐ M-119-1: the whole trip of the queue on the mobile (create ⇒ assign ⇒ gone)
+      ---
+      duration_ms: 11174.751758
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-119-2: the queue keeps the RIGHTS of the role (the employee never assigns)
+    ok 24 - ⭐⭐⭐ M-119-2: the queue keeps the RIGHTS of the role (the employee never assigns)
+      ---
+      duration_ms: 4051.305998
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-121-4: a FAILED opening leaves the fields of the assignment hidden
+    ok 25 - ⭐⭐⭐ M-121-4: a FAILED opening leaves the fields of the assignment hidden
+      ---
+      duration_ms: 5341.405797
+      type: 'test'
+      ...
+    1..25
+ok 31 - FOUNDATION 4) the support tickets in a real browser (D-073)
+  ---
+  duration_ms: 95221.586639
+  type: 'test'
+  ...
+1..31
+# tests 286
+# suites 0
+# pass 285
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 560841.456641
+EXIT=0
+SHA=15d37fe98ee7c8f8f8a315dd7ee43544345c6306

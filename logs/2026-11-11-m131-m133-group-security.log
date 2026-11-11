@@ -1,0 +1,799 @@
+
+> wasl-ai@0.1.0 test:security
+> node --experimental-strip-types --test tests/security-trust-boundary.test.ts tests/server/foundation-security.test.ts tests/server/foundation-auth-protection.test.ts tests/server/foundation-boundaries.test.ts tests/server/foundation-deletion-evidence.test.ts tests/server/foundation-deletion-receipt.test.ts tests/server/foundation-auth-grading.test.ts tests/server/foundation-deletion-evidence-limits.test.ts tests/server/foundation-access-scope.test.ts tests/server/foundation-permission-matrix.test.ts tests/server/foundation-security-independent.test.ts tests/server/foundation-evidence-guard.test.ts tests/server/foundation-ticket-rights.test.ts
+
+TAP version 13
+# Subtest: 🔒 ١) تزوير `capabilities` داخل بيانات العميل ⇒ يُتجاهل تماماً
+    # Subtest: ⭐⭐⭐ عميل يحمل صلاحيات مزوّرة ⇒ لا تُمنح له ولا واحدة
+    ok 1 - ⭐⭐⭐ عميل يحمل صلاحيات مزوّرة ⇒ لا تُمنح له ولا واحدة
+      ---
+      duration_ms: 1.821205
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ الصلاحيات الممنوحة = سياسة الدور لا حمولة العميل
+    ok 2 - ⭐⭐⭐ الصلاحيات الممنوحة = سياسة الدور لا حمولة العميل
+      ---
+      duration_ms: 1.463401
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ حقل `capabilities` غير موجود أصلاً في هوية المصدر
+    ok 3 - ⭐⭐⭐ حقل `capabilities` غير موجود أصلاً في هوية المصدر
+      ---
+      duration_ms: 0.200718
+      type: 'test'
+      ...
+    1..3
+ok 1 - 🔒 ١) تزوير `capabilities` داخل بيانات العميل ⇒ يُتجاهل تماماً
+  ---
+  duration_ms: 6.731799
+  type: 'test'
+  ...
+# Subtest: 🔒 ٢) نسخ الادّعاءات غير الموثوقة إلى كائن جديد ⇒ رفض
+    # Subtest: ⭐⭐⭐ نسخة من جلسة صحيحة ⇒ تُرفض (النَسَب لا الشكل)
+    ok 1 - ⭐⭐⭐ نسخة من جلسة صحيحة ⇒ تُرفض (النَسَب لا الشكل)
+      ---
+      duration_ms: 0.284749
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ المصدر الساذج (يمرّر حمولة العميل كما هي) ⇒ رفض بنيوي
+    ok 2 - ⭐⭐⭐⭐ المصدر الساذج (يمرّر حمولة العميل كما هي) ⇒ رفض بنيوي
+      ---
+      duration_ms: 0.295746
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ المصدر الساذج (نسخة) ⇒ الصلاحيات من النواة لا من العميل
+    ok 3 - ⭐⭐⭐⭐ المصدر الساذج (نسخة) ⇒ الصلاحيات من النواة لا من العميل
+      ---
+      duration_ms: 0.267149
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ مصدر غير مسجَّل ⇒ رفض بنيوي (لا سياق أصلاً)
+    ok 4 - ⭐⭐⭐⭐⭐ مصدر غير مسجَّل ⇒ رفض بنيوي (لا سياق أصلاً)
+      ---
+      duration_ms: 0.320671
+      type: 'test'
+      ...
+    1..4
+ok 2 - 🔒 ٢) نسخ الادّعاءات غير الموثوقة إلى كائن جديد ⇒ رفض
+  ---
+  duration_ms: 2.13204
+  type: 'test'
+  ...
+# Subtest: 🔒 ٣) محاولة الحصول على صلاحيات أعلى من المصرّح بها ⇒ السقف يحكم
+    # Subtest: ⭐⭐⭐ السقف المسجَّل يحدّ صلاحيات الدور الأعلى
+    ok 1 - ⭐⭐⭐ السقف المسجَّل يحدّ صلاحيات الدور الأعلى
+      ---
+      duration_ms: 0.466504
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ مصدر بسقف مقيَّد ⇒ لا يمنح ما هو خارج السقف
+    ok 2 - ⭐⭐⭐ مصدر بسقف مقيَّد ⇒ لا يمنح ما هو خارج السقف
+      ---
+      duration_ms: 0.468584
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ دور بلا منح (`none`) ⇒ صفر صلاحية (الافتراضي = المنع)
+    ok 3 - ⭐⭐⭐ دور بلا منح (`none`) ⇒ صفر صلاحية (الافتراضي = المنع)
+      ---
+      duration_ms: 0.285406
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ دور خارج المجموعة المغلقة ⇒ يُرفض عند التسجيل
+    ok 4 - ⭐⭐⭐⭐ دور خارج المجموعة المغلقة ⇒ يُرفض عند التسجيل
+      ---
+      duration_ms: 0.223874
+      type: 'test'
+      ...
+    1..4
+ok 3 - 🔒 ٣) محاولة الحصول على صلاحيات أعلى من المصرّح بها ⇒ السقف يحكم
+  ---
+  duration_ms: 2.022426
+  type: 'test'
+  ...
+# Subtest: 🔒 ٤) انتحال مستخدم أو مستأجر آخر ⇒ رفض
+    # Subtest: ⭐⭐⭐ ادّعاءات مستأجر آخر (خام) ⇒ رفض
+    ok 1 - ⭐⭐⭐ ادّعاءات مستأجر آخر (خام) ⇒ رفض
+      ---
+      duration_ms: 0.204473
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ جلسات مستأجرين مختلفة ⇒ نطاقات مختلفة (لا خلط)
+    ok 2 - ⭐⭐⭐⭐ جلسات مستأجرين مختلفة ⇒ نطاقات مختلفة (لا خلط)
+      ---
+      duration_ms: 0.278296
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ المستأجر الذي لا يحمل الصلاحية ⇒ يفشل (لا تسريب عابر)
+    ok 3 - ⭐⭐⭐⭐⭐ المستأجر الذي لا يحمل الصلاحية ⇒ يفشل (لا تسريب عابر)
+      ---
+      duration_ms: 0.412107
+      type: 'test'
+      ...
+    1..3
+ok 4 - 🔒 ٤) انتحال مستخدم أو مستأجر آخر ⇒ رفض
+  ---
+  duration_ms: 1.258386
+  type: 'test'
+  ...
+# Subtest: 🔒 ٥) رفض الجلسات غير الصالحة أو غير الموثوقة
+    # Subtest: ⭐⭐⭐ ادّعاءات غير مُصنَّعة ⇒ رفض (أي شكل كان)
+    ok 1 - ⭐⭐⭐ ادّعاءات غير مُصنَّعة ⇒ رفض (أي شكل كان)
+      ---
+      duration_ms: 0.256201
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ جلسة غير مُصادَق عليها ⇒ رفض
+    ok 2 - ⭐⭐⭐ جلسة غير مُصادَق عليها ⇒ رفض
+      ---
+      duration_ms: 0.197432
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ بدون مصدر جلسات ⇒ رفض (لا افتراض افتراضي)
+    ok 3 - ⭐⭐⭐⭐ بدون مصدر جلسات ⇒ رفض (لا افتراض افتراضي)
+      ---
+      duration_ms: 0.157342
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ المسار الإنتاجي يرفض مصدر الاختبار بنيوياً
+    ok 4 - ⭐⭐⭐⭐⭐ المسار الإنتاجي يرفض مصدر الاختبار بنيوياً
+      ---
+      duration_ms: 0.205166
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ السطح العام لا يُصدّر أدوات بناء السياق
+    ok 5 - ⭐⭐⭐⭐⭐ السطح العام لا يُصدّر أدوات بناء السياق
+      ---
+      duration_ms: 0.306967
+      type: 'test'
+      ...
+    1..5
+ok 5 - 🔒 ٥) رفض الجلسات غير الصالحة أو غير الموثوقة
+  ---
+  duration_ms: 1.634221
+  type: 'test'
+  ...
+# Subtest: 🔒 ٦) عدم تسريب البيانات عبر المستأجرين
+    # Subtest: ⭐⭐⭐ مستأجر آخر لا يقرأ محادثات مستأجر (صفر صفوف)
+    ok 1 - ⭐⭐⭐ مستأجر آخر لا يقرأ محادثات مستأجر (صفر صفوف)
+      ---
+      duration_ms: 3.406315
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ محادثة مستأجر آخر ⇒ لا تُسرَّب في السجل المعزول
+    ok 2 - ⭐⭐⭐⭐ محادثة مستأجر آخر ⇒ لا تُسرَّب في السجل المعزول
+      ---
+      duration_ms: 0.334218
+      type: 'test'
+      ...
+    1..2
+ok 6 - 🔒 ٦) عدم تسريب البيانات عبر المستأجرين
+  ---
+  duration_ms: 4.060666
+  type: 'test'
+  ...
+# Subtest: 🔒 ٧) استمرار عمل صلاحيات القراءة المصرّح بها
+    # Subtest: ⭐⭐⭐ الدور المصرَّح يقرأ محادثاته كالمعتاد
+    ok 1 - ⭐⭐⭐ الدور المصرَّح يقرأ محادثاته كالمعتاد
+      ---
+      duration_ms: 0.695817
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ دور بلا صلاحية ⇒ نفس المسار يرفض (بلا انهيار)
+    ok 2 - ⭐⭐⭐⭐ دور بلا صلاحية ⇒ نفس المسار يرفض (بلا انهيار)
+      ---
+      duration_ms: 0.356332
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ جدول الأدوار مغلق ومُعلَن
+    ok 3 - ⭐⭐⭐⭐⭐ جدول الأدوار مغلق ومُعلَن
+      ---
+      duration_ms: 0.309964
+      type: 'test'
+      ...
+    1..3
+ok 7 - 🔒 ٧) استمرار عمل صلاحيات القراءة المصرّح بها
+  ---
+  duration_ms: 1.748263
+  type: 'test'
+  ...
+# Subtest: 🔒 ٨) عدم كسر Slice 01 وSlice 02 وSlice 03
+    # Subtest: ⭐⭐⭐ دورة الرسالة الكاملة تعمل كما هي
+    ok 1 - ⭐⭐⭐ دورة الرسالة الكاملة تعمل كما هي
+      ---
+      duration_ms: 0.514498
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ مسار Slice 02 (المعالجة + الترتيب) سليم
+    ok 2 - ⭐⭐⭐⭐ مسار Slice 02 (المعالجة + الترتيب) سليم
+      ---
+      duration_ms: 0.435844
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ مسار Slice 03 (القراءة) سليم + المحادثة تُقرأ معزولة
+    ok 3 - ⭐⭐⭐⭐⭐ مسار Slice 03 (القراءة) سليم + المحادثة تُقرأ معزولة
+      ---
+      duration_ms: 0.485877
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ لا مصدر إنتاجي مسجَّل في الإنتاج ⇒ لا مسار افتراضي
+    ok 4 - ⭐⭐⭐⭐⭐⭐ لا مصدر إنتاجي مسجَّل في الإنتاج ⇒ لا مسار افتراضي
+      ---
+      duration_ms: 0.178664
+      type: 'test'
+      ...
+    1..4
+ok 8 - 🔒 ٨) عدم كسر Slice 01 وSlice 02 وSlice 03
+  ---
+  duration_ms: 2.098353
+  type: 'test'
+  ...
+# Subtest: 🔒 ⭐ الفحص الساكن: بلا أي مسار يقرأ صلاحيات من حمولة العميل
+    # Subtest: ⭐⭐⭐⭐⭐ ملفات النواة لا تقرأ `claims.capabilities` من ادّعاءات خامة
+    ok 1 - ⭐⭐⭐⭐⭐ ملفات النواة لا تقرأ `claims.capabilities` من ادّعاءات خامة
+      ---
+      duration_ms: 3.877345
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ صفر محاولة اتصال (الحاجز مُركَّب)
+    ok 2 - ⭐⭐⭐⭐⭐⭐ صفر محاولة اتصال (الحاجز مُركَّب)
+      ---
+      duration_ms: 0.125294
+      type: 'test'
+      ...
+    1..2
+ok 9 - 🔒 ⭐ الفحص الساكن: بلا أي مسار يقرأ صلاحيات من حمولة العميل
+  ---
+  duration_ms: 4.264575
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 19) the access of an employee to the conversations (M-76)
+    # Subtest: ⭐⭐⭐ SC-01: the list of an agent carries ONLY their conversations
+    ok 1 - ⭐⭐⭐ SC-01: the list of an agent carries ONLY their conversations
+      ---
+      duration_ms: 41.597312
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SC-02: an agent does NOT read a conversation that is not theirs
+    ok 2 - ⭐⭐⭐ SC-02: an agent does NOT read a conversation that is not theirs
+      ---
+      duration_ms: 20.306924
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SC-03: an agent does NOT reply to a conversation that is not theirs
+    ok 3 - ⭐⭐⭐ SC-03: an agent does NOT reply to a conversation that is not theirs
+      ---
+      duration_ms: 94.266603
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SC-04: an agent DOES read and reply to their own conversation
+    ok 4 - ⭐⭐⭐ SC-04: an agent DOES read and reply to their own conversation
+      ---
+      duration_ms: 58.628767
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SC-05: the viewer reads but writes nothing
+    ok 5 - ⭐⭐⭐ SC-05: the viewer reads but writes nothing
+      ---
+      duration_ms: 22.011628
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SC-06: the supervisor and the owner reach the whole company
+    ok 6 - ⭐⭐⭐ SC-06: the supervisor and the owner reach the whole company
+      ---
+      duration_ms: 92.056517
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SC-07: no company reaches a conversation of another one
+    ok 7 - ⭐⭐⭐ SC-07: no company reaches a conversation of another one
+      ---
+      duration_ms: 18.467277
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ SC-08: the assignment opens the conversation to its agent
+    ok 8 - ⭐⭐⭐ SC-08: the assignment opens the conversation to its agent
+      ---
+      duration_ms: 35.051571
+      type: 'test'
+      ...
+    1..8
+ok 10 - FOUNDATION 19) the access of an employee to the conversations (M-76)
+  ---
+  duration_ms: 1746.081409
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 17) the login protection is graded and never switches the users off (M-73)
+    # Subtest: ⭐⭐⭐ M-73a: the attacker spends the platform budget and the legitimate user still gets in
+    ok 1 - ⭐⭐⭐ M-73a: the attacker spends the platform budget and the legitimate user still gets in
+      ---
+      duration_ms: 1291.30078
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-73b: the account budget still refuses the guesses and never the owner
+    ok 2 - ⭐⭐⭐ M-73b: the account budget still refuses the guesses and never the owner
+      ---
+      duration_ms: 453.827746
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-73c: one company cannot spend the budget of another company
+    ok 3 - ⭐⭐⭐ M-73c: one company cannot spend the budget of another company
+      ---
+      duration_ms: 3205.753516
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-73d: the number of key derivations per second is bounded
+    ok 4 - ⭐⭐⭐ M-73d: the number of key derivations per second is bounded
+      ---
+      duration_ms: 2173.158409
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-73e: the last resort refuses with a declared code
+    ok 5 - ⭐⭐⭐ M-73e: the last resort refuses with a declared code
+      ---
+      duration_ms: 142.918994
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-73f: a spoofed header does not buy a fresh budget
+    ok 6 - ⭐⭐⭐ M-73f: a spoofed header does not buy a fresh budget
+      ---
+      duration_ms: 355.261282
+      type: 'test'
+      ...
+    1..6
+ok 11 - FOUNDATION 17) the login protection is graded and never switches the users off (M-73)
+  ---
+  duration_ms: 8237.845292
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 13) the login protection and the server under pressure (M-67)
+    # Subtest: ⭐⭐⭐ M-67a: the key derivation does not block the event loop
+    ok 1 - ⭐⭐⭐ M-67a: the key derivation does not block the event loop
+      ---
+      duration_ms: 673.886353
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-67b: the platform budget slows a distributed attack down
+    ok 2 - ⭐⭐⭐ M-67b: the platform budget slows a distributed attack down
+      ---
+      duration_ms: 685.583632
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-67c: a spoofed X-Forwarded-For changes nothing
+    ok 3 - ⭐⭐⭐ M-67c: a spoofed X-Forwarded-For changes nothing
+      ---
+      duration_ms: 130.483518
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-67d: the live role of the membership is the authority
+    ok 4 - ⭐⭐⭐ M-67d: the live role of the membership is the authority
+      ---
+      duration_ms: 166.910551
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-67e: an expired, a revoked and a disabled session stop working
+    ok 5 - ⭐⭐ M-67e: an expired, a revoked and a disabled session stop working
+      ---
+      duration_ms: 366.859411
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-67f: a flood of guesses does not stop the health check
+    ok 6 - ⭐⭐⭐ M-67f: a flood of guesses does not stop the health check
+      ---
+      duration_ms: 1008.156908
+      type: 'test'
+      ...
+    1..6
+ok 12 - FOUNDATION 13) the login protection and the server under pressure (M-67)
+  ---
+  duration_ms: 3591.768534
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 5) boundaries, secrets and the notes M59 to M65
+    # Subtest: ⭐ AC-10a: the server tree contains no external endpoint
+    ok 1 - ⭐ AC-10a: the server tree contains no external endpoint
+      ---
+      duration_ms: 45.019402
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-10b: no integration of a forbidden service exists
+    ok 2 - ⭐ AC-10b: no integration of a forbidden service exists
+      ---
+      duration_ms: 56.686726
+      type: 'test'
+      ...
+    # Subtest: ⭐ M60: the runtime refuses any connection outside the loopback
+    ok 3 - ⭐ M60: the runtime refuses any connection outside the loopback
+      ---
+      duration_ms: 481.183904
+      type: 'test'
+      ...
+    # Subtest: ⭐ AC-14: no secret and no real data in the tracked files
+    ok 4 - ⭐ AC-14: no secret and no real data in the tracked files
+      ---
+      duration_ms: 497.193742
+      type: 'test'
+      ...
+    # Subtest: ⭐ M62: every operation refuses the other company
+    ok 5 - ⭐ M62: every operation refuses the other company
+      ---
+      duration_ms: 289.802359
+      type: 'test'
+      ...
+    # Subtest: ⭐ M63: the declared rejection code stays declared and is reachable
+    ok 6 - ⭐ M63: the declared rejection code stays declared and is reachable
+      ---
+      duration_ms: 86.197225
+      type: 'test'
+      ...
+    # Subtest: ⭐ M61: the console is connected to the real backend
+    ok 7 - ⭐ M61: the console is connected to the real backend
+      ---
+      duration_ms: 5290.874501
+      type: 'test'
+      ...
+    1..7
+ok 13 - FOUNDATION 5) boundaries, secrets and the notes M59 to M65
+  ---
+  duration_ms: 7854.333586
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 19) the real limits of the deletion evidence (M-74)
+    # Subtest: ⭐⭐⭐ M-74a: the request role may not READ the evidence
+    ok 1 - ⭐⭐⭐ M-74a: the request role may not READ the evidence
+      ---
+      duration_ms: 38.02615
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-74b: the owner role may READ it and may NOT change it
+    ok 2 - ⭐⭐⭐ M-74b: the owner role may READ it and may NOT change it
+      ---
+      duration_ms: 226.076889
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-74c: the receipt is linked to the deletion that really happened
+    ok 3 - ⭐⭐⭐ M-74c: the receipt is linked to the deletion that really happened
+      ---
+      duration_ms: 10.133816
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-74d: a tamper of the content is DETECTED by the receipt
+    ok 4 - ⭐⭐⭐ M-74d: a tamper of the content is DETECTED by the receipt
+      ---
+      duration_ms: 46.586705
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-74e: the limit of the wall: the ADMINISTRATOR of the database wins
+    ok 5 - ⭐⭐⭐ M-74e: the limit of the wall: the ADMINISTRATOR of the database wins
+      ---
+      duration_ms: 21.228208
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-74f: the deletion is not repeated when the answer is lost
+    ok 6 - ⭐⭐⭐ M-74f: the deletion is not repeated when the answer is lost
+      ---
+      duration_ms: 147.017966
+      type: 'test'
+      ...
+    1..6
+ok 14 - FOUNDATION 19) the real limits of the deletion evidence (M-74)
+  ---
+  duration_ms: 1148.160664
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 10) the protection of the deletion evidence (M-03)
+    # Subtest: ⭐⭐⭐ M-03a: a fake evidence is refused by the database
+    ok 1 - ⭐⭐⭐ M-03a: a fake evidence is refused by the database
+      ---
+      duration_ms: 228.429258
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-03b: an evidence of another tenant or of an unexecuted request is refused
+    ok 2 - ⭐⭐⭐ M-03b: an evidence of another tenant or of an unexecuted request is refused
+      ---
+      duration_ms: 241.835467
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-03c: the real deletion writes the evidence and stamps the requester
+    ok 3 - ⭐⭐ M-03c: the real deletion writes the evidence and stamps the requester
+      ---
+      duration_ms: 202.817005
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-03d: a failed step rolls back and the retry succeeds exactly once
+    ok 4 - ⭐⭐⭐ M-03d: a failed step rolls back and the retry succeeds exactly once
+      ---
+      duration_ms: 244.698288
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-03e: a connection dropped during the deletion rolls everything back
+    ok 5 - ⭐⭐⭐ M-03e: a connection dropped during the deletion rolls everything back
+      ---
+      duration_ms: 236.054173
+      type: 'test'
+      ...
+    1..5
+ok 15 - FOUNDATION 10) the protection of the deletion evidence (M-03)
+  ---
+  duration_ms: 1800.38446
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 14) the integrity of the deletion evidence (M-68)
+    # Subtest: ⭐⭐⭐ M-68a: the evidence is immutable
+    ok 1 - ⭐⭐⭐ M-68a: the evidence is immutable
+      ---
+      duration_ms: 296.99449
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-68b: the hash is computed by the database
+    ok 2 - ⭐⭐⭐ M-68b: the hash is computed by the database
+      ---
+      duration_ms: 278.421136
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-68c: a privileged manipulation is detected
+    ok 3 - ⭐⭐⭐ M-68c: a privileged manipulation is detected
+      ---
+      duration_ms: 211.116631
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-68d: the receipt tells the three states apart
+    ok 4 - ⭐⭐⭐ M-68d: the receipt tells the three states apart
+      ---
+      duration_ms: 197.768899
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-68e: a re-sent request never deletes twice
+    ok 5 - ⭐⭐⭐ M-68e: a re-sent request never deletes twice
+      ---
+      duration_ms: 201.872086
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-68f: a failure before the commit leaves nothing behind
+    ok 6 - ⭐⭐⭐ M-68f: a failure before the commit leaves nothing behind
+      ---
+      duration_ms: 188.623288
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-68h: the answer is lost after the commit
+    ok 7 - ⭐⭐ M-68h: the answer is lost after the commit
+      ---
+      duration_ms: 245.569119
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-68g: the request id is not guessable
+    ok 8 - ⭐⭐ M-68g: the request id is not guessable
+      ---
+      duration_ms: 168.035477
+      type: 'test'
+      ...
+    1..8
+ok 16 - FOUNDATION 14) the integrity of the deletion evidence (M-68)
+  ---
+  duration_ms: 2451.15816
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 04) the guard of the deletion evidence (M-100)
+    # Subtest: ⭐⭐⭐ M-100a: the guard is restored after a SUCCESS
+    ok 1 - ⭐⭐⭐ M-100a: the guard is restored after a SUCCESS
+      ---
+      duration_ms: 59.45925
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-100b: an EXCEPTION restores the guard AND the row
+    ok 2 - ⭐⭐⭐ M-100b: an EXCEPTION restores the guard AND the row
+      ---
+      duration_ms: 47.894255
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-100c: a CONCURRENT writer is refused while the purge is in flight
+    ok 3 - ⭐⭐⭐ M-100c: a CONCURRENT writer is refused while the purge is in flight
+      ---
+      duration_ms: 893.83615
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-100d: the guard is restored after the BACKEND is terminated
+    ok 4 - ⭐⭐⭐ M-100d: the guard is restored after the BACKEND is terminated
+      ---
+      duration_ms: 532.09045
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-100e: the guard is restored after the PROCESS is killed
+    ok 5 - ⭐⭐⭐ M-100e: the guard is restored after the PROCESS is killed
+      ---
+      duration_ms: 1593.406413
+      type: 'test'
+      ...
+    1..5
+ok 17 - FOUNDATION 04) the guard of the deletion evidence (M-100)
+  ---
+  duration_ms: 3671.209767
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 25) the limits of the CRM and the inbox are one matrix (M-84)
+    # Subtest: ⭐⭐⭐ M-84a: the matrix of the four roles of the company (from the core)
+    ok 1 - ⭐⭐⭐ M-84a: the matrix of the four roles of the company (from the core)
+      ---
+      duration_ms: 854.087363
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-84b: the matrix is written down and it matches the core
+    ok 2 - ⭐⭐⭐ M-84b: the matrix is written down and it matches the core
+      ---
+      duration_ms: 0.559469
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-84c: the employee of another company reaches NOTHING of the drill
+    ok 3 - ⭐⭐⭐ M-84c: the employee of another company reaches NOTHING of the drill
+      ---
+      duration_ms: 200.001198
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-84d: an expired session reaches NOTHING
+    ok 4 - ⭐⭐⭐ M-84d: an expired session reaches NOTHING
+      ---
+      duration_ms: 45.534623
+      type: 'test'
+      ...
+    1..4
+ok 18 - FOUNDATION 25) the limits of the CRM and the inbox are one matrix (M-84)
+  ---
+  duration_ms: 2478.083718
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4) the independent security matrix (M-86)
+    # Subtest: ⭐⭐⭐ every operation answers what the owner decided
+    ok 1 - ⭐⭐⭐ every operation answers what the owner decided
+      ---
+      duration_ms: 796.427389
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-91 — the assignment AT THE CREATION is the right of the owner alone
+    ok 2 - ⭐⭐⭐ M-91 — the assignment AT THE CREATION is the right of the owner alone
+      ---
+      duration_ms: 13.063432
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the refusal of a right is a 403 and NOT a 404 nor a 500
+    ok 3 - ⭐⭐⭐ the refusal of a right is a 403 and NOT a 404 nor a 500
+      ---
+      duration_ms: 16.067651
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the company of another tenant is INVISIBLE
+    ok 4 - ⭐⭐⭐ the company of another tenant is INVISIBLE
+      ---
+      duration_ms: 81.355367
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ an expired session is refused (the token alone is not enough)
+    ok 5 - ⭐⭐⭐ an expired session is refused (the token alone is not enough)
+      ---
+      duration_ms: 12.084554
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the role of the client has NO effect (no escalation)
+    ok 6 - ⭐⭐⭐ the role of the client has NO effect (no escalation)
+      ---
+      duration_ms: 83.084958
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ a request without a token is refused
+    ok 7 - ⭐⭐⭐ a request without a token is refused
+      ---
+      duration_ms: 1.935977
+      type: 'test'
+      ...
+    1..7
+ok 19 - FOUNDATION 4) the independent security matrix (M-86)
+  ---
+  duration_ms: 2659.65337
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 9) the sessions, the rate limit and the health check (M-02)
+    # Subtest: ⭐⭐ M-02a: the health check describes the service and nothing else
+    ok 1 - ⭐⭐ M-02a: the health check describes the service and nothing else
+      ---
+      duration_ms: 6.416769
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-02b: the login rate limit refuses the guesses
+    ok 2 - ⭐⭐⭐ M-02b: the login rate limit refuses the guesses
+      ---
+      duration_ms: 713.680983
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-02c: a business answer is not counted as a guess
+    ok 3 - ⭐⭐ M-02c: a business answer is not counted as a guess
+      ---
+      duration_ms: 81.459129
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-02d: a session expires
+    ok 4 - ⭐⭐⭐ M-02d: a session expires
+      ---
+      duration_ms: 1331.582097
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-02e: a session is revoked when it is deleted
+    ok 5 - ⭐⭐ M-02e: a session is revoked when it is deleted
+      ---
+      duration_ms: 139.917534
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-02f: the role comes from the database, not from the client
+    ok 6 - ⭐⭐⭐ M-02f: the role comes from the database, not from the client
+      ---
+      duration_ms: 147.73506
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-02g: the structured log drops what is not on the allow list
+    ok 7 - ⭐⭐ M-02g: the structured log drops what is not on the allow list
+      ---
+      duration_ms: 0.668393
+      type: 'test'
+      ...
+    1..7
+ok 20 - FOUNDATION 9) the sessions, the rate limit and the health check (M-02)
+  ---
+  duration_ms: 3097.831789
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 04) the matrix of the rights of a ticket (M-104 / M-106)
+    # Subtest: M-106a: the LIST and the READ follow the matrix with the EXACT status
+    ok 1 - M-106a: the LIST and the READ follow the matrix with the EXACT status
+      ---
+      duration_ms: 224.428399
+      type: 'test'
+      ...
+    # Subtest: M-106b: the CREATE follows the matrix AND writes nothing when refused
+    ok 2 - M-106b: the CREATE follows the matrix AND writes nothing when refused
+      ---
+      duration_ms: 48.587776
+      type: 'test'
+      ...
+    # Subtest: M-106c: the UPDATE follows the matrix
+    ok 3 - M-106c: the UPDATE follows the matrix
+      ---
+      duration_ms: 175.470559
+      type: 'test'
+      ...
+    # Subtest: M-106d: the ASSIGNMENT follows the matrix (the owner alone)
+    ok 4 - M-106d: the ASSIGNMENT follows the matrix (the owner alone)
+      ---
+      duration_ms: 53.46877
+      type: 'test'
+      ...
+    # Subtest: M-106e: the LINKAGE (the customer of the conversation)
+    ok 5 - M-106e: the LINKAGE (the customer of the conversation)
+      ---
+      duration_ms: 18.596645
+      type: 'test'
+      ...
+    # Subtest: M-106f: EVERY row of the matrix was exercised
+    ok 6 - M-106f: EVERY row of the matrix was exercised
+      ---
+      duration_ms: 1.154679
+      type: 'test'
+      ...
+    # Subtest: M-106g: the NEGATIVE PROOF (an injected 500 breaks the guard)
+    ok 7 - M-106g: the NEGATIVE PROOF (an injected 500 breaks the guard)
+      ---
+      duration_ms: 0.745622
+      type: 'test'
+      ...
+    1..7
+ok 21 - FOUNDATION 04) the matrix of the rights of a ticket (M-104 / M-106)
+  ---
+  duration_ms: 2043.442946
+  type: 'test'
+  ...
+1..21
+# tests 127
+# suites 0
+# pass 127
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 50280.487797
+EXIT=0
+SHA=15d37fe98ee7c8f8f8a315dd7ee43544345c6306
