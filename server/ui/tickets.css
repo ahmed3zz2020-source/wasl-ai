@@ -1083,3 +1083,215 @@ li.activity .meta {
     display: block;
   }
 }
+
+/* ⭐⭐⭐ tk-16: the measurements of the ticket. */
+.measurements {
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.measurements h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.measurements-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.measurements-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 12px;
+}
+
+.measure-label {
+  color: var(--text-muted);
+}
+
+.measure-value {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.measurements .note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ⭐⭐⭐ tk-16: the short badge in the list. */
+.measure-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.measure-badge[data-state='done'] {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.measure-badge[data-state='waiting'] {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+/* ⭐⭐⭐ tk-17: the ready phrases of the ticket. */
+.templates {
+  margin: 4px 0 10px;
+  padding: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.templates-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.templates-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.templates-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.templates-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.templates-list .template {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.templates-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  background: var(--warn-soft);
+  font-size: 12px;
+}
+
+.templates-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ⭐⭐⭐ tk-20: the follow-up reminders. */
+.reminders {
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.reminders h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.reminders .note {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.reminder-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.reminder-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.reminder-form .grow {
+  flex: 1 1 160px;
+}
+
+.reminder-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.reminders-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reminders-list .reminder {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 12px;
+}
+
+.reminder-subject {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.reminder-due {
+  color: var(--accent-ink);
+}
+
+.reminder-note {
+  color: var(--text-muted);
+}
+
+.reminders-list .reminder button {
+  margin-inline-start: auto;
+}

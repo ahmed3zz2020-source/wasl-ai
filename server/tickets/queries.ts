@@ -57,9 +57,68 @@ export interface TicketRow {
   readonly priority: string;
   readonly assignee_actor_id: string | null;
   readonly version: number;
-  readonly created_at: string;
-  readonly updated_at: string;
+  /**
+   * ⭐⭐⭐ tk-16: ⭐⭐⭐ the MEASUREMENTS of the ticket ⇒ ⇒ ⇒ ⇒ they come
+   * ⭐⭐⭐ tk-16 from the data that ALREADY EXISTS ⇒ ⇒ ⇒ ⇒ and nothing
+   * ⭐⭐⭐ tk-16 is invented ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ no target is declared in
+   * ⭐⭐⭐ tk-16 the project ⇒ ⇒ ⇒ ⇒ ⇒ the page shows the measurement
+   * ⭐⭐⭐ tk-16 and says that the target is a commercial decision).
+   * ⭐⭐⭐ tk-16: ⭐⭐⭐ `first_response_at` is NULL when the ticket has
+   * ⭐⭐⭐ tk-16 no conversation or no reply yet ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ "غير
+   * ⭐⭐⭐ tk-16 متاح" — NOT a zero and NOT a guess).
+   */
+  readonly first_response_at: string | null;
+  readonly first_response_minutes: number | null;
+  readonly age_minutes: number;
+  readonly idle_minutes: number;
 }
+
+/**
+ * ⭐⭐⭐ tk-16: ⭐⭐⭐ the measurement of the first reply.
+ * ⭐⭐⭐ It is the FIRST outbound reply of the conversation of the ticket
+ * ⭐⭐⭐ tk-16 that came AFTER the ticket was created ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒
+ * ⭐⭐⭐ tk-16 a reply of an earlier moment does not count) ⇒ ⇒ ⇒ ⇒ and
+ * ⭐⭐⭐ tk-16 it is ONE query for the whole page (no N+1).
+ */
+const FIRST_RESPONSE_SQL = `left join lateral (
+          select m.occurred_at as first_response_at
+            from messages m
+           where m.tenant_id = t.tenant_id
+             and m.conversation_ref = t.conversation_ref
+             and m.direction = 'outbound'
+             and m.occurred_at >= t.created_at
+           order by m.occurred_at asc, m.message_ref asc
+           limit 1
+        ) fr on true`;
+
+/**
+ * ⭐⭐⭐ tk-16: ⭐⭐⭐ PostgreSQL gives the numbers of `extract(epoch …)`
+ * ⭐⭐⭐ tk-16 as text ⇒ ⇒ ⇒ ⇒ they are turned into REAL numbers here ⇒
+ * ⭐⭐⭐ tk-16 ⇒ ⇒ ⇒ ⇒ (and the interface of the page stays honest).
+ */
+interface TicketRowRaw extends TicketRow {
+  readonly first_response_minutes: string | number | null;
+  readonly age_minutes: string | number;
+  readonly idle_minutes: string | number;
+}
+
+function withMeasurements(row: TicketRowRaw): TicketRow {
+  const first = row.first_response_minutes;
+  return {
+    ...row,
+    first_response_minutes: first === null || first === undefined ? null : Number(first),
+    age_minutes: Number(row.age_minutes ?? 0),
+    idle_minutes: Number(row.idle_minutes ?? 0),
+  };
+}
+
+const FIRST_RESPONSE_COLUMNS = `fr.first_response_at as first_response_at,
+            case when fr.first_response_at is null then null
+                 else extract(epoch from (fr.first_response_at - t.created_at)) / 60
+            end as first_response_minutes,
+            extract(epoch from (now() - t.created_at)) / 60 as age_minutes,
+            extract(epoch from (now() - t.updated_at)) / 60 as idle_minutes`;
+
 
 interface TicketScopeSql {
   readonly where: string | null;
@@ -162,7 +221,7 @@ export async function listTickets(
         ? `${stateRank} asc, t.updated_at desc, t.id desc`
         : 't.updated_at desc, t.id desc';
 
-  const result = await uow.query<TicketRow>(
+  const result = await uow.query<TicketRowRaw>(
     `select t.ref,
             t.customer_id,
             cu.display_name as customer_name,
@@ -174,9 +233,11 @@ export async function listTickets(
             t.assignee_actor_id,
             t.version,
             t.created_at,
-            t.updated_at
+            t.updated_at,
+            ${FIRST_RESPONSE_COLUMNS}
        from support_tickets t
        left join customers cu on cu.tenant_id = t.tenant_id and cu.id = t.customer_id
+       ${FIRST_RESPONSE_SQL}
       where ${where}
       order by ${order}
       limit ${limit} offset ${offset}`,
@@ -188,7 +249,10 @@ export async function listTickets(
     values.slice(0, values.length - 2),
   );
 
-  return { rows: result.rows, total: Number(countResult.rows[0]?.count ?? '0') };
+  return {
+    rows: result.rows.map(withMeasurements),
+    total: Number(countResult.rows[0]?.count ?? '0'),
+  };
 }
 
 /**
@@ -263,7 +327,7 @@ export async function readTicket(
   if (scope.role === 'agent') {
     values.push(scope.actorId);
   }
-  const result = await uow.query<TicketRow>(
+  const result = await uow.query<TicketRowRaw>(
     `select t.ref,
             t.customer_id,
             cu.display_name as customer_name,
@@ -275,13 +339,16 @@ export async function readTicket(
             t.assignee_actor_id,
             t.version,
             t.created_at,
-            t.updated_at
+            t.updated_at,
+            ${FIRST_RESPONSE_COLUMNS}
        from support_tickets t
        left join customers cu on cu.tenant_id = t.tenant_id and cu.id = t.customer_id
+       ${FIRST_RESPONSE_SQL}
       where t.tenant_id = $1 and t.ref = $2${scopeFilter}`,
     values,
   );
-  return result.rows[0] ?? null;
+  const row = result.rows[0];
+  return row ? withMeasurements(row) : null;
 }
 
 /** ⭐⭐ The activity of a ticket (the change log). */

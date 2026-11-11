@@ -102,6 +102,11 @@
           غير مُسندة
           <span class="counter" id="unassigned-counter">—</span>
         </button>
+        <!-- ⭐⭐⭐ tk-19: the export of the tickets that the employee may
+             read (⇒ the isolation of the company and the scope of the
+             role are the ones of the list ⇒ ⇒ ⇒ and the cells of the
+             file are protected against the formulas of a spreadsheet). -->
+        <button class="ghost" id="btn-export" type="button">تصدير CSV</button>
         <button class="primary" id="btn-new" type="button" hidden>تذكرة جديدة</button>
       </section>
 
@@ -188,11 +193,66 @@
                   <span>الوصف</span>
                   <textarea id="edit-description" rows="4" maxlength="4000"></textarea>
                 </label>
+                <!-- ⭐⭐⭐ tk-17: the ready phrases of the ticket ⇒ ⇒ ⇒ ⇒
+                     they write in the description and NOTHING else ⇒ ⇒ ⇒ ⇒
+                     (they never save ⇒ ⇒ ⇒ ⇒ the employee saves with his
+                     own hand) ⇒ ⇒ ⇒ ⇒ and the text that is already there
+                     ⇒ ⇒ ⇒ ⇒ is NEVER replaced without a confirmation. -->
+                <div class="templates" id="ticket-templates">
+                  <div class="templates-head">
+                    <span class="templates-title">عبارات جاهزة</span>
+                    <span class="templates-hint">بتكتب في الوصف — ولسه لازم تحفظه بإيدك</span>
+                  </div>
+                  <div class="templates-list" id="ticket-templates-list"></div>
+                  <div class="templates-confirm" id="ticket-templates-confirm" hidden>
+                    <span class="templates-question">فيه نص في الوصف — تستبدله بالعبارة الجاهزة؟</span>
+                    <span class="templates-actions">
+                      <button class="ghost" id="btn-template-replace" type="button">استبدل</button>
+                      <button class="ghost" id="btn-template-keep" type="button">أبقِ نصي</button>
+                    </span>
+                  </div>
+                </div>
                 <div class="edit-actions">
                   <button class="primary" id="btn-save" type="submit">حفظ التعديل</button>
                   <span class="muted" id="edit-note"></span>
                 </div>
               </form>
+            </section>
+
+            <!-- ⭐⭐⭐ tk-16: the measurements of the ticket ⇒ ⇒ ⇒ ⇒ they
+                 come from the data that exists ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ "غير
+                 ⭐⭐⭐ tk-16 متاح" when there is nothing to measure ⇒ ⇒ ⇒ ⇒
+                 ⇒ ⇒ ⇒ ⇒ and never a number that was invented). -->
+            <section class="measurements" id="measurements" hidden>
+              <h3>القياسات</h3>
+              <ul class="measurements-list" id="measurements-list"></ul>
+              <p class="muted note" id="measurements-note"></p>
+            </section>
+
+            <!-- ⭐⭐⭐ tk-20: the follow-up reminders ⇒ ⇒ ⇒ ⇒ they live on
+                 the device of the employee ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ no message
+                 and no notification goes out) ⇒ ⇒ ⇒ ⇒ and they are shown
+                 ⭐⭐⭐ tk-20 in the interface only. -->
+            <section class="reminders" id="reminders" hidden>
+              <h3>تذكيرات المتابعة</h3>
+              <p class="muted note">التذكيرات على جهازك فقط — مفيش أي إشعار برّه.</p>
+              <form class="reminder-form" id="reminder-form" hidden>
+                <label class="field">
+                  <span>متى تتابع</span>
+                  <input id="reminder-due" type="datetime-local" required />
+                </label>
+                <label class="field grow">
+                  <span>ملاحظة (اختياري)</span>
+                  <input id="reminder-note" type="text" maxlength="200" />
+                </label>
+                <div class="reminder-actions">
+                  <button class="primary" id="btn-reminder-save" type="submit">احفظ التذكير</button>
+                  <button class="ghost" id="btn-reminder-cancel" type="button">إلغاء</button>
+                </div>
+              </form>
+              <button class="ghost" id="btn-reminder-new" type="button">تذكير متابعة لهذه التذكرة</button>
+              <ul class="reminders-list" id="reminders-list"></ul>
+              <p class="state-box" id="reminders-empty" hidden>مفيش تذكيرات محفوظة.</p>
             </section>
 
             <section class="activity-block">

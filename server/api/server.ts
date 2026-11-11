@@ -92,6 +92,7 @@ import {
   type TicketFilters,
   type TicketScope,
 } from '../tickets/queries.ts';
+import { ticketsToCsv } from '../tickets/csv.ts';
 import {
   assertTicketTransition,
   isTicketPriority,
@@ -113,6 +114,12 @@ function sleep(ms: number): Promise<void> {
   });
 }
 const SCOPE_REF = 'tenant-scope';
+/**
+ * ⭐⭐⭐ tk-19: ⭐⭐⭐ the limit of the export (a declared number ⇒ ⇒ ⇒ ⇒
+ * ⭐⭐⭐ tk-19 the employee is told to narrow the filters instead of
+ * ⭐⭐⭐ tk-19 receiving a file that was cut in the middle).
+ */
+const EXPORT_LIMIT = 5000;
 
 /**
  * ⭐ The local console is served by the same process that serves the
@@ -729,6 +736,13 @@ export class WaslApiServer {
     if (segments[1] === 'tickets') {
       if (method === 'GET' && segments.length === 2) {
         return this.#listTickets(context, url);
+      }
+      // ⭐⭐⭐ tk-19: ⭐⭐⭐ the export of the tickets that the employee
+      // ⭐⭐⭐ tk-19 may read ⇒ ⇒ ⇒ ⇒ (the SAME capability and the SAME
+      // ⭐⭐⭐ tk-19 scope as the list ⇒ ⇒ ⇒ ⇒ ⇒ the export can never
+      // ⭐⭐⭐ tk-19 show a ticket of another company).
+      if (method === 'GET' && segments.length === 3 && segments[2] === 'export') {
+        return this.#exportTickets(context, url);
       }
       if (method === 'POST' && segments.length === 2) {
         return locked(() => this.#createTicket(context, req));
@@ -1651,6 +1665,88 @@ export class WaslApiServer {
         may_assign: this.#mayAssignTickets(context),
       },
     };
+  }
+
+  /**
+   * ⭐⭐⭐ tk-19: ⭐⭐⭐ the export of the tickets (a CSV).
+   * ⭐⭐⭐ tk-19: ⭐⭐⭐ THE RIGHT is the one of the list (`ticket.list`)
+   * ⭐⭐⭐ tk-19 ⇒ ⇒ ⇒ ⇒ (no new capability ⇒ ⇒ ⇒ ⇒ no change in the
+   * ⭐⭐⭐ tk-19 permissions) ⇒ ⇒ ⇒ ⇒ and the SCOPE is the one of the
+   * ⭐⭐⭐ tk-19 list ⇒ ⇒ ⇒ ⇒ ⇒ an employee exports HIS tickets only.
+   * ⭐⭐⭐ tk-19: ⭐⭐⭐ the limit of the file is declared ⇒ ⇒ ⇒ ⇒ (the
+   * ⭐⭐⭐ tk-19 employee is told to narrow the filters instead of
+   * ⭐⭐⭐ tk-19 receiving a file that was cut in the middle).
+   */
+  async #exportTickets(context: RequestContext, url: URL): Promise<JsonResponse> {
+    const decision = this.#authorizeTicket(context, 'ticket.list', SCOPE_REF);
+    if (!decision.allowed) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'ticket.list',
+        'denied',
+        decision.code,
+        { target: 'export' },
+      );
+      return {
+        status: 403,
+        body: { ok: false, error: { code: decision.code, message: decision.reason } },
+      };
+    }
+    const state = url.searchParams.get('state');
+    const priority = url.searchParams.get('priority');
+    const unassigned = url.searchParams.get('unassigned') === '1';
+    const filters: TicketFilters = {
+      ...(url.searchParams.get('q') !== null ? { query: url.searchParams.get('q') as string } : {}),
+      ...(state !== null ? { state } : {}),
+      ...(priority !== null ? { priority } : {}),
+      ...(url.searchParams.get('assignee') !== null
+        ? { assignee: url.searchParams.get('assignee') as string }
+        : {}),
+      ...(unassigned ? { unassigned: true } : {}),
+      sort: 'recent',
+      limit: EXPORT_LIMIT,
+      offset: 0,
+    };
+    const page = await readTicketPage(
+      this.#pool,
+      context.session.tenantId,
+      this.#ticketScope(context),
+      filters,
+    );
+    if (page.total > EXPORT_LIMIT) {
+      await this.#audit(
+        context.session.tenantId,
+        context.session.actorId,
+        context.session.sessionId,
+        'ticket.list',
+        'allowed',
+        null,
+        { target: 'export', refused: 'too_many', total: page.total },
+      );
+      return {
+        status: 400,
+        body: {
+          ok: false,
+          error: {
+            code: 'export_too_large',
+            message: `التصدير محدود بـ ${EXPORT_LIMIT} تذكرة — ضيّق البحث أو الفلتر.`,
+          },
+        },
+      };
+    }
+    const csv = ticketsToCsv(page.rows);
+    await this.#audit(
+      context.session.tenantId,
+      context.session.actorId,
+      context.session.sessionId,
+      'ticket.list',
+      'allowed',
+      null,
+      { target: 'export', count: page.rows.length },
+    );
+    return { status: 200, body: csv, contentType: 'text/csv; charset=utf-8' };
   }
 
   /** ⭐⭐ D-073: the detail of one ticket and its activity. */

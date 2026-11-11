@@ -427,6 +427,10 @@ function renderTickets() {
     updated.textContent = `آخر تحديث: ${formatTime(ticket.updated_at)}`;
     updated.title = formatAbsolute(ticket.updated_at);
     meta.appendChild(updated);
+    // ⭐⭐⭐ tk-16: the measurement of the first reply (⇒ ⇒ ⇒ ⇒ a real
+    // ⭐⭐⭐ tk-16 number ⇒ ⇒ ⇒ ⇒ and «بانتظار أول رد» when there is
+    // ⭐⭐⭐ tk-16 none ⇒ ⇒ ⇒ ⇒ — never a number that was invented).
+    meta.appendChild(measurementBadge(ticket));
     if (ticket.assignee_actor_id) {
       const assignee = document.createElement('span');
       assignee.textContent = `مُسنَد إلى ${ticket.assignee_actor_id}`;
@@ -559,10 +563,18 @@ async function openTicket(ref) {
   $('detail-ref').textContent = ticket.ref ?? '';
 
   renderFacts(ticket);
+  // ⭐⭐⭐ tk-16: the measurements of THIS ticket (from the data that
+  // ⭐⭐⭐ tk-16 exists ⇒ ⇒ ⇒ ⇒ and nothing is invented).
+  renderMeasurements(ticket);
   renderEdit(ticket);
+  // ⭐⭐⭐ tk-17: the pending confirmation belongs to the ticket that is
+  // ⭐⭐⭐ tk-17 on the screen ⇒ ⇒ ⇒ ⇒ (it never crosses over).
+  clearPendingTicketTemplate();
   renderChanges(rowsOf(answer.body, 'changes'));
   renderTickets();
   renderDetailRightsNote();
+  // ⭐⭐⭐ tk-20: the reminders of the company are always in reach.
+  renderReminders();
 
   if (isSmallScreen()) {
     // ⭐⭐ M-114: the small screen swaps the list for the detail ⇒ ⇒ ⇒
@@ -610,6 +622,314 @@ function closeDetail() {
     window.scrollTo({ top: state.listView.scroll, behavior: 'auto' });
   }
   renderTickets();
+}
+
+// ============================================================
+// ⭐⭐⭐ tk-16: the MEASUREMENTS of a ticket
+// ------------------------------------------------------------
+// ⭐⭐⭐ They come from the data that ALREADY EXISTS (the database) ⇒ ⇒
+// ⭐⭐⭐ ⇒ and nothing is invented ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ when there is
+// ⭐⭐⭐ nothing to measure the answer is «غير متاح» — NOT a zero).
+// ⭐⭐⭐ ⭐ AND THERE IS NO TARGET IN THE PROJECT ⇒ ⇒ ⇒ ⇒ ⇒ the page
+// ⭐⭐⭐ shows the MEASUREMENT and says that the target is a decision
+// ⭐⭐⭐ of the commercial slice (⇒ ⇒ ⇒ ⇒ it is not guessed here).
+// ============================================================
+function formatMinutes(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return 'غير متاح';
+  const total = Math.max(0, Math.round(Number(value)));
+  if (total < 60) return `${new Intl.NumberFormat('ar-EG').format(total)} دقيقة`;
+  if (total < 60 * 24) {
+    const hours = Math.floor(total / 60);
+    const rest = total % 60;
+    const hoursText = new Intl.NumberFormat('ar-EG').format(hours);
+    if (rest === 0) return `${hoursText} ساعة`;
+    return `${hoursText} ساعة و${new Intl.NumberFormat('ar-EG').format(rest)} دقيقة`;
+  }
+  const days = Math.floor(total / (60 * 24));
+  return `${new Intl.NumberFormat('ar-EG').format(days)} يوم`;
+}
+
+/** ⭐⭐⭐ tk-16: the measurements of the ticket on the screen. */
+function renderMeasurements(ticket) {
+  const block = $('measurements');
+  const list = $('measurements-list');
+  if (!block || !list) return;
+  list.textContent = '';
+  const rows = [
+    [
+      'زمن أول رد',
+      ticket.first_response_minutes === null || ticket.first_response_minutes === undefined
+        ? 'غير متاح'
+        : formatMinutes(ticket.first_response_minutes),
+    ],
+    ['عمر التذكرة', formatMinutes(ticket.age_minutes)],
+    ['آخر نشاط', formatMinutes(ticket.idle_minutes)],
+  ];
+  for (const [label, value] of rows) {
+    const item = document.createElement('li');
+    const term = document.createElement('span');
+    term.className = 'measure-label';
+    term.textContent = label;
+    const amount = document.createElement('span');
+    amount.className = 'measure-value';
+    amount.textContent = value;
+    item.appendChild(term);
+    item.appendChild(amount);
+    list.appendChild(item);
+  }
+  const note = $('measurements-note');
+  if (note) {
+    note.textContent =
+      'القياسات مقيسة من البيانات الموجودة — مفيش هدف متفق عليه في المشروع، والهدف قرار تجاري.';
+  }
+  block.hidden = false;
+}
+
+/** ⭐⭐⭐ tk-16: the short badge of the measurement in the list. */
+function measurementBadge(ticket) {
+  const badge = document.createElement('span');
+  badge.className = 'measure-badge';
+  const first = ticket.first_response_minutes;
+  if (first === null || first === undefined) {
+    badge.textContent = ticket.conversation_ref ? 'بانتظار أول رد' : 'بلا محادثة';
+    badge.title = 'مفيش رد أول بعد — أو مفيش محادثة مرتبطة بالتذكرة';
+    badge.dataset.state = 'waiting';
+    return badge;
+  }
+  badge.textContent = `أول رد: ${formatMinutes(first)}`;
+  badge.title = 'الزمن بين إنشاء التذكرة وأول رد على محادثتها';
+  badge.dataset.state = 'done';
+  return badge;
+}
+
+// ============================================================
+// ⭐⭐⭐ tk-17: the ready phrases of the ticket
+// ------------------------------------------------------------
+// ⭐⭐⭐ They live in the page (⇒ ⇒ ⇒ NO central management · NO
+// ⭐⭐⭐ storage on the server · NO AI) ⇒ ⇒ ⇒ ⇒ and they write in the
+// ⭐⭐⭐ description ONLY ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ they never save) ⇒ ⇒ ⇒ ⇒
+// ⭐⭐⭐ and the text that is already there is NEVER replaced without
+// ⭐⭐⭐ a clear confirmation.
+// ============================================================
+const TICKET_TEMPLATES = [
+  {
+    id: 'contacted',
+    label: 'تم التواصل',
+    text: 'تم التواصل مع العميل وتم الاتفاق على خطوة تالية للمتابعة.',
+  },
+  {
+    id: 'waiting_customer',
+    label: 'بانتظار العميل',
+    text: 'بانتظار رد العميل — المتابعة بعد وصول رده.',
+  },
+  {
+    id: 'need_info',
+    label: 'مطلوب تفاصيل',
+    text: 'تم طلب تفاصيل إضافية من العميل (رقم الطلب ووقت حدوث المشكلة).',
+  },
+  {
+    id: 'resolved',
+    label: 'تم الحل',
+    text: 'تم حل الطلب بالكامل ولا يحتاج متابعة إضافية.',
+  },
+];
+
+/** ⭐⭐⭐ tk-17: the pending confirmation (it belongs to the ticket on the screen). */
+let pendingTicketTemplate = null;
+
+function renderTicketTemplates() {
+  const list = $('ticket-templates-list');
+  if (!list) return;
+  list.textContent = '';
+  for (const template of TICKET_TEMPLATES) {
+    const button = document.createElement('button');
+    // ⭐⭐⭐ tk-17: the button is NOT a submit (⇒ ⇒ ⇒ ⇒ it never saves).
+    button.type = 'button';
+    button.className = 'ghost template';
+    button.dataset.template = template.id;
+    button.textContent = template.label;
+    button.title = template.text;
+    button.addEventListener('click', () => applyTicketTemplate(template));
+    list.appendChild(button);
+  }
+}
+
+function applyTicketTemplate(template) {
+  const box = $('edit-description');
+  if (!box) return;
+  const confirm = $('ticket-templates-confirm');
+  if (box.value.trim().length > 0) {
+    // ⭐⭐⭐ tk-17: the text is NEVER replaced without a confirmation.
+    pendingTicketTemplate = template;
+    if (confirm) confirm.hidden = false;
+    return;
+  }
+  writeTicketTemplate(template);
+}
+
+function writeTicketTemplate(template) {
+  const box = $('edit-description');
+  if (!box) return;
+  box.value = template.text;
+  box.focus();
+  pendingTicketTemplate = null;
+  const confirm = $('ticket-templates-confirm');
+  if (confirm) confirm.hidden = true;
+  const note = $('edit-note');
+  if (note) note.textContent = 'العبارة اتكتبت في الوصف — دوس «حفظ التعديل» لتثبيتها.';
+  toast('العبارة الجاهزة اتكتبت في الوصف — لسه لازم تحفظ.');
+}
+
+function clearPendingTicketTemplate() {
+  pendingTicketTemplate = null;
+  const confirm = $('ticket-templates-confirm');
+  if (confirm) confirm.hidden = true;
+}
+
+// ============================================================
+// ⭐⭐⭐ tk-19: the export of the tickets
+// ------------------------------------------------------------
+// ⭐⭐⭐ The file comes from the SERVER with the same right and the same
+// ⭐⭐⭐ scope as the list ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ the export of an employee
+// ⭐⭐⭐ holds HIS tickets only) ⇒ ⇒ ⇒ ⇒ and the file is fetched with
+// ⭐⭐⭐ the token of the session ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ the token never goes
+// ⭐⭐⭐ into the address of the page ⇒ ⇒ ⇒ ⇒ ⇒ it never lands in the
+// ⭐⭐⭐ history of the browser).
+// ============================================================
+async function exportTickets() {
+  const button = $('btn-export');
+  if (button) button.disabled = true;
+  try {
+    const params = new URLSearchParams();
+    const query = $('filter-query').value.trim();
+    const state = $('filter-state').value;
+    const priority = $('filter-priority').value;
+    if (query) params.set('q', query);
+    if (state) params.set('state', state);
+    if (priority) params.set('priority', priority);
+    const answer = await api('GET', `/api/tickets/export?${params.toString()}`);
+    if (!answer.ok) {
+      toast(errorMessage(answer.body, 'تعذّر تصدير التذاكر.'), true);
+      return;
+    }
+    // ⭐⭐⭐ tk-19: the file is made in the browser from the answer ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ (⇒ ⇒ ⇒ ⇒ the token is not in the address of the download).
+    const blob = new Blob([String(answer.body ?? '')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `wasl-tickets-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('الملف اتحمّل.');
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+// ============================================================
+// ⭐⭐⭐ tk-20: the follow-up reminders (LOCAL)
+// ------------------------------------------------------------
+// ⭐⭐⭐ They live in the browser of the employee ⇒ ⇒ ⇒ ⇒ (⇒ ⇒ ⇒ ⇒ no
+// ⭐⭐⭐ message goes out · no notification · no push · no server) ⇒ ⇒
+// ⭐⭐⭐ ⇒ and they are bound to the company of the session ⇒ ⇒ ⇒ ⇒ (⇒
+// ⭐⭐⭐ ⇒ the reminders of one company never show in another).
+// ============================================================
+const REMINDERS_KEY = 'wasl_ticket_reminders_v1';
+
+function readReminders() {
+  try {
+    const raw = localStorage.getItem(REMINDERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && typeof item === 'object');
+  } catch {
+    return [];
+  }
+}
+
+function writeReminders(list) {
+  try {
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(list));
+  } catch {
+    // ⭐⭐⭐ tk-20: the storage may be refused ⇒ the page keeps working.
+  }
+}
+
+function remindersOfThisCompany() {
+  const tenant = state.sessionTenantId ?? '';
+  return readReminders().filter((item) => item.tenant === tenant);
+}
+
+function renderReminders() {
+  const block = $('reminders');
+  const list = $('reminders-list');
+  if (!block || !list) return;
+  const reminders = remindersOfThisCompany().sort((a, b) => String(a.due).localeCompare(String(b.due)));
+  list.textContent = '';
+  for (const reminder of reminders) {
+    const item = document.createElement('li');
+    item.className = 'reminder';
+    const subject = document.createElement('span');
+    subject.className = 'reminder-subject';
+    subject.textContent = reminder.subject || reminder.ref;
+    const due = document.createElement('span');
+    due.className = 'reminder-due';
+    const when = new Date(reminder.due);
+    due.textContent = Number.isNaN(when.getTime())
+      ? String(reminder.due)
+      : new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }).format(when);
+    item.appendChild(subject);
+    item.appendChild(due);
+    if (reminder.note) {
+      const note = document.createElement('span');
+      note.className = 'reminder-note';
+      note.textContent = reminder.note;
+      item.appendChild(note);
+    }
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'ghost small';
+    remove.textContent = 'امسح';
+    remove.addEventListener('click', () => {
+      const rest = readReminders().filter((entry) => entry.id !== reminder.id);
+      writeReminders(rest);
+      renderReminders();
+    });
+    item.appendChild(remove);
+    list.appendChild(item);
+  }
+  const empty = $('reminders-empty');
+  if (empty) empty.hidden = reminders.length > 0;
+  block.hidden = false;
+}
+
+function saveReminder(event) {
+  event.preventDefault();
+  const ref = state.selected?.ref;
+  if (!ref) return;
+  const due = $('reminder-due').value;
+  if (!due) {
+    toast('اختار وقت المتابعة.', true);
+    return;
+  }
+  const ticket = state.detailTicket;
+  const reminder = {
+    id: `rem_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+    tenant: state.sessionTenantId ?? '',
+    ref,
+    subject: ticket?.subject ?? ref,
+    due: new Date(due).toISOString(),
+    note: $('reminder-note').value.trim(),
+  };
+  writeReminders([...readReminders(), reminder]);
+  $('reminder-form').hidden = true;
+  $('reminder-note').value = '';
+  renderReminders();
+  toast('التذكير اتحفظ على جهازك — مفيش أي إشعار برّه.');
 }
 
 function renderFacts(ticket) {
@@ -890,6 +1210,49 @@ $('btn-login').addEventListener('click', () => {
 $('btn-logout').addEventListener('click', () => {
   void logout();
 });
+// ⭐⭐⭐ tk-19: the export of the tickets that the employee may read.
+$('btn-export').addEventListener('click', () => {
+  void exportTickets();
+});
+// ⭐⭐⭐ tk-17: the confirmation of the ready phrase (⇒ ⇒ ⇒ ⇒ it is the
+// ⭐⭐⭐ tk-17 phrase of the ticket on the screen ⇒ ⇒ ⇒ ⇒ and it never
+// ⭐⭐⭐ tk-17 crosses over to another ticket).
+$('btn-template-replace').addEventListener('click', () => {
+  const template = pendingTicketTemplate;
+  clearPendingTicketTemplate();
+  if (!template) return;
+  writeTicketTemplate(template);
+});
+$('btn-template-keep').addEventListener('click', () => {
+  clearPendingTicketTemplate();
+});
+// ⭐⭐⭐ tk-20: the reminders (local ⇒ ⇒ ⇒ ⇒ nothing goes out of the
+// ⭐⭐⭐ tk-20 device).
+$('btn-reminder-new').addEventListener('click', () => {
+  const form = $('reminder-form');
+  if (!form) return;
+  form.hidden = !form.hidden;
+  if (!form.hidden) {
+    const due = $('reminder-due');
+    if (due && !due.value) {
+      // ⭐⭐⭐ tk-20: the default is tomorrow at the beginning of the
+      // ⭐⭐⭐ tk-20 next hour (⇒ ⇒ ⇒ ⇒ the employee does not hunt for
+      // ⭐⭐⭐ tk-20 a date).
+      const when = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      when.setMinutes(0, 0, 0);
+      due.value = when.toISOString().slice(0, 16);
+    }
+    const note = $('reminder-note');
+    if (note) note.focus();
+  }
+});
+$('btn-reminder-cancel').addEventListener('click', () => {
+  $('reminder-form').hidden = true;
+});
+$('reminder-form').addEventListener('submit', (event) => {
+  saveReminder(event);
+});
+
 $('btn-refresh').addEventListener('click', () => {
   void loadTickets({ resetPage: true });
 });
@@ -986,8 +1349,14 @@ $('create-form').addEventListener('submit', (event) => {
 
 // ⭐⭐ D-073: the page opens the ticket that another page pointed at.
 async function boot() {
+  // ⭐⭐⭐ tk-17: the ready phrases are drawn once (⇒ ⇒ ⇒ ⇒ they live in
+  // ⭐⭐⭐ tk-17 the page and not on the server).
+  renderTicketTemplates();
   if (restoreSession()) {
     showWorkspace();
+    // ⭐⭐⭐ tk-20: the reminders of the company come back with the
+    // ⭐⭐⭐ tk-20 page (⇒ ⇒ ⇒ ⇒ they live on the device).
+    renderReminders();
     await loadTickets({ resetPage: true });
     await loadAgents();
     const params = new URLSearchParams(window.location.search);
