@@ -447,7 +447,12 @@ function renderTickets() {
       assign.textContent = 'إسناد…';
       assign.addEventListener('click', (event) => {
         event.stopPropagation();
-        void openTicket(ticket.ref).then(() => {
+        // ⭐⭐⭐ M-121: ⭐⭐⭐ the fields of the assignment appear ONLY
+        // ⭐⭐⭐ M-121 when the ticket really opened ⇒ ⇒ ⇒ a failed
+        // ⭐⭐⭐ M-121 opening leaves the screen honest (no form of a
+        // ⭐⭐⭐ M-121 ticket that was never loaded).
+        void openTicket(ticket.ref).then((opened) => {
+          if (!opened) return;
           const field = $('assignee-field');
           if (field) field.hidden = false;
           const select = $('edit-assignee');
@@ -536,12 +541,14 @@ async function openTicket(ref) {
   const answer = await api('GET', `/api/tickets/${encodeURIComponent(ref)}`);
   // ⭐⭐⭐ M-114: a late reply of an old ticket ⇒ ⇒ ⇒ it is dropped
   // ⭐⭐⭐ (the screen shows the ticket that was asked for LAST).
-  if (seq !== state.detailSeq) return;
+  if (seq !== state.detailSeq) return false;
   if (!answer.ok) {
     $('detail-error').textContent = errorMessage(answer.body, 'تعذّر فتح التذكرة.');
     $('detail-error').hidden = false;
     $('detail-subject').textContent = '—';
-    return;
+    // ⭐⭐⭐ M-121: the opening FAILED ⇒ ⇒ ⇒ `false` ⇒ ⇒ ⇒ and the
+    // ⭐⭐⭐ M-121 fields of the assignment stay HIDDEN.
+    return false;
   }
   const ticket = answer.body.ticket ?? {};
   state.detailTicket = ticket;
@@ -566,6 +573,11 @@ async function openTicket(ref) {
     }
     $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  // ⭐⭐⭐ M-121: ⭐⭐⭐ the ticket really opened ⇒ ⇒ ⇒ `true`.
+  // ⭐⭐⭐ M-121 ⭐⭐⭐ (the caller of the assignment needs it ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-121 ⭐⭐⭐ so the fields of the assignment do NOT appear
+  // ⭐⭐⭐ M-121 ⭐⭐⭐ when the opening FAILED).
+  return true;
 }
 
 /** ⭐⭐ M-114: the note of the rights inside the detail. */

@@ -66,6 +66,14 @@ function readCredentials(): { owner_password: string; app_password: string } {
 export interface HarnessOptions {
   /** ⭐⭐ The namespace of the companies of this file (empty = the default). */
   readonly namespace?: string;
+  /**
+  * ⭐⭐⭐ M-121: ⭐⭐⭐ a WRAPPER of the pool of the application ⇒ ⇒ ⇒ it
+  *   ⭐⭐⭐ lets a test control WHEN a statement of the product runs ⇒
+  *   ⭐⭐⭐ ⇒ ⇒ ⇒ (the window of the concurrency is DETERMINISTIC and
+  *   ⭐⭐⭐ not a race of the clock) ⇒ ⇒ ⇒ and the SQL of the product
+  *   ⭐⭐⭐ is never mocked.
+  */
+  readonly wrapPool?: (pool: PgPool) => PgPool;
 }
 
 /** ⭐ Prepare the database (migrations + seed) and start the API. */
@@ -99,7 +107,9 @@ config.databaseName
   const port = Number(process.env['WASL_TEST_PORT'] ?? String(reserved.base));
   const testConfig: ServerConfig = { ...config, port, host: '127.0.0.1' };
 
-  const appPool = createPool(config.appDatabaseUrl, 6);
+  const appPool = options.wrapPool
+    ? options.wrapPool(createPool(config.appDatabaseUrl, 6))
+    : createPool(config.appDatabaseUrl, 6);
   // ⭐ A listener on the pool error: a broken connection must not raise
   //   an unhandled error inside the test runner.
   appPool.on('error', () => undefined);

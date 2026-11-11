@@ -1200,4 +1200,65 @@ test('FOUNDATION 4) the support tickets in a real browser (D-073)', async (t) =>
       `⭐⭐⭐ the server accepted the assignment of the employee: ${direct}`,
     );
   });
+
+  // ============================================================
+  // M-121 — the fields of the assignment appear ONLY when the
+  //          ticket really opened
+  // ============================================================
+
+  await t.test('⭐⭐⭐ M-121-4: a FAILED opening leaves the fields of the assignment hidden', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/ui/tickets.html`);
+    await page.waitForTimeout(700);
+    await offerDrillAccounts(page, TENANT_ID, [
+      [OWNER_ID, 'UI owner'],
+      [AGENT_ID, 'UI agent'],
+      [VIEWER_ID, 'UI viewer'],
+    ]);
+    if (await page.isVisible('#btn-logout')) {
+      await page.click('#btn-logout');
+      await page.waitForTimeout(600);
+    }
+    await page.selectOption('#login-tenant', TENANT_ID);
+    await page.selectOption('#login-user', OWNER_ID);
+    await page.click('#btn-login');
+    await page.waitForTimeout(1300);
+    await page.click('#btn-unassigned');
+    await page.waitForTimeout(1200);
+    const assignButtons = await countOf(page, '#ticket-list .assign-button');
+    assert.ok(assignButtons > 0, '⭐⭐⭐ the queue of the owner has no button of the assignment');
+    // ⭐⭐⭐ THE OPENING FAILS: ⭐⭐⭐ the request of the detail of the
+    // ⭐⭐⭐ ticket is answered with an error ⇒ ⇒ ⇒ (the server is
+    // ⭐⭐⭐ real, only ITS answer for that one request is broken).
+    await page.route('**/api/tickets/*', async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: false, error: { code: 'ticket_not_found', message: 't' } }),
+      });
+    });
+    await page.evaluate(
+      `(() => {
+        const button = document.querySelector('#ticket-list .assign-button');
+        if (button) button.click();
+      })()`,
+    );
+    await page.waitForTimeout(1200);
+    // ⭐⭐⭐ THE ASSERTION: ⭐⭐⭐ the fields of the assignment do NOT
+    // ⭐⭐⭐ appear ⇒ ⇒ ⇒ (the screen never shows a form of a ticket
+    // ⭐⭐⭐ that was never loaded).
+    assert.equal(
+      await page.isVisible('#assignee-field'),
+      false,
+      '⭐⭐⭐ the fields of the assignment appeared although the opening failed',
+    );
+    // ⭐⭐⭐ and the failure is TOLD to the user (the message of the
+    // ⭐⭐⭐ error ⇒ ⇒ ⇒ not a silent nothing).
+    const failureText = (await page.textContent('#detail-error')) ?? '';
+    assert.ok(
+      failureText.trim().length > 0,
+      '⭐⭐⭐ the failure of the opening was not told to the user',
+    );
+    await page.unroute('**/api/tickets/*');
+  });
 });

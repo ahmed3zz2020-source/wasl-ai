@@ -163,12 +163,16 @@ def compute(inventory: dict) -> dict:
     items = inventory.get("items", [])
     done = len([item for item in items if item.get("done") is True])
     total = len(items)
+    baseline = inventory.get("baseline") or {}
     return {
         "areas": areas,
         "done": done,
         "total": total,
         "percent": percent(done, total),
         "series": inventory.get("project_estimate", []),
+        # (the baseline of the round: the same weights, the numbers of
+        #  the round before ⇒ the board shows before/after)
+        "baseline": baseline,
     }
 
 
@@ -206,6 +210,42 @@ def render(inventory: dict, computed: dict) -> str:
         "⇐ ⭐⭐ ولكل بند مُنجَز سطر بدليله في `docs/completion-board.json`."
     )
     lines.append("")
+
+    # (the before/after of the round: the same areas, the same weights)
+    baseline = computed.get("baseline") or {}
+    base_areas = baseline.get("areas") or {}
+    if base_areas:
+        lines.append(
+            "### ⭐⭐⭐ المقارنة (قبل / بعد) — النطاقات الثلاثة بأوزانها الثابتة"
+        )
+        lines.append("")
+        lines.append("| النطاق | الوزن | قبل | بعد | الفرق |")
+        lines.append("|---|---:|---:|---:|---:|")
+        for area in computed["areas"]:
+            before = base_areas.get(area["id"])
+            if before is None:
+                continue
+            delta = area["done"] - int(before)
+            lines.append(
+                f"| ⭐ {area['name']} | {area['weight']} | {before} | {area['done']} "
+                f"| {'+' if delta > 0 else ''}{delta} |"
+            )
+        base_done = baseline.get("done")
+        base_total = baseline.get("total", computed["total"])
+        if base_done is not None:
+            delta = computed["done"] - int(base_done)
+            lines.append(
+                f"| ⭐⭐ **الإجمالي** | **{computed['total']}** | **{base_done}/{base_total}** "
+                f"| **{computed['done']}/{computed['total']}** "
+                f"| {'+' if delta > 0 else ''}{delta} بند |"
+            )
+        lines.append("")
+        lines.append(
+            f"> ⭐⭐ **الأساس**: ⭐ {baseline.get('round', '')} — "
+            f"{computed['done'] - int(base_done)} بند أُنجز فعلاً في هذه الجولة "
+            "⇐ ⭐⭐ والمقام (75) والأوزان (20/20/35) لم يتغيّرا ⇐ ⭐⭐ فلا تضخيم."
+        )
+        lines.append("")
     lines.append("## ٢. ⭐⭐⭐ المقياس الثاني — التقدير العام للمشروع (سلّم المالك)")
     lines.append("")
     lines.append("| الجولة | النسبة | الحالة | الأساس |")
@@ -218,9 +258,15 @@ def render(inventory: dict, computed: dict) -> str:
     lines.append("")
     first = computed["series"][0] if computed["series"] else {"value": 0}
     last = computed["series"][-1] if computed["series"] else {"value": 0}
+    owner_last = None
+    for entry in computed["series"]:
+        if entry.get("status") == "owner":
+            owner_last = entry
+    approved = owner_last.get("value") if owner_last else first.get("value")
     lines.append(
-        f"> ⭐⭐ **السلّم**: ⭐ **{first.get('value')}%** (قبل M-114) ⇒ ⭐ **{last.get('value')}%** "
-        "(بعد هذه الجولة) ⇐ ⭐⭐ والفرق كله من **قدرات جديدة مثبتة** ⇐ ⭐⭐ وكل جولة تكتب أساسها."
+        f"> ⭐⭐ **السلّم**: ⭐ **{first.get('value')}%** (قبل M-114) ⇒ ⭐ **{approved}%** "
+        f"(المعتمد من المالك) ⇒ ⭐ **{last.get('value')}%** (مقترح هذه الجولة) "
+        "⇐ ⭐⭐ والفرق كله من **قدرات جديدة مثبتة** ⇐ ⭐⭐ وكل جولة تكتب أساسها."
     )
     lines.append("")
     lines.append(

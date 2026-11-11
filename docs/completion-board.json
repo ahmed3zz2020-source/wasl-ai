@@ -1,90 +1,633 @@
 {
   "version": 1,
   "note": "⭐⭐ M-118: the inventory of the completion of the project. ⭐⭐ THE DENOMINATOR NEVER CHANGES: 75 items in three areas with FIXED weights (20 / 20 / 35) ⇒ ⭐⭐ and the method of the calculation never changes between the rounds ⇒ ⭐⭐ so every advance is a real item that was really delivered. ⭐⭐ The board is rendered by `tools/completion_board.py` and the file `docs/COMPLETION-BOARD.md` is VERIFIED against this inventory (a stale published number is a failure).",
-  "weights": { "ui": 20, "tickets": 20, "platform": 35 },
+  "weights": {
+    "ui": 20,
+    "tickets": 20,
+    "platform": 35
+  },
   "areas": [
-    { "id": "ui", "name": "الواجهة والموبايل", "weight": 20 },
-    { "id": "tickets", "name": "التذاكر والمتابعة", "weight": 20 },
-    { "id": "platform", "name": "المنصّة", "weight": 35 }
+    {
+      "id": "ui",
+      "name": "الواجهة والموبايل",
+      "weight": 20
+    },
+    {
+      "id": "tickets",
+      "name": "التذاكر والمتابعة",
+      "weight": 20
+    },
+    {
+      "id": "platform",
+      "name": "المنصّة",
+      "weight": 35
+    }
   ],
   "items": [
-    { "id": "ui-01", "area": "ui", "title": "قائمة التذاكر (بيانات حقيقية + نطاق الدور)", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-1)" },
-    { "id": "ui-02", "area": "ui", "title": "تفاصيل التذكرة (الحقائق)", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-3)" },
-    { "id": "ui-03", "area": "ui", "title": "سجلّ النشاط", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-3)" },
-    { "id": "ui-04", "area": "ui", "title": "إنشاء تذكرة من النموذج", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-2)" },
-    { "id": "ui-05", "area": "ui", "title": "الحقوق في الواجهة من الخادم", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-4)" },
-    { "id": "ui-06", "area": "ui", "title": "نطاق الموظف في المتصفح", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-5)" },
-    { "id": "ui-07", "area": "ui", "title": "الجلسة (دخول · خروج · استرجاع)", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-1)" },
-    { "id": "ui-08", "area": "ui", "title": "القائمة على الشاشة الصغيرة (بلا تمدّد أفقي)", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (390px)" },
-    { "id": "ui-09", "area": "ui", "title": "التنقّل بين الصفحات (الوارد · CRM)", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-6 · D-073-7)" },
-    { "id": "ui-10", "area": "ui", "title": "رسائل الخطأ بالعربية", "done": true, "round": "D-073", "evidence": "server/ui/tickets.js (ERROR_LABELS)" },
-    { "id": "ui-11", "area": "ui", "title": "صيغة الوقت والتاريخ بالعربية", "done": true, "round": "D-073", "evidence": "server/ui/tickets.js (formatTime)" },
-    { "id": "ui-12", "area": "ui", "title": "العدّاد والترقيم", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-1)" },
-    { "id": "ui-13", "area": "ui", "title": "البحث بتأخير (طلب واحد للكلمة)", "done": true, "round": "M-114", "evidence": "tests/ui/tickets-ui.test.ts (M-114-1 · M-116-1)" },
-    { "id": "ui-14", "area": "ui", "title": "الردّ القديم لا يكتب فوق الجديد", "done": true, "round": "M-114", "evidence": "tests/ui/tickets-ui.test.ts (M-114-2 · M-116-2)" },
-    { "id": "ui-15", "area": "ui", "title": "بقاء حالة القائمة عند الرجوع", "done": true, "round": "M-114", "evidence": "tests/ui/tickets-ui.test.ts (M-114-3 · M-117-1)" },
-    { "id": "ui-16", "area": "ui", "title": "حالات التحميل · الفراغ · انقطاع الاتصال", "done": true, "round": "M-114", "evidence": "tests/ui/tickets-ui.test.ts (M-114-5)" },
-    { "id": "ui-17", "area": "ui", "title": "تنقّل الموبايل (القائمة أو التفاصيل)", "done": true, "round": "M-114", "evidence": "tests/ui/tickets-ui.test.ts (M-114-4)" },
-    { "id": "ui-18", "area": "ui", "title": "ملاحظة الحقوق (لماذا الزر مخفي)", "done": true, "round": "M-114", "evidence": "tests/ui/tickets-ui.test.ts (M-114-6)" },
-    { "id": "ui-19", "area": "ui", "title": "طابور الكتابة عند انقطاع الاتصال", "done": false, "round": "", "evidence": "" },
-    { "id": "ui-20", "area": "ui", "title": "تدقيق الوارد وCRM على الموبايل", "done": false, "round": "", "evidence": "", "note": "⏳ نصفه فقط: ⭐ الـCRM اتدقّق في M-120 (بحث بتأخير · ردّ قديم · قائمة/ملف للموبايل · رجوع بيحفظ · فراغ وانقطاع) ⇒ ⭐⭐ وباقي تدقيق الوارد (بلا تأخير في البحث · بلا مبدّل قائمة/محادثة · بلا شريط انقطاع) ⇒ ⭐⭐ فالبند يفضل مفتوح ⇐ ⭐⭐ (والمقام ما اتغيّرش ⇐ ٧٥ بنداً)." },
-
-    { "id": "tk-01", "area": "tickets", "title": "نموذج التذكرة (الحالة · الأولوية · النسخة)", "done": true, "round": "D-073", "evidence": "server/db/migrations/008_phase04_tickets.sql" },
-    { "id": "tk-02", "area": "tickets", "title": "API القائمة (فلاتر · ترتيب · ترقيم)", "done": true, "round": "D-073", "evidence": "tests/server/foundation-tickets.test.ts" },
-    { "id": "tk-03", "area": "tickets", "title": "API التفاصيل (التذكرة + التغييرات)", "done": true, "round": "D-073", "evidence": "tests/server/foundation-tickets.test.ts (M-104)" },
-    { "id": "tk-04", "area": "tickets", "title": "الإنشاء (الخادم هو الذي يقرّر)", "done": true, "round": "D-073", "evidence": "tests/server/foundation-tickets.test.ts (M-104)" },
-    { "id": "tk-05", "area": "tickets", "title": "التحديث (القفل المتفائل بالنسخة)", "done": true, "round": "D-073", "evidence": "tests/server/foundation-tickets.test.ts (M-85)" },
-    { "id": "tk-06", "area": "tickets", "title": "الإسناد (للمالك وحده)", "done": true, "round": "D-073", "evidence": "tests/server/foundation-tickets-assign.test.ts (M-104 · M-106)" },
-    { "id": "tk-07", "area": "tickets", "title": "تحقّق المُسنَد إليه (شركة · نشط · موجود)", "done": true, "round": "D-073", "evidence": "tests/server/foundation-tickets-assign.test.ts (M-89 · M-95)" },
-    { "id": "tk-08", "area": "tickets", "title": "تناسب العميل والمحادثة", "done": true, "round": "D-073", "evidence": "tests/server/foundation-tickets-assign.test.ts (M-90 · M-95)" },
-    { "id": "tk-09", "area": "tickets", "title": "سجلّ التدقيق للتغييرات", "done": true, "round": "D-073", "evidence": "server/db/migrations/008_phase04_tickets.sql (support_ticket_changes)" },
-    { "id": "tk-10", "area": "tickets", "title": "مصفوفة الحقوق (بخط اليد)", "done": true, "round": "M-110", "evidence": "tests/server/foundation-ticket-rights.matrix.ts (M-110)" },
-    { "id": "tk-11", "area": "tickets", "title": "نطاق الموظف (المُسنَد إليه فقط)", "done": true, "round": "D-073", "evidence": "server/tickets/queries.ts (M-83)" },
-    { "id": "tk-12", "area": "tickets", "title": "انتقالات الحالة المسموحة", "done": true, "round": "D-073", "evidence": "server/tickets/states.ts (ticket_operation_unknown)" },
-    { "id": "tk-13", "area": "tickets", "title": "الربط بالمحادثة (المتابعة)", "done": true, "round": "D-073", "evidence": "server/tickets/queries.ts (D-073)" },
-    { "id": "tk-14", "area": "tickets", "title": "عدّاد التذاكر المفتوحة في CRM", "done": true, "round": "D-073", "evidence": "tests/ui/tickets-ui.test.ts (D-073-6)" },
-    { "id": "tk-15", "area": "tickets", "title": "تجربة التذاكر على الموبايل", "done": true, "round": "M-114", "evidence": "tests/ui/tickets-ui.test.ts (حزمة M-114)" },
-    { "id": "tk-16", "area": "tickets", "title": "زمن أول ردّ (SLA)", "done": false, "round": "", "evidence": "" },
-    { "id": "tk-17", "area": "tickets", "title": "قوالب الردود الجاهزة", "done": false, "round": "", "evidence": "" },
-    { "id": "tk-18", "area": "tickets", "title": "طابور العمل (غير المُسنَد)", "done": true, "round": "M-119", "evidence": "tests/server/foundation-tickets-queue.test.ts · tests/ui/tickets-ui.test.ts (M-119)" },
-    { "id": "tk-19", "area": "tickets", "title": "تصدير التذاكر", "done": false, "round": "", "evidence": "" },
-    { "id": "tk-20", "area": "tickets", "title": "تذكيرات المتابعة", "done": false, "round": "", "evidence": "" },
-
-    { "id": "pf-01", "area": "platform", "title": "نواة القدرات (الأدوار والحقوق)", "done": true, "round": "D-062", "evidence": "src/core/capability.ts" },
-    { "id": "pf-02", "area": "platform", "title": "الجلسات والدخول بالرمز", "done": true, "round": "D-062", "evidence": "src/core/session.ts" },
-    { "id": "pf-03", "area": "platform", "title": "عزل الشركة (RLS)", "done": true, "round": "D-062", "evidence": "tests/server/foundation-isolation.test.ts" },
-    { "id": "pf-04", "area": "platform", "title": "دليل الحذف", "done": true, "round": "D-062", "evidence": "tests/server/foundation-deletion.test.ts" },
-    { "id": "pf-05", "area": "platform", "title": "النسخ الاحتياطي والاستعادة", "done": true, "round": "D-062", "evidence": "tests/server/foundation-backup.test.ts" },
-    { "id": "pf-06", "area": "platform", "title": "رحلة المستخدم كاملة (E2E)", "done": true, "round": "D-062", "evidence": "tests/acceptance-journey.test.ts" },
-    { "id": "pf-07", "area": "platform", "title": "مصفوفة الاختبارات + حارس الأرقام", "done": true, "round": "M-113", "evidence": "tests/tools/published-numbers.test.ts" },
-    { "id": "pf-08", "area": "platform", "title": "دخول الإنتاج (مزوّد هوية حقيقي)", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-09", "area": "platform", "title": "مزوّد الاستضافة", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-10", "area": "platform", "title": "صلاحيات التذاكر في الإنتاج", "done": false, "round": "", "evidence": "", "note": "⛔ D-078 محلي فقط ⇐ حقوق الإنتاج بند منفصل لم يُقرَّر." },
-    { "id": "pf-11", "area": "platform", "title": "مدد الاحتفاظ الرقمية", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-12", "area": "platform", "title": "بيانات عملاء حقيقية", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-13", "area": "platform", "title": "قناة واتساب", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-14", "area": "platform", "title": "ذكاء اصطناعي خارجي", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-15", "area": "platform", "title": "موارد مدفوعة", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-16", "area": "platform", "title": "النشر على الإنتاج", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-17", "area": "platform", "title": "المراقبة والتنبيهات", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-18", "area": "platform", "title": "مدير الأسرار", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-19", "area": "platform", "title": "نسخ احتياطي خارج الجهاز", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-20", "area": "platform", "title": "قيم RPO/RTO التي يقرّرها المالك", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-21", "area": "platform", "title": "تمرين الكوارث", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-22", "area": "platform", "title": "دِرل Docker (M75)", "done": false, "round": "", "evidence": "", "note": "⛔ BLOCKED في بيئة القياس (الـdaemon يعمل والـcontainer ما بيبدأش) ⇒ ⭐ وهو سبب المتخطّى الوحيد." },
-    { "id": "pf-23", "area": "platform", "title": "جدولة الـCI", "done": false, "round": "", "evidence": "", "note": "⛔ بلا قرار المالك." },
-    { "id": "pf-24", "area": "platform", "title": "مراجعة الكود", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-25", "area": "platform", "title": "ترخيص الاعتماديات", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-26", "area": "platform", "title": "تدقيق الوصول (a11y)", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-27", "area": "platform", "title": "اختبار الحِمل", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-28", "area": "platform", "title": "تعريب غير العربي", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-29", "area": "platform", "title": "فوترة متعدّدة الشركات", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-30", "area": "platform", "title": "تدقيق التكاليف", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-31", "area": "platform", "title": "المناوبة والتشغيل", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-32", "area": "platform", "title": "توثيق الـAPI للعامة", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-33", "area": "platform", "title": "عملية الإصدار", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-34", "area": "platform", "title": "ترقية النواة", "done": false, "round": "", "evidence": "" },
-    { "id": "pf-35", "area": "platform", "title": "توسيع src/core", "done": false, "round": "", "evidence": "" }
+    {
+      "id": "ui-01",
+      "area": "ui",
+      "title": "قائمة التذاكر (بيانات حقيقية + نطاق الدور)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-1)"
+    },
+    {
+      "id": "ui-02",
+      "area": "ui",
+      "title": "تفاصيل التذكرة (الحقائق)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-3)"
+    },
+    {
+      "id": "ui-03",
+      "area": "ui",
+      "title": "سجلّ النشاط",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-3)"
+    },
+    {
+      "id": "ui-04",
+      "area": "ui",
+      "title": "إنشاء تذكرة من النموذج",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-2)"
+    },
+    {
+      "id": "ui-05",
+      "area": "ui",
+      "title": "الحقوق في الواجهة من الخادم",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-4)"
+    },
+    {
+      "id": "ui-06",
+      "area": "ui",
+      "title": "نطاق الموظف في المتصفح",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-5)"
+    },
+    {
+      "id": "ui-07",
+      "area": "ui",
+      "title": "الجلسة (دخول · خروج · استرجاع)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-1)"
+    },
+    {
+      "id": "ui-08",
+      "area": "ui",
+      "title": "القائمة على الشاشة الصغيرة (بلا تمدّد أفقي)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (390px)"
+    },
+    {
+      "id": "ui-09",
+      "area": "ui",
+      "title": "التنقّل بين الصفحات (الوارد · CRM)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-6 · D-073-7)"
+    },
+    {
+      "id": "ui-10",
+      "area": "ui",
+      "title": "رسائل الخطأ بالعربية",
+      "done": true,
+      "round": "D-073",
+      "evidence": "server/ui/tickets.js (ERROR_LABELS)"
+    },
+    {
+      "id": "ui-11",
+      "area": "ui",
+      "title": "صيغة الوقت والتاريخ بالعربية",
+      "done": true,
+      "round": "D-073",
+      "evidence": "server/ui/tickets.js (formatTime)"
+    },
+    {
+      "id": "ui-12",
+      "area": "ui",
+      "title": "العدّاد والترقيم",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-1)"
+    },
+    {
+      "id": "ui-13",
+      "area": "ui",
+      "title": "البحث بتأخير (طلب واحد للكلمة)",
+      "done": true,
+      "round": "M-114",
+      "evidence": "tests/ui/tickets-ui.test.ts (M-114-1 · M-116-1)"
+    },
+    {
+      "id": "ui-14",
+      "area": "ui",
+      "title": "الردّ القديم لا يكتب فوق الجديد",
+      "done": true,
+      "round": "M-114",
+      "evidence": "tests/ui/tickets-ui.test.ts (M-114-2 · M-116-2)"
+    },
+    {
+      "id": "ui-15",
+      "area": "ui",
+      "title": "بقاء حالة القائمة عند الرجوع",
+      "done": true,
+      "round": "M-114",
+      "evidence": "tests/ui/tickets-ui.test.ts (M-114-3 · M-117-1)"
+    },
+    {
+      "id": "ui-16",
+      "area": "ui",
+      "title": "حالات التحميل · الفراغ · انقطاع الاتصال",
+      "done": true,
+      "round": "M-114",
+      "evidence": "tests/ui/tickets-ui.test.ts (M-114-5)"
+    },
+    {
+      "id": "ui-17",
+      "area": "ui",
+      "title": "تنقّل الموبايل (القائمة أو التفاصيل)",
+      "done": true,
+      "round": "M-114",
+      "evidence": "tests/ui/tickets-ui.test.ts (M-114-4)"
+    },
+    {
+      "id": "ui-18",
+      "area": "ui",
+      "title": "ملاحظة الحقوق (لماذا الزر مخفي)",
+      "done": true,
+      "round": "M-114",
+      "evidence": "tests/ui/tickets-ui.test.ts (M-114-6)"
+    },
+    {
+      "id": "ui-19",
+      "area": "ui",
+      "title": "طابور الكتابة عند انقطاع الاتصال",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "ui-20",
+      "area": "ui",
+      "title": "تدقيق الوارد وCRM على الموبايل",
+      "done": true,
+      "round": "ردّ #٥٨ (M-125)",
+      "evidence": "tests/ui/inbox-ui.test.ts (M-125-1..5) + tests/ui/crm-ui.test.ts (M-122) — Chromium 390 بكسل + PostgreSQL حقيقي",
+      "note": "اكتمل التدقيق فعلاً: الـCRM في M-120 (بحث بتأخير، ردّ قديم، قائمة/ملف للموبايل، رجوع بيحفظ، فراغ وانقطاع) والوارد في M-125 (مبدّل قائمة/محادثة، رجوع يحفظ البحث والصفحة، شريط انقطاع + إعادة محاولة، منع الإرسال المزدوج، حقوق الأدوار، عزل الشركة)."
+    },
+    {
+      "id": "tk-01",
+      "area": "tickets",
+      "title": "نموذج التذكرة (الحالة · الأولوية · النسخة)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "server/db/migrations/008_phase04_tickets.sql"
+    },
+    {
+      "id": "tk-02",
+      "area": "tickets",
+      "title": "API القائمة (فلاتر · ترتيب · ترقيم)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/server/foundation-tickets.test.ts"
+    },
+    {
+      "id": "tk-03",
+      "area": "tickets",
+      "title": "API التفاصيل (التذكرة + التغييرات)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/server/foundation-tickets.test.ts (M-104)"
+    },
+    {
+      "id": "tk-04",
+      "area": "tickets",
+      "title": "الإنشاء (الخادم هو الذي يقرّر)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/server/foundation-tickets.test.ts (M-104)"
+    },
+    {
+      "id": "tk-05",
+      "area": "tickets",
+      "title": "التحديث (القفل المتفائل بالنسخة)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/server/foundation-tickets.test.ts (M-85)"
+    },
+    {
+      "id": "tk-06",
+      "area": "tickets",
+      "title": "الإسناد (للمالك وحده)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/server/foundation-tickets-assign.test.ts (M-104 · M-106)"
+    },
+    {
+      "id": "tk-07",
+      "area": "tickets",
+      "title": "تحقّق المُسنَد إليه (شركة · نشط · موجود)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/server/foundation-tickets-assign.test.ts (M-89 · M-95)"
+    },
+    {
+      "id": "tk-08",
+      "area": "tickets",
+      "title": "تناسب العميل والمحادثة",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/server/foundation-tickets-assign.test.ts (M-90 · M-95)"
+    },
+    {
+      "id": "tk-09",
+      "area": "tickets",
+      "title": "سجلّ التدقيق للتغييرات",
+      "done": true,
+      "round": "D-073",
+      "evidence": "server/db/migrations/008_phase04_tickets.sql (support_ticket_changes)"
+    },
+    {
+      "id": "tk-10",
+      "area": "tickets",
+      "title": "مصفوفة الحقوق (بخط اليد)",
+      "done": true,
+      "round": "M-110",
+      "evidence": "tests/server/foundation-ticket-rights.matrix.ts (M-110)"
+    },
+    {
+      "id": "tk-11",
+      "area": "tickets",
+      "title": "نطاق الموظف (المُسنَد إليه فقط)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "server/tickets/queries.ts (M-83)"
+    },
+    {
+      "id": "tk-12",
+      "area": "tickets",
+      "title": "انتقالات الحالة المسموحة",
+      "done": true,
+      "round": "D-073",
+      "evidence": "server/tickets/states.ts (ticket_operation_unknown)"
+    },
+    {
+      "id": "tk-13",
+      "area": "tickets",
+      "title": "الربط بالمحادثة (المتابعة)",
+      "done": true,
+      "round": "D-073",
+      "evidence": "server/tickets/queries.ts (D-073)"
+    },
+    {
+      "id": "tk-14",
+      "area": "tickets",
+      "title": "عدّاد التذاكر المفتوحة في CRM",
+      "done": true,
+      "round": "D-073",
+      "evidence": "tests/ui/tickets-ui.test.ts (D-073-6)"
+    },
+    {
+      "id": "tk-15",
+      "area": "tickets",
+      "title": "تجربة التذاكر على الموبايل",
+      "done": true,
+      "round": "M-114",
+      "evidence": "tests/ui/tickets-ui.test.ts (حزمة M-114)"
+    },
+    {
+      "id": "tk-16",
+      "area": "tickets",
+      "title": "زمن أول ردّ (SLA)",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "tk-17",
+      "area": "tickets",
+      "title": "قوالب الردود الجاهزة",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "tk-18",
+      "area": "tickets",
+      "title": "طابور العمل (غير المُسنَد)",
+      "done": true,
+      "round": "M-119",
+      "evidence": "tests/server/foundation-tickets-queue.test.ts · tests/ui/tickets-ui.test.ts (M-119)"
+    },
+    {
+      "id": "tk-19",
+      "area": "tickets",
+      "title": "تصدير التذاكر",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "tk-20",
+      "area": "tickets",
+      "title": "تذكيرات المتابعة",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-01",
+      "area": "platform",
+      "title": "نواة القدرات (الأدوار والحقوق)",
+      "done": true,
+      "round": "D-062",
+      "evidence": "src/core/capability.ts"
+    },
+    {
+      "id": "pf-02",
+      "area": "platform",
+      "title": "الجلسات والدخول بالرمز",
+      "done": true,
+      "round": "D-062",
+      "evidence": "src/core/session.ts"
+    },
+    {
+      "id": "pf-03",
+      "area": "platform",
+      "title": "عزل الشركة (RLS)",
+      "done": true,
+      "round": "D-062",
+      "evidence": "tests/server/foundation-isolation.test.ts"
+    },
+    {
+      "id": "pf-04",
+      "area": "platform",
+      "title": "دليل الحذف",
+      "done": true,
+      "round": "D-062",
+      "evidence": "tests/server/foundation-deletion.test.ts"
+    },
+    {
+      "id": "pf-05",
+      "area": "platform",
+      "title": "النسخ الاحتياطي والاستعادة",
+      "done": true,
+      "round": "D-062",
+      "evidence": "tests/server/foundation-backup.test.ts"
+    },
+    {
+      "id": "pf-06",
+      "area": "platform",
+      "title": "رحلة المستخدم كاملة (E2E)",
+      "done": true,
+      "round": "D-062",
+      "evidence": "tests/acceptance-journey.test.ts"
+    },
+    {
+      "id": "pf-07",
+      "area": "platform",
+      "title": "مصفوفة الاختبارات + حارس الأرقام",
+      "done": true,
+      "round": "M-113",
+      "evidence": "tests/tools/published-numbers.test.ts"
+    },
+    {
+      "id": "pf-08",
+      "area": "platform",
+      "title": "دخول الإنتاج (مزوّد هوية حقيقي)",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-09",
+      "area": "platform",
+      "title": "مزوّد الاستضافة",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-10",
+      "area": "platform",
+      "title": "صلاحيات التذاكر في الإنتاج",
+      "done": false,
+      "round": "",
+      "evidence": "",
+      "note": "⛔ D-078 محلي فقط ⇐ حقوق الإنتاج بند منفصل لم يُقرَّر."
+    },
+    {
+      "id": "pf-11",
+      "area": "platform",
+      "title": "مدد الاحتفاظ الرقمية",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-12",
+      "area": "platform",
+      "title": "بيانات عملاء حقيقية",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-13",
+      "area": "platform",
+      "title": "قناة واتساب",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-14",
+      "area": "platform",
+      "title": "ذكاء اصطناعي خارجي",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-15",
+      "area": "platform",
+      "title": "موارد مدفوعة",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-16",
+      "area": "platform",
+      "title": "النشر على الإنتاج",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-17",
+      "area": "platform",
+      "title": "المراقبة والتنبيهات",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-18",
+      "area": "platform",
+      "title": "مدير الأسرار",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-19",
+      "area": "platform",
+      "title": "نسخ احتياطي خارج الجهاز",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-20",
+      "area": "platform",
+      "title": "قيم RPO/RTO التي يقرّرها المالك",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-21",
+      "area": "platform",
+      "title": "تمرين الكوارث",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-22",
+      "area": "platform",
+      "title": "دِرل Docker (M75)",
+      "done": false,
+      "round": "",
+      "evidence": "",
+      "note": "⛔ BLOCKED في بيئة القياس (الـdaemon يعمل والـcontainer ما بيبدأش) ⇒ ⭐ وهو سبب المتخطّى الوحيد."
+    },
+    {
+      "id": "pf-23",
+      "area": "platform",
+      "title": "جدولة الـCI",
+      "done": false,
+      "round": "",
+      "evidence": "",
+      "note": "⛔ بلا قرار المالك."
+    },
+    {
+      "id": "pf-24",
+      "area": "platform",
+      "title": "مراجعة الكود",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-25",
+      "area": "platform",
+      "title": "ترخيص الاعتماديات",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-26",
+      "area": "platform",
+      "title": "تدقيق الوصول (a11y)",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-27",
+      "area": "platform",
+      "title": "اختبار الحِمل",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-28",
+      "area": "platform",
+      "title": "تعريب غير العربي",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-29",
+      "area": "platform",
+      "title": "فوترة متعدّدة الشركات",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-30",
+      "area": "platform",
+      "title": "تدقيق التكاليف",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-31",
+      "area": "platform",
+      "title": "المناوبة والتشغيل",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-32",
+      "area": "platform",
+      "title": "توثيق الـAPI للعامة",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-33",
+      "area": "platform",
+      "title": "عملية الإصدار",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-34",
+      "area": "platform",
+      "title": "ترقية النواة",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    },
+    {
+      "id": "pf-35",
+      "area": "platform",
+      "title": "توسيع src/core",
+      "done": false,
+      "round": "",
+      "evidence": ""
+    }
   ],
   "project_estimate": [
     {
@@ -102,8 +645,26 @@
     {
       "round": "ردّ #٥٧ (M116 · M117 · M118 · M119 · M120)",
       "value": 46,
+      "status": "owner",
+      "basis": "قدرتان جديدتان مثبتتان بالاختبارات: طابور التذاكر غير المُسندة (M-119) وحزمة تجربة الـCRM على الموبايل (M-120) + الإصلاح المُثبت لـ M116/M117 (+١ نقطة) — وقد اعتمد المالك هذه الـ46٪ في D-082 (تقدير عام للمتابعة، وليست جاهزية إنتاج). والرقم الداخلي 54.7٪ نطاق مختلف فلا خلط بين المقياسين."
+    },
+    {
+      "round": "ردّ #٥٨ (M121 · M122 · M123 · M124 · M125)",
+      "value": 47,
       "status": "proposed",
-      "basis": "⭐⭐ قدرتان جديدتان مثبتتان بالاختبارات: ⭐ (١) طابور التذاكر غير المُسندة (M-119) ⇐ قدرة منتج جديدة ⭐ (٢) حزمة تجربة الـCRM على الموبايل (M-120) ⇐ سطح جديد قابل للاستخدام ⭐⭐ وبالإصلاح المُثبت لـ M116/M117 ⇒ ⇒ ⇒ (+١ نقطة) ⇐ ⭐⭐ ونفس قاعدة الجولة السابقة (M-114 = +١) ⇒ ⇒ ⇒ ورقم القائمة الداخلي هو 41/75 = 54.7% (أدناه) ⇐ ⭐⭐ وهو نطاق مختلف ⇐ ⭐⭐ فمفيش خلط بين المقياسين."
+      "basis": "قدرة جديدة قابلة للاستخدام في هذه الجولة: صندوق الوارد على الموبايل (M-125) — مبدّل قائمة/محادثة، رجوع يحفظ البحث والصفحة، شريط انقطاع مع إعادة محاولة، منع الإرسال المزدوج، وحقوق الأدوار كما يقرّرها النواة — وكله مُثبَت باختبارات Chromium على 390 بكسل مع PostgreSQL حقيقي. شرط المالك في D-082 مستوفى (47٪ فقط مع تقدّم وظيفي حقيقي مُثبَت) ⇒ +١ نقطة عن 46٪ المعتمد. والبند ui-20 صار مُنجَزاً فعلاً ⇒ القائمة الداخلية 42/75 = 56.0٪ (رقم داخلي، نطاق مختلف، لا خلط)."
     }
-  ]
+  ],
+  "baseline": {
+    "round": "ردّ #٥٧ (قبل ردّ #٥٨)",
+    "areas": {
+      "ui": 18,
+      "tickets": 16,
+      "platform": 7
+    },
+    "done": 41,
+    "total": 75,
+    "percent": 54.7,
+    "basis": "خط الأساس لهذه الجولة (نفس الأوزان ٢٠/٢٠/٣٥) وهو مرجع المقارنة قبل/بعد."
+  }
 }

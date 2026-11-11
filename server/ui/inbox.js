@@ -68,6 +68,19 @@ const state = {
   pollBusy: false,
   /** ⭐⭐ M-77: the messages that are already on the screen. */
   knownMessageRefs: new Set(),
+  /** ⭐⭐⭐ M-125: the connection with the server is gone. */
+  offline: false,
+  /** ⭐⭐⭐ M-125: the place of the list before the conversation. */
+  listScroll: 0,
+  /** ⭐⭐⭐ M-125: the small screen shows EITHER the list OR the thread. */
+  threadView: false,
+  /** ⭐⭐⭐ M-125: what to do when the connection comes back. */
+  retry: null,
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ the rights of the CORE (the server announces
+  // ⭐⭐⭐ M-125 them ⇒ ⇒ ⇒ and the page hides what may NOT be done).
+  mayReply: false,
+  mayChangeState: false,
+  mayAssign: false,
 };
 
 /**
@@ -178,6 +191,51 @@ async function api(method, path, body, channel = null) {
   return { ok: response.ok, status: response.status, body: parsed };
 }
 
+/** ⭐⭐⭐ M-125: ⭐⭐⭐ the connection with the server is gone? */
+function setOffline(offline) {
+  state.offline = offline;
+  const banner = $('offline-banner');
+  if (banner) banner.hidden = !offline;
+}
+
+/** ⭐⭐⭐ M-125: ⭐⭐⭐ is the screen of the small size? */
+function isSmallScreen() {
+  return window.matchMedia('(max-width: 860px)').matches;
+}
+
+/**
+ * ⭐⭐⭐ M-125: ⭐⭐⭐ the small screen shows EITHER the list OR the
+ * ⭐⭐⭐ M-125 conversation ⇒ ⇒ ⇒ (the big screen shows the two).
+ */
+function setThreadView(on) {
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ the swap is for the SMALL screen only ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-125 (the big screen keeps the list and the conversation
+  // ⭐⭐⭐ M-125 together ⇒ ⇒ ⇒ as it always was).
+  const small = isSmallScreen();
+  state.threadView = small && on;
+  document.body.classList.toggle('view-thread', small && on);
+  const listPane = document.querySelector('.pane.list');
+  const threadPane = document.querySelector('.pane.thread');
+  if (listPane) listPane.hidden = small && on;
+  if (threadPane) threadPane.hidden = false;
+  if (!on) {
+    // ⭐⭐⭐ M-125: ⭐⭐⭐ the list comes back AT ITS PLACE ⇒ ⇒ ⇒ (the
+    // ⭐⭐⭐ M-125 user does not hunt for the conversation again).
+    const scroller = $('conversation-list');
+    if (scroller && state.listScroll > 0) scroller.scrollTop = state.listScroll;
+  }
+}
+
+/** ⭐⭐⭐ M-125: ⭐⭐⭐ the conversation is closed and the list is back. */
+function closeThread() {
+  state.selected = null;
+  setThreadView(false);
+  $('thread').hidden = true;
+  $('thread-placeholder').hidden = false;
+  stopPolling();
+  renderConversations();
+}
+
 /** ⭐ The message of an error (the code decides, never the raw text). */
 function errorMessage(body, fallback) {
   const code = String((body?.error?.code) ?? '');
@@ -262,6 +320,14 @@ async function loadConversations(options = {}) {
   const answer = await api('GET', `/api/inbox/conversations?${params.toString()}`, undefined, 'list');
   if (answer.stale) return; // ⭐⭐ M-79: a late answer never paints.
   $('list-loading').hidden = true;
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ the network is gone ⇒ ⇒ ⇒ (the banner + the
+  // ⭐⭐⭐ M-125 button of the retry ⇒ ⇒ ⇒ and the list stays as it is).
+  if (answer.status === 0) {
+    setOffline(true);
+    state.retry = () => loadConversations();
+  } else {
+    setOffline(false);
+  }
 
   if (!answer.ok) {
     $('list-error').textContent = errorMessage(answer.body, 'تعذّر تحميل المحادثات.');
@@ -425,6 +491,17 @@ async function openConversation(ref, options = {}) {
   //   screen is dropped ⇒ ⭐ no data of an old conversation is ever
   //   painted under the title of a new one.
   if (answer.stale) return;
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ the network is gone ⇒ ⇒ ⇒ (the banner + the
+  // ⭐⭐⭐ M-125 retry ⇒ ⇒ ⇒ the conversation is NOT lost).
+  if (answer.status === 0) {
+    setOffline(true);
+    state.retry = () => openConversation(ref, { keepScroll: true });
+    $('thread-error').textContent = errorMessage(answer.body, 'تعذّر فتح المحادثة.');
+    $('thread-error').hidden = false;
+    stopPolling();
+    return;
+  }
+  setOffline(false);
   if (!answer.ok) {
     $('thread-error').textContent = errorMessage(answer.body, 'تعذّر فتح المحادثة.');
     $('thread-error').hidden = false;
@@ -435,6 +512,12 @@ async function openConversation(ref, options = {}) {
 
   const conversation = answer.body.conversation ?? {};
   state.allowedStates = answer.body.allowed_states ?? [];
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ the rights of the core (the server decides ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-125 and the page NEVER decides for itself).
+  state.mayReply = answer.body.may_reply === true;
+  state.mayChangeState = answer.body.may_change_state === true;
+  state.mayAssign = answer.body.may_assign === true;
+  renderRights();
   state.lastServerTime = answer.body.server_time ?? null;
   $('thread-customer').textContent = conversation.customer_name ?? 'محادثة بلا اسم عميل';
   $('thread-ref').textContent = conversation.ref ?? '';
@@ -477,8 +560,14 @@ async function openConversation(ref, options = {}) {
     ticketLink.href = '#';
   }
 
-  if (window.matchMedia('(max-width: 860px)').matches) {
-    $('thread').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ the small screen shows the conversation IN THE
+  // ⭐⭐⭐ M-125 PLACE of the list ⇒ ⇒ ⇒ (the list is one scroll
+  // ⭐⭐⭐ M-125 away ⇒ ⇒ ⇒ and «رجوع» brings it back).
+  if (isSmallScreen()) {
+    const scroller = $('conversation-list');
+    state.listScroll = scroller ? scroller.scrollTop : 0;
+    setThreadView(true);
+    window.scrollTo(0, 0);
   }
 }
 
@@ -543,6 +632,26 @@ function appendNewMessages(messages) {
   return added;
 }
 
+/**
+ * ⭐⭐⭐ M-125: ⭐⭐⭐ the rights of the core on the screen ⇒ ⇒ ⇒ (the
+ * ⭐⭐⭐ M-125 employee who may only READ sees a NOTE ⇒ ⇒ ⇒ and not a
+ * ⭐⭐⭐ M-125 composer he may not use ⇒ ⇒ ⇒).
+ */
+function renderRights() {
+  const composer = $('composer');
+  const note = $('readonly-note');
+  if (composer) composer.hidden = !state.mayReply;
+  if (note) note.hidden = state.mayReply;
+  const stateField = $('state-select');
+  if (stateField) {
+    stateField.disabled = !state.mayChangeState;
+    const label = stateField.closest('.field');
+    if (label) label.hidden = !state.mayChangeState;
+  }
+  const assignField = $('assign-field');
+  if (assignField) assignField.hidden = !state.mayAssign;
+}
+
 function renderStateOptions(current) {
   const select = $('state-select');
   select.textContent = '';
@@ -589,7 +698,9 @@ async function loadAgents() {
   }
   const current = state.selected?.assignee ?? '';
   select.value = current;
-  field.hidden = false;
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ the right of the core decides ⇒ ⇒ ⇒ (not the
+  // ⭐⭐⭐ M-125 fact that the list of the agents arrived).
+  field.hidden = !state.mayAssign;
 }
 
 // ------------------------------------------------------------ the actions
@@ -786,9 +897,36 @@ $('state-select').addEventListener('change', () => {
 $('assign-select').addEventListener('change', () => {
   void changeAssignee();
 });
+// ⭐⭐⭐ M-125: ⭐⭐⭐ «رجوع» brings the LIST back (with its search
+// ⭐⭐⭐ M-125 and its place) ⇒ ⇒ ⇒ (and it is the same on the big
+// ⭐⭐⭐ M-125 screen ⇒ ⇒ ⇒ the two screens behave the same).
 $('btn-back').addEventListener('click', () => {
-  $('thread').hidden = true;
-  $('thread-placeholder').hidden = false;
+  closeThread();
+});
+// ⭐⭐⭐ M-125: ⭐⭐⭐ the browser's back button closes the
+// ⭐⭐⭐ M-125 conversation ⇒ ⇒ ⇒ (the same as «رجوع»).
+window.addEventListener('popstate', () => {
+  if (state.threadView) closeThread();
+});
+// ⭐⭐⭐ M-125: ⭐⭐⭐ the retry of the connection that is gone.
+$('btn-retry-offline').addEventListener('click', () => {
+  setOffline(false);
+  const retry = state.retry;
+  state.retry = null;
+  if (retry) void retry();
+  else void loadConversations();
+});
+// ⭐⭐⭐ M-125: ⭐⭐⭐ the browser says that the connection is gone (or
+// ⭐⭐⭐ M-125 is back).
+window.addEventListener('offline', () => {
+  setOffline(true);
+});
+window.addEventListener('online', () => {
+  setOffline(false);
+  const retry = state.retry;
+  state.retry = null;
+  if (retry) void retry();
+  else void loadConversations();
 });
 let searchTimer = null;
 $('filter-query').addEventListener('input', () => {
@@ -798,9 +936,20 @@ $('filter-query').addEventListener('input', () => {
   }, 250);
 });
 $('filter-state').addEventListener('change', () => {
+  // ⭐⭐⭐ M-125: ⭐⭐⭐ a filter that changes CANCELS the pending
+  // ⭐⭐⭐ M-125 search ⇒ ⇒ ⇒ (the search of the old text never
+  // ⭐⭐⭐ M-125 lands on the new filter).
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+  }
   void loadConversations({ resetPage: true });
 });
 $('filter-assignee').addEventListener('change', () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+  }
   void loadConversations({ resetPage: true });
 });
 void bootSession();

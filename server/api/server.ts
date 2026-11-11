@@ -88,6 +88,7 @@ import {
   readTicketForUpdate,
   readTicketByRef,
   countUnassignedTickets,
+  readTicketPage,
   type TicketFilters,
   type TicketScope,
 } from '../tickets/queries.ts';
@@ -1617,18 +1618,12 @@ export class WaslApiServer {
       limit: Number(url.searchParams.get('limit') ?? '25'),
       offset: Number(url.searchParams.get('offset') ?? '0'),
     };
-    const page = await UnitOfWork.run(this.#pool, context.session.tenantId, async (uow) => {
-      const rows = await listTickets(uow, context.session.tenantId, this.#ticketScope(context), filters);
-      // ⭐⭐⭐ M-119: the counter of the queue ⇒ ⭐⭐⭐ the SAME scope and
-      // ⭐⭐⭐ the SAME filters ⇒ ⭐⭐⭐ (the lesson of M-83).
-      const unassignedCount = await countUnassignedTickets(
-        uow,
-        context.session.tenantId,
-        this.#ticketScope(context),
-        filters,
-      );
-      return { rows, unassignedCount };
-    });
+    const page = await readTicketPage(
+      this.#pool,
+      context.session.tenantId,
+      this.#ticketScope(context),
+      filters,
+    );
     await this.#audit(
       context.session.tenantId,
       context.session.actorId,
@@ -1642,8 +1637,10 @@ export class WaslApiServer {
       status: 200,
       body: {
         ok: true,
-        tickets: page.rows.rows,
-        total: page.rows.total,
+        // ⭐⭐⭐ M-121: ⭐⭐⭐ the rows, the total and the counter come
+        // ⭐⭐⭐ from ONE snapshot of the page ⇒ ⇒ ⇒ (they always agree).
+        tickets: page.rows,
+        total: page.total,
         limit: filters.limit,
         offset: filters.offset,
         // ⭐⭐⭐ M-119: how many tickets are waiting for an assignment.
@@ -2141,6 +2138,32 @@ export class WaslApiServer {
   }
 
   /**
+   * ⭐⭐⭐ M-125: ⭐⭐⭐ may this employee WRITE a reply? ⭐⭐⭐ (the
+   * ⭐⭐⭐ M-125 core's `conversation.write` ⇒ ⇒ ⇒ the owner, the
+   * ⭐⭐⭐ M-125 supervisor and the agent ⇒ ⇒ ⇒ and NOT the viewer).
+   */
+  #mayReply(context: RequestContext): boolean {
+    return this.#authorize(context, 'conversation.write', SCOPE_REF).allowed;
+  }
+
+  /**
+   * ⭐⭐⭐ M-125: ⭐⭐⭐ may this employee change the STATE of the
+   * ⭐⭐⭐ M-125 conversation? ⭐⭐⭐ (the core's
+   * ⭐⭐⭐ M-125 `conversation.state.update`).
+   */
+  #mayChangeState(context: RequestContext): boolean {
+    return this.#authorize(context, 'conversation.state.update', SCOPE_REF).allowed;
+  }
+
+  /**
+   * ⭐⭐⭐ M-125: ⭐⭐⭐ may this employee assign the conversation? ⭐⭐⭐
+   * ⭐⭐⭐ M-125 (the core's `conversation.assign` ⇒ ⇒ ⇒ the owner).
+   */
+  #mayAssignConversations(context: RequestContext): boolean {
+    return this.#authorize(context, 'conversation.assign', SCOPE_REF).allowed;
+  }
+
+  /**
    * ⭐⭐ D-071: the list of the customers of a company.
    * ⭐ The pagination is real (the total comes with the page) ⇒ ⭐ a
    *   company with more than a hundred customers sees all of them.
@@ -2522,6 +2545,14 @@ export class WaslApiServer {
         conversation: detail.conversation,
         messages: detail.messages,
         allowed_states: allowedStates,
+        // ⭐⭐⭐ M-125: ⭐⭐⭐ the rights of the CORE are announced ⇒ ⇒ ⇒
+        // ⭐⭐⭐ M-125 (the page hides what the employee may NOT do ⇒ ⇒ ⇒
+        // ⭐⭐⭐ M-125 and the server still refuses it ⇒ ⇒ ⇒).
+        // ⭐⭐⭐ M-125: ⭐⭐⭐ no NEW capability ⇒ ⇒ ⇒ (the three
+        // ⭐⭐⭐ M-125 operations are the ones the core already has).
+        may_reply: this.#mayReply(context),
+        may_change_state: this.#mayChangeState(context),
+        may_assign: this.#mayAssignConversations(context),
         // ⭐ M-77: the instant of the database ⇒ the next poll asks
         //   only for what is newer than it.
         server_time: detail.server_time,

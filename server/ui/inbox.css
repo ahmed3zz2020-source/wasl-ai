@@ -546,9 +546,38 @@ button.ghost:hover:not(:disabled) {
 }
 
 /* ------------------------------------------------------------ mobile */
+/* ⭐⭐⭐ M-125: the banner of the loss of the connection. */
+.notice.offline {
+  background: var(--danger-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.notice.offline strong {
+  color: var(--danger);
+}
+
+.notice.offline button {
+  margin-inline-start: auto;
+}
+
 @media (max-width: 860px) {
   .panes {
     grid-template-columns: 1fr;
+  }
+
+  /* ⭐⭐⭐ M-125: ⭐⭐⭐ the small screen shows EITHER the list OR the
+     ⭐⭐⭐ M-125 conversation ⇒ ⇒ ⇒ (the conversation opens AT the
+     ⭐⭐⭐ M-125 top of the screen ⇒ ⇒ ⇒ and the «رجوع» brings the
+     ⭐⭐⭐ M-125 list back with its search and its place). */
+  body.view-thread .pane.list {
+    display: none;
+  }
+
+  body.view-thread .pane.thread {
+    display: block;
   }
 
   .conversations {

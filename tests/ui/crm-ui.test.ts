@@ -155,6 +155,15 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
   const tenantId = 'tnt_b03_ui2';
   const ownerId = 'usr_b03_ui2_owner';
   const agentId = 'usr_b03_ui2_agent';
+  // ⭐⭐⭐ M-122: ⭐⭐⭐ the four roles of the company ⇒ ⇒ ⇒ (the
+  // ⭐⭐⭐ M-122 rights of the CRM are measured on EACH one).
+  const viewerId = 'usr_b03_ui2_viewer';
+  const supervisorId = 'usr_b03_ui2_supervisor';
+  // ⭐⭐⭐ M-122: ⭐⭐⭐ a SECOND company with NAMED customers ⇒ ⇒ ⇒
+  // ⭐⭐⭐ M-122 (the isolation is measured with names we can read on
+  // ⭐⭐⭐ M-122 the screen ⇒ ⇒ ⇒ not with a number).
+  const otherTenantId = 'tnt_b03_ui2_other';
+  const otherCustomerId = 'cus_b03_ui2_foreign';
   t.after(async () => {
     await browser.close();
     await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
@@ -163,8 +172,12 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
       await uow.query(`delete from customers where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from sessions where tenant_id = $1`, [tenantId]);
       await uow.query(`delete from memberships where tenant_id = $1`, [tenantId]);
-      await uow.query(`delete from users where id in ($1,$2)`, [ownerId, agentId]);
-      await uow.query(`delete from tenants where id = $1`, [tenantId]);
+      await uow.query(
+        `delete from users where id in ($1,$2,$3,$4)`,
+        [ownerId, agentId, viewerId, supervisorId],
+      );
+      await uow.query(`delete from customers where id = $1`, [otherCustomerId]);
+      await uow.query(`delete from tenants where id in ($1,$2)`, [tenantId, otherTenantId]);
     });
     await harness.stop();
   });
@@ -191,6 +204,8 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     for (const [id, role] of [
       [ownerId, 'owner'],
       [agentId, 'agent'],
+      [viewerId, 'viewer'],
+      [supervisorId, 'supervisor'],
     ] as const) {
       await uow.query(
         `insert into users (id, display_name, email, status, passcode_hash)
@@ -214,10 +229,15 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
          on conflict (id) do nothing`,
         [`cus_b03_ui2_${index}_${RUN}`, tenantId, `عميل ${index}`, `c${index}@example.invalid`, '+20100'],
       );
+      // ⭐⭐⭐ M-122: ⭐⭐⭐ the FIRST conversation is ASSIGNED to the
+      // ⭐⭐⭐ M-122 agent ⇒ ⇒ ⇒ (the scope of the agent is the
+      // ⭐⭐⭐ M-122 conversations of him ⇒ ⇒ ⇒ and the test can see
+      // ⭐⭐⭐ M-122 the difference between the SCOPE and the RIGHT).
       await uow.query(
-        `insert into conversations (tenant_id, ref, customer_id, state, version, updated_at)
-         values ($1,$2,$3,'open',1, now())`,
-        [tenantId, ref, `cus_b03_ui2_${index}_${RUN}`],
+        `insert into conversations (tenant_id, ref, customer_id, state, version, updated_at, assignee_actor_id)
+         values ($1,$2,$3,'open',1, now(),$4)
+         on conflict (tenant_id, ref) do update set assignee_actor_id = excluded.assignee_actor_id`,
+        [tenantId, ref, `cus_b03_ui2_${index}_${RUN}`, index === 0 ? agentId : null],
       );
       await uow.query(
         `insert into messages (message_ref, tenant_id, conversation_ref, channel, direction, sender,
@@ -226,6 +246,24 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
         [`msg_b03_ui2_${index}_${RUN}`, tenantId, ref, `رسالة العميل ${index}`],
       );
     }
+  });
+
+  // ⭐⭐⭐ M-122: ⭐⭐⭐ the second company (with a customer whose name
+  // ⭐⭐⭐ M-122 is written on the screen ⇒ ⇒ ⇒ so the isolation is
+  // ⭐⭐⭐ M-122 READABLE ⇒ ⇒ ⇒ not a number).
+  await UnitOfWork.run(harness.ownerPool, otherTenantId, async (uow) => {
+    await uow.query(`delete from customers where id = $1`, [otherCustomerId]);
+    await uow.query(
+      `insert into tenants (id, name, status) values ($1,$2,'active')
+       on conflict (id) do update set name = excluded.name`,
+      [otherTenantId, 'شركة أخرى (اصطناعية)'],
+    );
+    await uow.query(
+      `insert into customers (id, tenant_id, display_name, data_class)
+       values ($1,$2,$3,'standard')
+       on conflict (id) do update set display_name = excluded.display_name`,
+      [otherCustomerId, otherTenantId, 'Customer Alpha'],
+    );
   });
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -765,5 +803,205 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     await page.waitForTimeout(11000);
     const note = await page.innerText('#thread-refresh');
     assert.match(note, /انتهت الجلسة/, `⭐⭐⭐ the page did not say that the session is over: ${note}`);
+  });
+  // ============================================================
+  // M-122 — the rights of the CRM on the FOUR roles (and the
+  //          isolation of the company, with names we can read)
+  // ============================================================
+
+  await t.test('⭐⭐⭐ M-122: each role sees what the core lets it see (and nothing more)', async () => {
+    // ⭐⭐⭐ THE HELPER: ⭐⭐⭐ log in as any of the four roles of the
+    // ⭐⭐⭐ synthetic company ⇒ ⇒ ⇒ (the passcode is the same ⇒ ⇒ ⇒
+    // ⭐⭐⭐ the only difference is the ROLE).
+    const loginAsRole = async (userId: string, label: string): Promise<void> => {
+      await page.goto(`${base}/ui/inbox.html`);
+      await page.waitForTimeout(900);
+      // ⭐⭐⭐ the session of the previous role is closed ⇒ ⇒ ⇒ (the
+      // ⭐⭐⭐ login row comes back ⇒ ⇒ ⇒ and the role really changes).
+      if (await page.isVisible('#btn-logout')) {
+        await page.click('#btn-logout');
+        await page.waitForTimeout(700);
+      }
+      await page.evaluate(
+        ([tenant, id, name]) => {
+          const tenantSelect = document.getElementById('login-tenant');
+          if (!tenantSelect.querySelector(`option[value="${tenant}"]`)) {
+            const tenantOption = document.createElement('option');
+            tenantOption.value = tenant;
+            tenantOption.textContent = 'UI tenant';
+            tenantSelect.appendChild(tenantOption);
+          }
+          const userSelect = document.getElementById('login-user');
+          if (!userSelect.querySelector(`option[value="${id}"]`)) {
+            const userOption = document.createElement('option');
+            userOption.value = id;
+            userOption.textContent = name;
+            userSelect.appendChild(userOption);
+          }
+        },
+        [tenantId, userId, label],
+      );
+      await page.selectOption('#login-tenant', tenantId);
+      await page.selectOption('#login-user', userId);
+      await page.fill('#login-passcode', PASSCODE);
+      await page.click('#btn-login');
+      await page.waitForTimeout(1300);
+    };
+
+    // ⭐⭐⭐ THE TABLE: ⭐⭐⭐ the core's `customer.manage` is the
+    // ⭐⭐⭐ owner and the supervisor ⇒ ⇒ ⇒ (the agent and the viewer
+    // ⭐⭐⭐ only READ ⇒ ⇒ ⇒).
+    // ⭐⭐⭐ THE TABLE: ⭐⭐⭐ the RIGHT of the edit is the core's
+    // ⭐⭐⭐ `customer.manage` ⇒ ⇒ ⇒ (the owner and the supervisor
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ and the agent and the viewer only READ).
+    const expectations: Array<[string, string, boolean]> = [
+      [ownerId, 'UI owner', true],
+      [supervisorId, 'UI supervisor', true],
+      [viewerId, 'UI viewer', false],
+    ];
+
+    for (const [userId, label, mayEdit] of expectations) {
+      await loginAsRole(userId, label);
+      await page.goto(`${base}/ui/crm.html`);
+      await page.waitForTimeout(1200);
+      // ⭐⭐⭐ ① the list of the customers is there for EVERY role
+      // ⭐⭐⭐ (the core gives `conversation.list` to all of them).
+      const rows = await countOf(page, '#customer-list .customer');
+      assert.ok(rows > 0, `⭐⭐⭐ ${label} sees no customer at all`);
+      // ⭐⭐⭐ ② the customer of ANOTHER company is NEVER there
+      // ⭐⭐⭐ (the name is written on the screen ⇒ ⇒ ⇒ so the test
+      // ⭐⭐⭐ reads it with the eyes).
+      const list = await page.innerText('#customer-list');
+      assert.ok(
+        !list.includes('Customer Alpha'),
+        `⭐⭐⭐ ${label} sees the customer of another company`,
+      );
+      // ⭐⭐⭐ ③ the edit block follows the permission of the SERVER
+      // ⭐⭐⭐ (the button is never an authorization).
+      await page.evaluate(`document.querySelector('#customer-list .customer').click()`);
+      await page.waitForTimeout(1000);
+      assert.equal(
+        await page.isVisible('#edit-block'),
+        mayEdit,
+        `⭐⭐⭐ ${label} ${mayEdit ? 'does not' : 'does'} see the edit of the customer`,
+      );
+    }
+
+    // ⭐⭐⭐ THE AGENT: ⭐⭐⭐ the SCOPE of the core is not the RIGHT
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ the agent sees ONLY the customers of the
+    // ⭐⭐⭐ conversations that are assigned to him ⇒ ⇒ ⇒ (and the
+    // ⭐⭐⭐ edit is hidden for him ⇒ ⇒ ⇒ the RIGHT is missing).
+    await loginAsRole(agentId, 'UI agent');
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    const agentRows = await countOf(page, '#customer-list .customer');
+    assert.equal(
+      agentRows,
+      1,
+      `⭐⭐⭐ the agent sees ${agentRows} customer(s) ⇒ the scope of the core is not applied`,
+    );
+    await page.evaluate(`document.querySelector('#customer-list .customer').click()`);
+    await page.waitForTimeout(1000);
+    assert.equal(
+      await page.isVisible('#edit-block'),
+      false,
+      '⭐⭐⭐ the agent sees the edit of the customer (the right is not the core\'s)',
+    );
+  });
+
+  await t.test('⭐⭐⭐ M-122: a DIRECT change without the right is refused (and the row is untouched)', async () => {
+    // ⭐⭐⭐ THE VIEWER: ⭐⭐⭐ he reads the customer of HIS company …
+    await page.goto(`${base}/ui/inbox.html`);
+    await page.waitForTimeout(900);
+    if (await page.isVisible('#btn-logout')) {
+      await page.click('#btn-logout');
+      await page.waitForTimeout(700);
+    }
+    await page.evaluate(
+      ([tenant, id, name]) => {
+        const tenantSelect = document.getElementById('login-tenant');
+        if (!tenantSelect.querySelector(`option[value="${tenant}"]`)) {
+          const tenantOption = document.createElement('option');
+          tenantOption.value = tenant;
+          tenantOption.textContent = 'UI tenant';
+          tenantSelect.appendChild(tenantOption);
+        }
+        const userSelect = document.getElementById('login-user');
+        if (!userSelect.querySelector(`option[value="${id}"]`)) {
+          const userOption = document.createElement('option');
+          userOption.value = id;
+          userOption.textContent = name;
+          userSelect.appendChild(userOption);
+        }
+      },
+      [tenantId, viewerId, 'UI viewer'],
+    );
+    await page.selectOption('#login-tenant', tenantId);
+    await page.selectOption('#login-user', viewerId);
+    await page.fill('#login-passcode', PASSCODE);
+    await page.click('#btn-login');
+    await page.waitForTimeout(1300);
+    await page.goto(`${base}/ui/crm.html`);
+    await page.waitForTimeout(1200);
+    const customerId = await page.evaluate(
+      `(() => {
+        const row = document.querySelector('#customer-list .customer');
+        return row ? row.getAttribute('data-id') || '' : '';
+      })()`,
+    );
+    assert.ok(customerId, '⭐⭐⭐ the list of the customers has no id to read');
+    const nameBefore = await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+      const result = await uow.query<{ display_name: string }>(
+        `select display_name from customers where tenant_id = $1 and id = $2`,
+        [tenantId, customerId],
+      );
+      return result.rows[0]?.display_name ?? '';
+    });
+    assert.ok(nameBefore, '⭐⭐⭐ the customer of the drill is not in the database');
+    // ⭐⭐⭐ THE DIRECT CHANGE: ⭐⭐⭐ the viewer writes the customer
+    // ⭐⭐⭐ WITHOUT the permission ⇒ ⇒ ⇒ (the server refuses ⇒ ⇒ ⇒
+    // ⭐⭐⭐ and the row of the database does NOT change).
+    const status = await page.evaluate(
+      `fetch('/api/crm/customers/' + ${JSON.stringify(customerId)}, {
+         method: 'PATCH',
+         headers: {
+           'content-type': 'application/json',
+           authorization: 'Bearer ' + JSON.parse(sessionStorage.getItem('wasl_session_v1')).token,
+         },
+         body: JSON.stringify({ version: 1, display_name: 'اسم اخترمه' }),
+       }).then((answer) => answer.status)`,
+    );
+    assert.equal(
+      Number(status),
+      403,
+      `⭐⭐⭐ the server accepted the change of the viewer: ${String(status)}`,
+    );
+    const nameAfter = await UnitOfWork.run(harness.ownerPool, tenantId, async (uow) => {
+      const result = await uow.query<{ display_name: string }>(
+        `select display_name from customers where tenant_id = $1 and id = $2`,
+        [tenantId, customerId],
+      );
+      return result.rows[0]?.display_name ?? '';
+    });
+    assert.equal(
+      nameAfter,
+      nameBefore,
+      `⭐⭐⭐ the row of the customer changed although the server refused: ${nameAfter}`,
+    );
+    // ⭐⭐⭐ AND THE FOREIGN CUSTOMER: ⭐⭐⭐ the viewer asks for the
+    // ⭐⭐⭐ customer of the OTHER company by his id ⇒ ⇒ ⇒ (the server
+    // ⭐⭐⭐ says no ⇒ ⇒ ⇒ the isolation is not only in the list).
+    const foreign = await page.evaluate(
+      `fetch('/api/crm/customers/' + ${JSON.stringify(otherCustomerId)}, {
+         headers: {
+           authorization: 'Bearer ' + JSON.parse(sessionStorage.getItem('wasl_session_v1')).token,
+         },
+       }).then((answer) => answer.status)`,
+    );
+    assert.notEqual(
+      Number(foreign),
+      200,
+      `⭐⭐⭐ the viewer read the customer of another company: ${String(foreign)}`,
+    );
   });
 });

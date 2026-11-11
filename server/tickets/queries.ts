@@ -17,6 +17,8 @@
 // ============================================================
 
 import type { UnitOfWork } from '../db/unit-of-work.ts';
+import { UnitOfWork as Work } from '../db/unit-of-work.ts';
+import type { PgPool } from '../db/pool.ts';
 
 export interface TicketScope {
   readonly role: string;
@@ -215,6 +217,38 @@ export async function countUnassignedTickets(
     values,
   );
   return Number(result.rows[0]?.count ?? '0');
+}
+
+/**
+ * ⭐⭐⭐ M-121: ⭐⭐⭐ THE PAGE AND THE COUNTER IN **ONE SNAPSHOT**.
+ *   ⭐⭐⭐ The rows, their total and the counter of the queue are three
+ *   ⭐⭐⭐ statements ⇒ ⇒ ⇒ in `read committed` every statement had its
+ *   ⭐⭐⭐ own snapshot ⇒ ⇒ ⇒ and an assignment that lands between them
+ *   ⭐⭐⭐ makes the badge and the queue DISAGREE ⇒ ⇒ ⇒ (the defect
+ *   ⭐⭐⭐ that M-121 proves with a real concurrent writer).
+ *   ⭐⭐⭐ ⇒ the read of the page runs in `repeatable read` ⇒ ⇒ ⇒ ONE
+ *   ⭐⭐⭐ snapshot for the three statements ⇒ ⇒ ⇒ they always agree.
+ *   ⭐⭐⭐ ⛔ No change of the rights · no change of the core · and the
+ *   ⭐⭐⭐ ⛔ write path keeps `read committed`.
+ *   ⭐⭐⭐ ⭐ And the API calls THIS function ⇒ ⇒ ⇒ so the proof of the
+ *   ⭐⭐⭐ ⭐ test measures the real path of the product.
+ */
+export async function readTicketPage(
+  pool: PgPool,
+  tenantId: string,
+  scope: TicketScope,
+  filters: TicketFilters,
+): Promise<{ readonly rows: TicketRow[]; readonly total: number; readonly unassignedCount: number }> {
+  return Work.run(
+    pool,
+    tenantId,
+    async (uow) => {
+      const page = await listTickets(uow, tenantId, scope, filters);
+      const unassignedCount = await countUnassignedTickets(uow, tenantId, scope, filters);
+      return { rows: page.rows, total: page.total, unassignedCount };
+    },
+    { isolation: 'repeatable read' },
+  );
 }
 
 /** ⭐⭐ The detail of one ticket (with its scope). */

@@ -54,6 +54,13 @@
 
     <p class="notice" id="login-notice" hidden></p>
 
+    <!-- ⭐⭐⭐ M-125: the banner of the loss of the connection. -->
+    <p class="notice offline" id="offline-banner" hidden role="status" aria-live="polite">
+      <strong>لا يوجد اتصال بالخادم.</strong>
+      <span>الاتصال بالخادم مقطوع دلوقتي — البيانات المحفوظة زي ما هي، وأول ما الاتصال يرجع دوس «أعد المحاولة».</span>
+      <button class="ghost" id="btn-retry-offline" type="button">أعد المحاولة</button>
+    </p>
+
     <main class="workspace" id="workspace" hidden>
       <section class="toolbar" aria-label="أدوات البحث والتصفية">
         <label class="field grow">
@@ -145,6 +152,13 @@
             <div class="state-box error" id="thread-error" hidden></div>
 
             <ol class="messages" id="messages"></ol>
+
+            <!-- ⭐⭐⭐ M-125: ⭐⭐⭐ the employee who may only READ
+                 ⭐⭐⭐ M-125 sees this note (not an empty space) ⇒ ⇒ ⇒
+                 ⭐⭐⭐ M-125 and the composer itself is hidden. -->
+            <p class="state-box" id="readonly-note" hidden>
+              ⭐⭐⭐ انت تشوف المحادثة فقط — الكتابة مش متاحة لدورك.
+            </p>
 
             <form class="composer" id="composer">
               <label class="field grow">

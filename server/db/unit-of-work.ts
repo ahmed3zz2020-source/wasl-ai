@@ -54,11 +54,24 @@ export class UnitOfWork {
    * ⭐ Run a unit of work for one tenant.
    * ⛔ The tenant id is validated here (fail closed) — it is the only
    *   value that may reach the RLS context.
+   *
+   * ⭐⭐⭐ M-121: ⭐⭐⭐ **THE ISOLATION LEVEL IS AN OPTION** ⇒ ⭐⭐⭐
+   *   ⭐⭐⭐ the default is EXACTLY what it was (`read committed`) ⇒
+   *   ⭐⭐⭐ and the behaviour of every other caller does NOT change.
+   *   ⭐⭐⭐ ⭐⭐⭐ `repeatable read` gives the unit ONE snapshot ⇒ ⇒ ⇒
+   *   ⭐⭐⭐ ⭐⭐⭐ so two queries of the same unit can never disagree ⇒
+   *   ⭐⭐⭐ ⭐⭐⭐ (the defect of M-121: the list of the queue and its
+   *   ⭐⭐⭐ ⭐⭐⭐ counter were two statements of a `read committed`
+   *   ⭐⭐⭐ ⭐⭐⭐ transaction ⇒ ⇒ ⇒ each one had its own snapshot).
+   *   ⭐⭐⭐ ⭐⭐⭐ ⛔ It is used ONLY where several statements of ONE
+   *   ⭐⭐⭐ ⭐⭐⭐ read must see the same data ⇒ ⭐⭐⭐ and never for a
+   *   ⭐⭐⭐ ⭐⭐⭐ write (a write keeps `read committed`).
    */
   static async run<T>(
     pool: PgPool,
     tenantId: string,
     fn: (uow: UnitOfWork) => Promise<T>,
+    options: { readonly isolation?: 'read committed' | 'repeatable read' } = {},
   ): Promise<T> {
     if (typeof tenantId !== 'string' || !TENANT_ID_PATTERN.test(tenantId)) {
       throw new UnitOfWorkError('tenant_context_invalid', 'tenant id is not a valid tenant context');
@@ -67,6 +80,11 @@ export class UnitOfWork {
     const uow = new UnitOfWork(client, tenantId);
     try {
       await client.query('BEGIN');
+      if (options.isolation === 'repeatable read') {
+        // ⭐⭐⭐ M-121: the snapshot of the unit is taken ONCE ⇒ ⇒ ⇒
+        // ⭐⭐⭐ every statement of this unit sees the SAME data.
+        await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+      }
       await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
       await client.query("select set_config('app.actor_id', $1, true)", ['system']);
       const result = await fn(uow);
