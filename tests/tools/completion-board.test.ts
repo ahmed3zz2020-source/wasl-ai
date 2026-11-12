@@ -197,10 +197,15 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
     assert.equal(series[1]?.value, 45, '⭐⭐⭐ the estimate after M-114 is not 45');
     assert.equal(series[2]?.value, 46, '⭐⭐⭐ the estimate of the round #57 is not 46');
     assert.equal(series[3]?.value, 47, '⭐⭐⭐ the estimate of the round #59 is not 47');
-    // ⭐⭐⭐ D-084: ⭐⭐⭐ the owner APPROVED 47% and set the condition of
-    // ⭐⭐⭐ 48% (a proven functional development) ⇒ ⇒ ⇒ ⇒ ⇒ the newest
-    // ⭐⭐⭐ estimate is 48% and it is approved ⇒ ⇒ ⇒ ⇒ ⇒ and it must
-    // ⭐⭐⭐ carry the decision of the owner in its basis.
+    // ⭐⭐⭐ D-084: ⭐⭐⭐ the owner APPROVED 47% explicitly and set a
+    // ⭐⭐⭐ CONDITION for 48% (a proven functional development) ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ the condition is met ⇒ ⇒ ⇒ ⇒ ⇒ but a condition that is met is
+    // ⭐⭐⭐ NOT an explicit approval ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ the newest estimate is 48% and it is PROPOSED ⇒ ⇒ ⇒ ⇒ ⇒ and the
+    // ⭐⭐⭐ newest APPROVED number of the owner is 47%.
     assert.equal(series[4]?.value, 48, '⭐⭐⭐ the estimate of the round #60 is not 48');
     let previous = -1;
     for (const entry of series) {
@@ -210,19 +215,28 @@ test('FOUNDATION 22) M-118 — the board of the completion is reproducible', asy
     }
     // ⭐⭐⭐ the estimate of the round #57 is APPROVED by the owner (D-082)
     assert.equal(series[2]?.status, 'owner', '⭐⭐⭐ the estimate of the round #57 is not approved');
-    // ⭐⭐⭐ D-084: ⭐⭐⭐ the estimate of THIS round is APPROVED — because
-    // ⭐⭐⭐ the owner decided it (47% approved + the condition of 48% met
-    // ⭐⭐⭐ with a proven functional development) ⇒ ⇒ ⇒ ⇒ ⇒ and the guard
-    // ⭐⭐⭐ now demands the PROOF of that approval (the decision of the
-    // ⭐⭐⭐ owner named in the basis) ⇒ ⇒ ⇒ ⇒ ⇒ so an approved number can
-    // ⭐⭐⭐ never appear without the owner behind it.
+    // ⭐⭐⭐ D-084: ⭐⭐⭐ 47% is the explicit approval of the owner ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ and 48% is only a proposal ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ the guard now refuses
+    // ⭐⭐⭐ to publish 48% as approved ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    assert.equal(series[3]?.status, 'owner', '⭐⭐⭐ the 47% approved by the owner (D-084) is not marked as approved');
     const last = series[series.length - 1];
-    assert.equal(last?.status, 'owner', '⭐⭐⭐ the estimate of this round is not approved (D-084)');
+    assert.equal(last?.status, 'proposed', '⭐⭐⭐ the 48% is published as approved — the owner never approved it explicitly');
     assert.equal(last?.value, 48, '⭐⭐⭐ the last estimate of the scale is not 48');
     assert.match(
       last?.basis ?? '',
       /D-084/,
-      '⭐⭐⭐ the approved estimate does not name the decision of the owner',
+      '⭐⭐⭐ the proposed estimate does not name the decision of the owner',
+    );
+    // ⭐⭐⭐ and the board must SAY it plainly ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    // ⭐⭐⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+    const boardText = fs.readFileSync(PUBLISHED, 'utf8');
+    assert.match(
+      boardText,
+      /47٪ المعتمد · 48٪ مُقترح/,
+      '⭐⭐⭐ the board does not state the truth of the estimate (47 approved · 48 proposed)',
     );
   });
 

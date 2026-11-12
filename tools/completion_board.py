@@ -492,11 +492,30 @@ def render(inventory: dict, computed: dict) -> str:
             "(⇒ ⭐⭐ خارج المجموع ⇒ ⭐⭐ فلا تضخيم)."
         )
         lines.append("")
+        approved = next(
+            (
+                entry
+                for entry in reversed(computed["series"])
+                if entry.get("status") == "owner"
+            ),
+            None,
+        )
+        latest = computed["series"][-1] if computed["series"] else None
+        owner_part = f"{approved['value']}٪ المعتمد" if approved else "لا يوجد معتمد"
+        if latest and latest.get("status") != "owner":
+            owner_part += f" · {latest['value']}٪ مُقترح"
         lines.append(
             "> ⭐⭐⭐ **منع الخلط (مرة أخرى)**: ⭐⭐ هذا الجدول **لا** يلغي التقدير "
-            "العام للمشروع (٤٦٪ المعتمد · ٤٧٪ المقترح) ⇐ ⭐⭐ ولا القائمة "
+            f"العام للمشروع ({owner_part}) ⇐ ⭐⭐ ولا القائمة "
             "الداخلية (٧٥ بنداً) ⇐ ⭐⭐ ⇒ ⇒ ⇒ هو **مقياس ثالث** يقيس النطاق "
             "التجاري الأصلي ⇐ ⭐⭐⇒ ⇒ ⇒ جاهزية المنتج التجاري تُقرأ من سُلّم المالك."
+        )
+        lines.append("")
+        lines.append(
+            "> ⭐⭐⭐ **طريقة المقارنة (المقياس الثالث)**: ⭐⭐ عمود «قبل» "
+            "مقيس على **نفس القدرات** عند خط الأساس (عبر git) ⇐ ⭐⭐ فالمقارنة "
+            "بمقام ثابت ⇐ ⭐⭐ والمقام نفسه كبر بست قدرات جديدة ⇐ ⭐⭐ "
+            "ولذلك الرقم ارتفع من جهة واحدة فقط: البرهان مثبت."
         )
         lines.append("")
     lines.append("## ٤. ⭐⭐⭐ البند المفتوح من هذه الجولة")
