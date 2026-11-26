@@ -557,7 +557,7 @@ test('M33) ⭐⭐⭐⭐⭐ الطرد: الكسر الحقيقي ⇒ نفس ال
         'النواة المعطوبة لم تسرّب ⇒ الكسر لم يعمل ⇒ اختبار الطرد غير حاسم',
       );
     } finally {
-      fs.rmSync(ISOLATED, { recursive: true, force: true });
+      fs.rmSync(ISOLATED, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   });
 
@@ -572,7 +572,7 @@ test('M33) ⭐⭐⭐⭐⭐ الطرد: الكسر الحقيقي ⇒ نفس ال
         'النواة المعطوبة لم تسرّب ⇒ الكسر لم يعمل ⇒ اختبار الطرد غير حاسم',
       );
     } finally {
-      fs.rmSync(ISOLATED_SCOPE, { recursive: true, force: true });
+      fs.rmSync(ISOLATED_SCOPE, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   });
 

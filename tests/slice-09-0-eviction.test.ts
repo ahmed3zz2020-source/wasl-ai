@@ -158,7 +158,7 @@ async function runEviction(t: any, spec: EvictionCase): Promise<void> {
           `الفاشل فعلياً: ${failed.join(' | ') || '(لا شيء)'}`,
       );
     } finally {
-      fs.rmSync(ISOLATED, { recursive: true, force: true });
+      fs.rmSync(ISOLATED, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   });
 

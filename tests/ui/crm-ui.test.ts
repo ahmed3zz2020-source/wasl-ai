@@ -78,6 +78,23 @@ async function countOf(page: PageLike, selector: string): Promise<number> {
   return Number(value ?? 0);
 }
 
+/**
+ * ⭐⭐⭐ ينتظر ظهور عنصر بدل مهلة ثابتة ⇒ ⭐ والاختبار لا يتأثر بالحِمل
+ *   (المهلة الثابتة كانت تُسقط الاختبار على جهاز مشغول ⇒ ⇒ ⇒ فكان
+ *   فشلاً في التوقيت لا في المنتج) ⇒ ⇒ ⇒ والفحص نفسه (أن عدد العملاء
+ *   أكبر من صفر) لم يتغيّر.
+ */
+async function waitForRows(page: PageLike, selector: string, timeoutMs = 20000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if ((await countOf(page, selector)) > 0) return;
+    if (Date.now() > deadline) {
+      throw new Error(`⭐ the selector ${selector} did not appear within ${timeoutMs}ms`);
+    }
+    await page.waitForTimeout(150);
+  }
+}
+
 /** ⭐⭐⭐ M-120: the URLs of the calls that the page made to the API. */
 async function apiCallUrls(page: PageLike, needle: string): Promise<string[]> {
   const value = await page.evaluate(
@@ -863,6 +880,9 @@ test('FOUNDATION 22) the CRM and the refresh in a real browser (D-071)', async (
     for (const [userId, label, mayEdit] of expectations) {
       await loginAsRole(userId, label);
       await page.goto(`${base}/ui/crm.html`);
+      // ⭐⭐⭐ ننتظر ظهور القائمة نفسها (لا مهلة ثابتة) ⇒ ⭐ فالحِمل على
+      //   الجهاز لا يحوّل الفحص إلى فشل في التوقيت.
+      await waitForRows(page, '#customer-list .customer');
       await page.waitForTimeout(1200);
       // ⭐⭐⭐ ① the list of the customers is there for EVERY role
       // ⭐⭐⭐ (the core gives `conversation.list` to all of them).

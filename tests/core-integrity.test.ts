@@ -93,7 +93,7 @@ test('M13) ⭐⭐⭐⭐⭐ حارس سلامة النواة — مقارنة ب�
         `الحارس لم يكتشف كسراً حقيقياً في النطاق (${CORE_PATH}) ⇒ اختبار زائف`,
       );
     } finally {
-      fs.rmSync(ISOLATED, { recursive: true, force: true });
+      fs.rmSync(ISOLATED, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   });
 
