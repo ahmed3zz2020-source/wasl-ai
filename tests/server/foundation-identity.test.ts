@@ -261,7 +261,12 @@ test('FOUNDATION 3) identity, roles and sessions', async (t) => {
   });
 
   await t.test('⭐ R-01: the migration connection uses the owner role and its own password', async () => {
-    const ownerPool = createPool(harness.config.ownerDatabaseUrl, 1);
+    assert.notEqual(
+      harness.config.ownerDatabaseUrl,
+      null,
+      'the owner url is missing: the secret of the owner of the tables is not available',
+    );
+    const ownerPool = createPool(harness.config.ownerDatabaseUrl as string, 1);
     const who = await ownerPool.query<{ current_user: string }>('select current_user');
     assert.equal(who.rows[0]?.current_user, 'wasl_owner', 'the owner url did not open as wasl_owner');
     await ownerPool.end();

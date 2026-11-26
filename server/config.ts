@@ -65,7 +65,14 @@ export interface ServerConfig {
   /** ⭐ Request path connection (role `wasl_app`, NOBYPASSRLS). */
   readonly appDatabaseUrl: string;
   /** ⭐ Migration/seed connection (role `wasl_owner`). */
-  readonly ownerDatabaseUrl: string;
+  /**
+   * ⭐⭐⭐ The URL of the migration role — ⭐ NULL when the secret of that
+   *   role is not available ⇒ ⇒ ⇒ ⇒ (the review of the wave · finding
+   *   #5) ⇒ ⇒ ⇒ ⇒ because the application secret must NEVER stand in for
+   *   the secret of the owner of the tables ⇒ ⇒ ⇒ ⇒ ⇒ and the tool that
+   *   needs it says so with a declared error.
+   */
+  readonly ownerDatabaseUrl: string | null;
   readonly databaseName: string;
   readonly sessionTtlSeconds: number;
   /** ⭐ The login rate limit (shared state in PostgreSQL). */
@@ -154,7 +161,11 @@ export function loadConfig(
   // The migration role has its own password: the setup command generates
   // a separate secret for `wasl_owner`. Using the app password for the
   // owner URL would fail the authentication of the migration connection.
-  const ownerPassword = env['WASL_PG_OWNER_PASSWORD'] ?? credentials?.ownerPassword ?? password;
+  // ⭐⭐⭐ The secret of the owner is its own ⇒ ⭐ the review of the wave
+  //   (finding #5) measured that the code said one thing and did the
+  //   opposite ⇒ ⇒ ⇒ ⇒ ⇒ so the fallback of the application secret is
+  //   GONE ⇒ ⇒ ⇒ ⇒ ⇒ and when it is missing the URL is simply absent.
+  const ownerPassword = env['WASL_PG_OWNER_PASSWORD'] ?? credentials?.ownerPassword ?? '';
   if (password === '' && options.requirePassword !== false) {
     throw new ConfigError(
       'pg_password_missing',
@@ -267,7 +278,7 @@ export function loadConfig(
     host: serverHost ?? '127.0.0.1',
     port: parsedPort,
     appDatabaseUrl: buildUrl(databaseName, 'wasl_app', password, host, port),
-    ownerDatabaseUrl: buildUrl(databaseName, 'wasl_owner', ownerPassword, host, port),
+    ownerDatabaseUrl: ownerPassword === '' ? null : buildUrl(databaseName, 'wasl_owner', ownerPassword, host, port),
     databaseName,
     sessionTtlSeconds: ttl,
     rateLimit: {

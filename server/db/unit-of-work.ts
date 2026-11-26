@@ -86,7 +86,16 @@ export class UnitOfWork {
         await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
       }
       await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
-      await client.query("select set_config('app.actor_id', $1, true)", ['system']);
+      // ⭐⭐⭐ The actor is NOT set here — ⭐ the review of the wave
+      //   (finding #6) measured that EVERY transaction wrote
+      //   `app.actor_id = 'system'` ⇒ ⇒ ⇒ ⇒ ⇒ so the variable carried no
+      //   meaning at all ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ and a future policy that trusted it
+      //   would have granted or refused silently.
+      // ⭐ The real actor lives in the COLUMN `actor_id` of the audit
+      //   table (`audit_events` · `audit_log`) ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ and it is
+      //   written there by the request layer with the real session.
+      // ⭐ No migration reads `app.actor_id` today ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ so removing
+      //   the write changes NO behaviour — it removes a trap.
       const result = await fn(uow);
       await client.query('COMMIT');
       return result;

@@ -18,7 +18,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import nodePath from 'node:path';
-import type { ServerConfig } from '../config.ts';
+import type { ServerConfig, ServerProfile } from '../config.ts';
 import type { PgPool } from '../db/pool.ts';
 import { UnitOfWork } from '../db/unit-of-work.ts';
 import {
@@ -147,6 +147,29 @@ const UI_FILES: Readonly<Record<string, { file: string; type: string }>> = Objec
 
 const UI_DIR = nodePath.join(nodePath.resolve(import.meta.dirname, '..'), 'ui');
 
+/**
+ * ⭐⭐⭐ The local passcode does NOT travel with the page outside the
+ *   local profiles — ⭐ the review of the wave (finding #8) measured
+ *   that the fixture passcode was written INSIDE the HTML of the
+ *   console (`value="wasl-local-test"`) ⇒ ⇒ ⇒ ⇒ ⇒ together with the
+ *   tenant and the employee ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ that is a full company
+ *   login for whoever opens the page.
+ * ⭐⭐⭐ In the profile that faces the outside (`staging`) the value is
+ *   removed ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ and the operator types the passcode ⇒ ⇒
+ *   ⇒ ⇒ ⇒ (the page already keeps the session in `sessionStorage` ⇒ ⇒
+ *   ⇒ ⇒ ⇒ ⇒ so nothing else changes).
+ * ⭐⭐⭐ The LOCAL profiles keep it ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ because that is the
+ *   fixture of the operator's own machine (a declared fixture, never a
+ *   real credential).
+ */
+function withoutLocalPasscode(text: string, contentType: string, profile: ServerProfile): string {
+  if (profile !== 'staging') return text;
+  if (!contentType.includes('text/html') && !contentType.includes('javascript')) return text;
+  return text
+    .replace(/ value="wasl-local-test"/g, '')
+    .replace(/passcode: 'wasl-local-test'/g, "passcode: ''");
+}
+
 export interface ApiServerOptions {
   readonly config: ServerConfig;
   readonly pool: PgPool;
@@ -231,8 +254,78 @@ function errorCodeOf(error: unknown): string {
   return error instanceof Error ? error.message : 'internal_error';
 }
 
-function errorMessageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+/**
+ * ⭐⭐⭐ The message that may reach the client — ⭐ DECLARED, never the raw
+ *   text. ⭐⭐ The review of the wave (finding #1) measured the leak: a
+ *   bad `limit` returned the text of PostgreSQL itself
+ *   (`invalid input syntax for type bigint: "NaN"`) ⇒ ⇒ ⇒ and that text
+ *   names the engine, the column and the value ⇒ ⇒ ⇒ ⇒ so it stops here:
+ *   ⭐ our own tokens (`conversation_not_found` · `json_invalid` · …) pass
+ *   ⭐ ⇒ ⇒ and everything else becomes a declared message of the status.
+ */
+const CLIENT_MESSAGE_BY_STATUS: Record<number, string> = {
+  400: 'invalid_request',
+  401: 'unauthorized',
+  403: 'forbidden',
+  404: 'not_found',
+  409: 'conflict',
+  413: 'body_too_large',
+  429: 'too_many_requests',
+};
+
+/**
+ * ⭐⭐⭐ A declared token of ours (no spaces, no punctuation).
+ * ⭐⭐⭐ WHY THIS IS SAFE ⇒ ⇒ ⇒ ⇒ ⇒ the token must be OURS ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+ *   ⭐ and the only strings that ever reach this function are the
+ *   ⭐ messages of OUR errors (a closed set of codes) or the text of the
+ *   ⭐ engine (spaces and punctuation ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ rejected) ⇒ ⇒
+ *   ⭐ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ and NO value of the client ever becomes the
+ *   ⭐ message of an error (measured by the search of every `throw` in
+ *   ⭐ `server/` and `src/core/`) ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒ ⇒.
+ */
+function isDeclaredToken(text: string): boolean {
+  return /^[a-z][a-z0-9_]{2,63}$/.test(text);
+}
+
+/**
+ * ⭐⭐⭐ A number from the query string — ⭐ finite, whole, or the default.
+ *   ⭐ The review of the wave (finding #4) measured the difference: the
+ *   ⭐ CRM path guarded it and the other two did not ⇒ ⇒ ⇒ ⇒ so a bad
+ *   ⭐ `limit` became a DATABASE error (`NaN` → PostgreSQL) ⇒ ⇒ ⇒ ⇒ ⇒ and
+ *   ⭐ now the three paths are the same ⇒ ⇒ ⇒ ⇒ ⇒ one rule, one place.
+ * ⭐⭐⭐ The value is a WHOLE number ⇒ ⇒ ⇒ (a fraction would reach
+ *   ⭐ `bigint` and become an engine error) ⇒ ⇒ ⇒ ⇒ ⇒ and it is never
+ *   ⭐ negative ⇒ ⇒ ⇒ ⇒ ⇒ (a negative page is not a page) ⇒ ⇒ ⇒ ⇒ ⇒ ⇒
+ *   ⭐ ⇒ and the query layer keeps its own ceiling (1..200).
+ */
+function queryNumber(raw: string | null, fallback: number): number {
+  if (raw === null) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return fallback;
+  const whole = Math.trunc(value);
+  if (whole < 0) return fallback;
+  return whole;
+}
+
+/**
+ * ⭐⭐⭐ The message of the response — declared only.
+ */
+export function clientMessageOf(error: unknown, status: number): string {
+  const raw = error instanceof Error ? error.message : '';
+  if (isDeclaredToken(raw)) return raw;
+  return CLIENT_MESSAGE_BY_STATUS[status] ?? 'internal_error';
+}
+
+/**
+ * ⭐⭐⭐ The code of the response — declared only. ⭐ The mechanical code of
+ *   the engine (the SQLSTATE) stays in the LOG for the operator ⇒ ⇒ ⇒ but
+ *   it does not go to the client ⇒ ⇒ ⇒ ⇒ (it names the engine).
+ */
+export function clientCodeOf(error: unknown, status: number): string {
+  const raw = errorCodeOf(error);
+  if (isDeclaredToken(raw)) return raw;
+  if (databaseStatus(error) !== null) return 'database_error';
+  return CLIENT_MESSAGE_BY_STATUS[status] ?? 'internal_error';
 }
 
 function shouldInvalidate(error: unknown): boolean {
@@ -517,7 +610,15 @@ export class WaslApiServer {
               ? 413
               : policy ?? database ?? 500;
       const code = errorCodeOf(error);
-      this.#send(res, status, { ok: false, error: { code, message: errorMessageOf(error) } }, requestId);
+      // ⭐⭐⭐ The client gets a DECLARED code and a DECLARED message ⇒ ⇒
+      //   ⇒ ⇒ and the raw text of the engine stays in the log below ⇒ ⇒
+      //   ⇒ ⇒ (the review of the wave · finding #1).
+      this.#send(
+        res,
+        status,
+        { ok: false, error: { code: clientCodeOf(error, status), message: clientMessageOf(error, status) } },
+        requestId,
+      );
       // ⭐ The log carries the code and the status, never the message
       //   body and never the request content.
       // ⭐ A 4xx is an answer (the request was refused), a 5xx is a
@@ -575,7 +676,11 @@ export class WaslApiServer {
     if (method === 'GET' && UI_FILES[path]) {
       const entry = UI_FILES[path]!;
       const content = fs.readFileSync(nodePath.join(UI_DIR, entry.file));
-      return { status: 200, body: content.toString('utf8'), contentType: entry.type };
+      return {
+        status: 200,
+        body: withoutLocalPasscode(content.toString('utf8'), entry.type, this.#config.profile),
+        contentType: entry.type,
+      };
     }
     if (method === 'POST' && path === '/api/session') {
       return this.#login(req);
@@ -809,21 +914,29 @@ export class WaslApiServer {
       db_ok: dbOk,
       schema_version: schemaVersion,
       uptime_ms: Date.now() - this.#startedAt,
-      rate_limit: {
-        max_account_attempts: this.#config.rateLimit.maxAccountAttempts,
-        max_tenant_attempts: this.#config.rateLimit.maxTenantAttempts,
-        max_global_attempts: this.#config.rateLimit.maxGlobalAttempts,
-        max_peer_attempts: this.#config.rateLimit.maxPeerAttempts,
-        window_seconds: this.#config.rateLimit.windowSeconds,
-        trust_peer_address: this.#config.rateLimit.trustPeerAddress,
-        // ⭐⭐ D-070 / M-73: the admission control is the real ceiling.
-        global_rate_per_second: this.#config.rateLimit.globalRatePerSecond,
-        global_burst: this.#config.rateLimit.globalBurst,
-        tenant_rate_per_second: this.#config.rateLimit.tenantRatePerSecond,
-        tenant_burst: this.#config.rateLimit.tenantBurst,
-        degraded_wait_ms: this.#config.rateLimit.degradedWaitMs,
-        max_wait_ms: this.#config.rateLimit.maxWaitMs,
-      },
+      // ⭐⭐⭐ The ceilings of the protection are LOCAL information ⇒ ⭐⭐⭐
+      //   The review of the wave (finding #7) measured that the health
+      //   endpoint published them WITHOUT a session ⇒ ⇒ ⇒ ⇒ ⇒ so in the
+      //   profile that faces the outside (staging) it publishes the MODE
+      //   only ⇒ ⇒ ⇒ ⇒ ⇒ and the local profiles keep the detail (it is
+      //   the operator's own screen, and the probe needs no session).
+      rate_limit: this.#config.profile === 'staging'
+        ? { mode: 'enforced' }
+        : {
+            max_account_attempts: this.#config.rateLimit.maxAccountAttempts,
+            max_tenant_attempts: this.#config.rateLimit.maxTenantAttempts,
+            max_global_attempts: this.#config.rateLimit.maxGlobalAttempts,
+            max_peer_attempts: this.#config.rateLimit.maxPeerAttempts,
+            window_seconds: this.#config.rateLimit.windowSeconds,
+            trust_peer_address: this.#config.rateLimit.trustPeerAddress,
+            // ⭐⭐ D-070 / M-73: the admission control is the real ceiling.
+            global_rate_per_second: this.#config.rateLimit.globalRatePerSecond,
+            global_burst: this.#config.rateLimit.globalBurst,
+            tenant_rate_per_second: this.#config.rateLimit.tenantRatePerSecond,
+            tenant_burst: this.#config.rateLimit.tenantBurst,
+            degraded_wait_ms: this.#config.rateLimit.degradedWaitMs,
+            max_wait_ms: this.#config.rateLimit.maxWaitMs,
+          },
     };
     return { status: dbOk ? 200 : 503, body };
   }
@@ -1629,8 +1742,8 @@ export class WaslApiServer {
       sort: ['recent', 'priority', 'state'].includes(url.searchParams.get('sort') ?? '')
         ? (url.searchParams.get('sort') as 'recent' | 'priority' | 'state')
         : 'recent',
-      limit: Number(url.searchParams.get('limit') ?? '25'),
-      offset: Number(url.searchParams.get('offset') ?? '0'),
+      limit: queryNumber(url.searchParams.get('limit'), 25),
+      offset: queryNumber(url.searchParams.get('offset'), 0),
     };
     const page = await readTicketPage(
       this.#pool,
@@ -2279,8 +2392,6 @@ export class WaslApiServer {
       return { status: 403, body: { ok: false, error: { code: decision.code, message: decision.reason } } };
     }
     const query = url.searchParams.get('q');
-    const limit = Number(url.searchParams.get('limit') ?? '25');
-    const offset = Number(url.searchParams.get('offset') ?? '0');
     const filters: CrmCustomerFilters = {
       ...(query !== null ? { query } : {}),
       actorId: context.session.actorId,
@@ -2291,8 +2402,8 @@ export class WaslApiServer {
       sort: ['name', 'recent', 'conversations'].includes(url.searchParams.get('sort') ?? '')
         ? (url.searchParams.get('sort') as string)
         : 'name',
-      limit: Number.isFinite(limit) ? limit : 25,
-      offset: Number.isFinite(offset) ? offset : 0,
+      limit: queryNumber(url.searchParams.get('limit'), 25),
+      offset: queryNumber(url.searchParams.get('offset'), 0),
     };
     const page = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
       listCustomers(uow, context.session.tenantId, filters),
@@ -2554,8 +2665,8 @@ export class WaslApiServer {
         : {}),
       actorId: context.session.actorId,
       role: context.session.role,
-      limit: Number(url.searchParams.get('limit') ?? '50'),
-      offset: Number(url.searchParams.get('offset') ?? '0'),
+      limit: queryNumber(url.searchParams.get('limit'), 50),
+      offset: queryNumber(url.searchParams.get('offset'), 0),
     };
     const page = await UnitOfWork.run(this.#pool, context.session.tenantId, (uow) =>
       listInboxConversations(uow, context.session.tenantId, filters),

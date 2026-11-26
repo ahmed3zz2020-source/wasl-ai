@@ -18,6 +18,15 @@ async function main(): Promise<void> {
   // The journey must not depend on the order of the commands: the
   // privacy suite deletes the synthetic rows of a tenant, so the
   // migrations and the seed are applied before every journey run.
+  // ⭐⭐⭐ The secret of the owner of the tables is its own ⇒ ⭐ if it is
+  //   missing ⇒ the journey says so with a declared error ⇒ ⇒ ⇒ ⇒ (the
+  //   review of the wave · finding #5) ⇒ ⇒ ⇒ ⇒ ⇒ and it never falls back
+  //   to the secret of the application.
+  if (config.ownerDatabaseUrl === null) {
+    throw new Error(
+      'pg_owner_password_missing: the secret of the owner of the tables is not available (WASL_PG_OWNER_PASSWORD)',
+    );
+  }
   const seedPool = createPool(config.ownerDatabaseUrl, 2);
   try {
     await runMigrations(seedPool);

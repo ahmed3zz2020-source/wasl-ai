@@ -48,3 +48,5 @@ credentials written to .local/pg-credentials.json (git ignored)
 ⛔ a public run needs: a provider · a domain · the secrets · the owner signature.
 
 {"ts":"2026-11-26T03:50:15.040Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_ab43d4ab8d4ee424","method":"GET","path":"/api/health","status":200,"duration_ms":12}
+{"ts":"2026-11-26T03:51:47.213Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_7fc02ea8d3e5052f","method":"GET","path":"/api/health","status":200,"duration_ms":12}
+{"ts":"2026-11-26T03:51:47.224Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_227b7766d35b02f1","method":"GET","path":"/ui/index.html","status":200,"duration_ms":1}
