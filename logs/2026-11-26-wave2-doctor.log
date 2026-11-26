@@ -1,0 +1,70 @@
+# the doctor — 2026-11-26 (wave 2)
+
+> wasl-ai@0.1.0 doctor
+> node --experimental-strip-types tools/wasl-doctor.ts
+
+
+⭐ WASL AI — the doctor of the readiness (it changes nothing)
+
+① ⭐ the runtime
+  ✅ Node — v22.19.0
+  ✅ PostgreSQL — 127.0.0.1:5432
+  ✅ the credentials of the database — .local/pg-credentials.json
+  ✅ the database of the service — wasl_local · the profile development
+
+② ⭐ the service
+  ✅ the service is already running on this port — 127.0.0.1:8787 · the db ok: true · the schema 008_phase04_tickets
+  ✅ the health endpoint exists — /api/health
+  ✅ the interface is served by the service — /ui/*.html
+
+③ ⭐ the interface
+  ✅ the page index.html
+  ✅ the page inbox.html
+  ✅ the page tickets.html
+  ✅ the page crm.html
+  ✅ the dashboard of the worker
+
+④ ⭐ the tools
+  ✅ tools/wasl-run.ts
+  ✅ tools/wasl-doctor.ts
+  ✅ tools/wasl-cost-tracker.ts
+  ✅ tools/wasl-a11y-audit.ts
+  ✅ tools/wasl-db-setup.ts
+  ✅ tools/wasl-db-backup.ts
+  ✅ tools/wasl-db-restore.ts
+  ✅ tools/wasl-db-verify.ts
+  ✅ tools/check-lang.py
+  ✅ tools/published_numbers_audit.py
+  ✅ tools/test_count_audit.py
+  ✅ tools/completion_board.py
+
+⑤ ⭐ the guards (they are run for real)
+  ✅ the language — OK
+  ✅ the published numbers — OK
+  ✅ the count of the tests — OK
+  ✅ the board of the completion — OK
+
+⑥ ⭐ the published state (read, never guessed)
+  ✅ the published tests — 1049 = 1048 pass + 0 fail + 1 skipped
+  ✅ the approved estimate of the project — 47%
+  ✅ the official readiness — 9/21
+  ✅ M75 (the Docker drill) is still BLOCKED
+
+⑦ ⭐ the CI
+  ✅ the workflow of the CI — .github/workflows/ci.yml
+  ✅ the guards run on every push — no secret needed
+  ✅ the full test job waits for ONE secret — the settings of the repository
+
+⑧ ⭐⭐ the PUBLIC run — what is missing and who owns it
+  ⬜ a provider + a database in it — the owner (D-3)
+  ⬜ a domain + a certificate — the owner (D-3)
+  ⬜ the secrets of the production — the owner (D-7)
+  ⬜ the legal basis + the agreement of the data — the owner + a lawyer (D-2)
+  ⬜ the identity of the production — the owner (D-4)
+  ⬜ the channel of the client — the owner (D-5)
+  ⬜ the data of a real client — the owner (D-1)
+  ⬜ the price ceiling of the running — the owner (D-7)
+
+⭐ the summary: 35 ready · 0 broken · ⭐⭐ and the public run needs the owner's signature
+
+# the exit code: 0

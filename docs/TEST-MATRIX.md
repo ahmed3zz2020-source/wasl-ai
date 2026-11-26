@@ -30,14 +30,14 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 620 + 286 + 127 + 16 = 1049 -->
-<!-- wasl:current-total 1049 = 1048 pass + 0 fail + 1 skipped -->
+<!-- wasl:current-partition 672 + 294 + 127 + 16 = 1109 -->
+<!-- wasl:current-total 1109 = 1108 pass + 0 fail + 1 skipped -->
 
 > ⭐⭐ **CURRENT (wave of 26 November 2026)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **620 + 286 + 127 + 16 = 1049** = the number of `npm test` exactly
-> (1048 of the 1049 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **672 + 294 + 127 + 16 = 1109** = the number of `npm test` exactly
+> (1108 of the 1109 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
 > ⭐⭐ **The +20 of this round are the acceptance tests of the new
 > items** (`tests/ui/inbox-session-isolation.test.ts` = 4 ·
@@ -423,6 +423,21 @@ python3 tools/test_count_audit.py --log <run.log> --docs \
 > ⇒ **and the published numbers come from the clean single run above**
 > ⇒ ⇒ ⇒ ⇒ **⇒ «حالة واحدة · قياس واحد · في وقت واحد»**.
 
+
+### ⭐⭐ The measured results of the SECOND wave (٢٦ نوفمبر ٢٠٢٦)
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | ⭐ `npm test` | ⭐ **1109** · **1108 pass** · **0 fail** · **1 skipped** | ⭐ `logs/2026-11-26-wave2-npm-test.log` |
+| ⭐ 1 | ⭐ `npm run test:unit` | ⭐ **672/672** | ⭐ `logs/2026-11-26-wave2-npm-test-group-unit.log` |
+| ⭐ 2 | ⭐ `npm run test:integration` | ⭐ **294** | ⭐ `logs/2026-11-26-wave2-npm-test-group-integration.log` |
+| ⭐ 3 | ⭐ `npm run test:security` | ⭐ **127/127** | ⭐ `logs/2026-11-26-wave2-npm-test-group-security.log` |
+| ⭐ 4 | ⭐ `npm run test:recovery` | ⭐ **16/16** | ⭐ `logs/2026-11-26-wave2-npm-test-group-recovery.log` |
+
+> ⭐ **The +60 of this wave** are the acceptance drills of the six findings (8)
+> => ⇒ the knowledge module (44) and the production gate (8)
+> => ⇒ ⇒ the unit group (+52) and the integration group (+8) moved
+> => ⇒ ⇒ ⇒ and the security and the recovery groups did not move.
 ## 8. ⭐ The history of the phases (the measurements are NOT rewritten)
 
 > ⭐⭐ **M96**: the current table of the groups is §1 and the history is

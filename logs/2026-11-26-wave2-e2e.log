@@ -1,0 +1,42 @@
+# the end to end journey — 2026-11-26 (wave 2)
+
+> wasl-ai@0.1.0 e2e
+> node --experimental-strip-types tools/wasl-e2e-journey.ts
+
+local api started on 127.0.0.1:8788
+{"ts":"2026-11-26T16:26:17.474Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_c14e15f74d02b605","method":"POST","path":"/api/session","status":200,"duration_ms":100}
+{"ts":"2026-11-26T16:26:17.483Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_27842bee507d155c","method":"GET","path":"/api/session","status":200,"duration_ms":6}
+{"ts":"2026-11-26T16:26:17.493Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_99a97b29d7287683","method":"POST","path":"/api/customers","status":201,"duration_ms":9}
+{"ts":"2026-11-26T16:26:17.504Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_fb296011ab861135","method":"POST","path":"/api/conversations","status":201,"duration_ms":10}
+{"ts":"2026-11-26T16:26:17.516Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_add3de830a76a033","method":"POST","path":"/api/conversations/conv_e2e_mwxrlevs/messages","status":201,"duration_ms":11}
+{"ts":"2026-11-26T16:26:17.528Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_326e3ded3cca7047","method":"POST","path":"/api/conversations/conv_e2e_mwxrlevs/state","status":200,"duration_ms":11}
+{"ts":"2026-11-26T16:26:17.541Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_88b6c67b0a2efb5a","method":"POST","path":"/api/conversations/conv_e2e_mwxrlevs/assign","status":200,"duration_ms":12}
+{"ts":"2026-11-26T16:26:17.550Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_24d39378f971a0fc","method":"POST","path":"/api/conversations/conv_e2e_mwxrlevs/state","status":409,"duration_ms":8}
+{"ts":"2026-11-26T16:26:17.561Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_17b03886194a1a12","method":"POST","path":"/api/conversations/conv_e2e_mwxrlevs/state","status":200,"duration_ms":10}
+{"ts":"2026-11-26T16:26:17.573Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_96fd8f750f3f991f","method":"POST","path":"/api/conversations/conv_e2e_mwxrlevs/state","status":200,"duration_ms":11}
+{"ts":"2026-11-26T16:26:17.580Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_ed5cffb925023b3a","method":"POST","path":"/api/conversations/conv_e2e_mwxrlevs/state","status":409,"duration_ms":7}
+{"ts":"2026-11-26T16:26:17.606Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_6e2abfcfbfd8596f","method":"GET","path":"/api/conversations/conv_e2e_mwxrlevs/changes","status":200,"duration_ms":26}
+{"ts":"2026-11-26T16:26:17.612Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_aef447e8274a5594","method":"GET","path":"/api/audit","status":200,"duration_ms":5}
+{"ts":"2026-11-26T16:26:17.690Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_7ec39128aedcb232","method":"POST","path":"/api/session","status":200,"duration_ms":77}
+{"ts":"2026-11-26T16:26:17.696Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_3d308c8048aeb699","method":"GET","path":"/api/conversations/conv_e2e_mwxrlevs","status":404,"duration_ms":5}
+{"ts":"2026-11-26T16:26:17.706Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_2e55af90e700a9d4","method":"GET","path":"/api/conversations","status":200,"duration_ms":10}
+{"ts":"2026-11-26T16:26:17.741Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_8a57b8235c687395","method":"POST","path":"/api/privacy/export","status":200,"duration_ms":34}
+{"ts":"2026-11-26T16:26:17.755Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_0ff8dd69fa2750c4","method":"POST","path":"/api/privacy/deletion/preview","status":200,"duration_ms":13}
+PASS  1. login creates a session (expected 200 + token, got 200) - session created
+PASS  2. session resolves to a membership (expected 200 + role from the database, got 200) - role=owner
+PASS  3. create a synthetic customer (expected 201, got 201) - cus_e2e_mwxrlez0
+PASS  4. create a conversation with a first message (expected 201, got 201) - conv_e2e_mwxrlevs
+PASS  5. message is classified by the local rules and the reply is stored but not sent (expected 201 + intent + reply + reply_sent=false, got 201) - intent=general sent=false
+PASS  6. transition new -> open (expected 200, got 200) - unknown_error
+PASS  7. assign the conversation to an employee (expected 200, got 200) - unknown_error
+PASS  8. an illegal transition is refused (expected 409 + transition_not_allowed, got 409) - transition_not_allowed
+PASS  9. the legal path closes the conversation (resolved -> closed) (expected 200, got 200) - unknown_error
+PASS 10. a closed conversation refuses every further change (expected 409 + terminal, got 409) - state_terminal
+PASS 11. the change log records every transition (expected 200 + at least 3 entries, got 200) - entries=4
+PASS 12. the audit trail is readable and non empty (expected 200 + entries, got 200) - entries=8
+PASS 13. another company cannot read the conversation (expected 404/403 and no leak, got 0) - status=404 conversation_not_found
+PASS 14. the tenant can export its own data (expected 200 + messages, got 200) - messages=4
+PASS 15. the deletion preview shows the impact without deleting (expected 200 + counts, got 200) - messages=4
+
+JOURNEY OK
+# the exit code: 0

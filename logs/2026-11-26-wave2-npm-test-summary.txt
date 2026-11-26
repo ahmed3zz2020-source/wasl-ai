@@ -1,0 +1,16 @@
+the measured SHA: e9385cb11f15148d63e3fc89f420c3b7ff5a3dd5
+--- logs/2026-11-26-wave2-npm-test.log
+# tests 1109 # pass 1108 # fail 0 # cancelled 0 # skipped 1 # todo 0 
+# the exit code: 0
+--- logs/2026-11-26-wave2-npm-test-group-unit.log
+# tests 672 # pass 672 # fail 0 # cancelled 0 # skipped 0 # todo 0 
+# the exit code: 0
+--- logs/2026-11-26-wave2-npm-test-group-integration.log
+# tests 294 # pass 293 # fail 0 # cancelled 0 # skipped 1 # todo 0 
+# the exit code: 0
+--- logs/2026-11-26-wave2-npm-test-group-security.log
+# tests 127 # pass 127 # fail 0 # cancelled 0 # skipped 0 # todo 0 
+# the exit code: 0
+--- logs/2026-11-26-wave2-npm-test-group-recovery.log
+# tests 16 # pass 16 # fail 0 # cancelled 0 # skipped 0 # todo 0 
+# the exit code: 0

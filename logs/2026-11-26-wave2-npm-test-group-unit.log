@@ -1,0 +1,4181 @@
+# ============================================================
+# WASL AI — the group unit (26 November 2026)
+# the measured SHA: e9385cb11f15148d63e3fc89f420c3b7ff5a3dd5
+# ============================================================
+
+> wasl-ai@0.1.0 test:unit
+> node --experimental-strip-types --test tests/slice-01.test.ts tests/slice-01.offline.test.ts tests/slice-01.separation.test.ts tests/slice-02.test.ts tests/contract-freeze.test.ts tests/slice-03.test.ts tests/slice-04.test.ts tests/slice-04-closing.test.ts tests/conversation-atomicity.test.ts tests/slice-05.test.ts tests/first-response.test.ts tests/workbench-snapshot.test.ts tests/slice-07.test.ts tests/core-integrity.test.ts tests/tenant-isolation.test.ts tests/security-hardening.test.ts tests/slice-08.test.ts tests/slice-09-0.test.ts tests/slice-09-0-eviction.test.ts tests/acceptance-journey.test.ts tests/tools/test-count-audit.test.ts tests/tools/platform-budget-audit.test.ts tests/tools/open-decisions-guard.test.ts tests/tools/reply-rights-table.test.ts tests/tools/published-numbers.test.ts tests/tools/completion-board.test.ts tests/tools/a11y-audit.test.ts tests/tools/cost-tracker.test.ts tests/knowledge/kno-index.test.ts tests/knowledge/kno-retrieve.test.ts tests/knowledge/kno-source.test.ts tests/knowledge/kno-refusal.test.ts tests/knowledge/kno-determinism.test.ts tests/knowledge/kno-normalization.test.ts tests/production/production-check.test.ts
+
+TAP version 13
+# Subtest: ACC-01) ⭐⭐⭐ فاتورة عادية ⇒ نية billing · أولوية normal · إسناد للموظّف · الحالة pending
+ok 1 - ACC-01) ⭐⭐⭐ فاتورة عادية ⇒ نية billing · أولوية normal · إسناد للموظّف · الحالة pending
+  ---
+  duration_ms: 8.983631
+  type: 'test'
+  ...
+# Subtest: ACC-02) ⭐⭐⭐ مشكلة تقنية ⇒ نية technical (التصنيف حتمي بالقوالب)
+ok 2 - ACC-02) ⭐⭐⭐ مشكلة تقنية ⇒ نية technical (التصنيف حتمي بالقوالب)
+  ---
+  duration_ms: 1.583532
+  type: 'test'
+  ...
+# Subtest: ACC-03) ⭐⭐⭐ استفسار شحن ⇒ نية delivery
+ok 3 - ACC-03) ⭐⭐⭐ استفسار شحن ⇒ نية delivery
+  ---
+  duration_ms: 1.660972
+  type: 'test'
+  ...
+# Subtest: ACC-04) ⭐⭐⭐⭐ طلب عاجل ⇒ أولوية high ⇒ تصعيد للمشرف (لا للموظّف)
+ok 4 - ACC-04) ⭐⭐⭐⭐ طلب عاجل ⇒ أولوية high ⇒ تصعيد للمشرف (لا للموظّف)
+  ---
+  duration_ms: 16.08591
+  type: 'test'
+  ...
+# Subtest: ACC-05) ⭐⭐⭐ رسالة عامة ⇒ نية general (بلا كلمات مطابقة)
+ok 5 - ACC-05) ⭐⭐⭐ رسالة عامة ⇒ نية general (بلا كلمات مطابقة)
+  ---
+  duration_ms: 1.32646
+  type: 'test'
+  ...
+# Subtest: ACC-06) ⭐⭐⭐⭐ الحتمية: نفس النص ⇒ نفس النتيجة بالضبط (مقيس مرتين)
+ok 6 - ACC-06) ⭐⭐⭐⭐ الحتمية: نفس النص ⇒ نفس النتيجة بالضبط (مقيس مرتين)
+  ---
+  duration_ms: 2.053328
+  type: 'test'
+  ...
+# Subtest: ACC-07) ⭐⭐⭐⭐ بوّابة الهوية (M54): إثبات مصنوع ⇒ رفضٌ صريح بلا تنفيذ
+ok 7 - ACC-07) ⭐⭐⭐⭐ بوّابة الهوية (M54): إثبات مصنوع ⇒ رفضٌ صريح بلا تنفيذ
+  ---
+  duration_ms: 0.422414
+  type: 'test'
+  ...
+# Subtest: ACC-08) ⭐⭐⭐⭐ انتقال غير مسموح ⇒ رفض من النواة (transition_not_allowed)
+ok 8 - ACC-08) ⭐⭐⭐⭐ انتقال غير مسموح ⇒ رفض من النواة (transition_not_allowed)
+  ---
+  duration_ms: 1.078551
+  type: 'test'
+  ...
+# Subtest: ACC-09) ⭐⭐⭐⭐ العزل: مستأجر آخر لا يرى محادثات المستأجر الأول (بلا تسريب)
+ok 9 - ACC-09) ⭐⭐⭐⭐ العزل: مستأجر آخر لا يرى محادثات المستأجر الأول (بلا تسريب)
+  ---
+  duration_ms: 0.662599
+  type: 'test'
+  ...
+# Subtest: ACC-10) ⭐⭐⭐⭐ الحالة النهائية: بعد closed ⇒ لا تعديل ولا إسناد (رفض من النواة)
+ok 10 - ACC-10) ⭐⭐⭐⭐ الحالة النهائية: بعد closed ⇒ لا تعديل ولا إسناد (رفض من النواة)
+  ---
+  duration_ms: 1.486114
+  type: 'test'
+  ...
+# Subtest: ACC-11) ⭐⭐⭐ لا إرسال: الردّ يُخزَّن محلياً فقط (رسالة واردة + رسالة صادرة)
+ok 11 - ACC-11) ⭐⭐⭐ لا إرسال: الردّ يُخزَّن محلياً فقط (رسالة واردة + رسالة صادرة)
+  ---
+  duration_ms: 1.058404
+  type: 'test'
+  ...
+# Subtest: ACC-12) ⭐⭐⭐ (M57) إصدار بلا سجلّ هوية ⇒ رفضٌ صريح (registry_missing)
+ok 12 - ACC-12) ⭐⭐⭐ (M57) إصدار بلا سجلّ هوية ⇒ رفضٌ صريح (registry_missing)
+  ---
+  duration_ms: 0.571336
+  type: 'test'
+  ...
+# Subtest: ACC-13) ⭐⭐⭐ (M57) رمز `identity_status_invalid` معلَن بلا مسار وصول (مقيس)
+ok 13 - ACC-13) ⭐⭐⭐ (M57) رمز `identity_status_invalid` معلَن بلا مسار وصول (مقيس)
+  ---
+  duration_ms: 0.228501
+  type: 'test'
+  ...
+# Subtest: ACC-14) ⭐⭐⭐ (M57) إصدار لهوية ملغاة ⇒ رفضٌ صريح (identity_revoked)
+ok 14 - ACC-14) ⭐⭐⭐ (M57) إصدار لهوية ملغاة ⇒ رفضٌ صريح (identity_revoked)
+  ---
+  duration_ms: 0.309436
+  type: 'test'
+  ...
+# Subtest: ACC-15) ⭐⭐⭐ (M57) إصدار لهوية منتهية ⇒ رفضٌ صريح (identity_expired)
+ok 15 - ACC-15) ⭐⭐⭐ (M57) إصدار لهوية منتهية ⇒ رفضٌ صريح (identity_expired)
+  ---
+  duration_ms: 0.267268
+  type: 'test'
+  ...
+# Subtest: ACC-16) ⭐⭐⭐⭐ (M57) إعادة التحقّق من السجلّ عند كل تقييم (٤ فروع · مقياس)
+ok 16 - ACC-16) ⭐⭐⭐⭐ (M57) إعادة التحقّق من السجلّ عند كل تقييم (٤ فروع · مقياس)
+  ---
+  duration_ms: 0.418388
+  type: 'test'
+  ...
+# Subtest: ACC-17) ⭐⭐⭐ (M57) الفصل البنيوي وحده: غياب الإثبات ⇒ shape_missing (بلا ثقة)
+ok 17 - ACC-17) ⭐⭐⭐ (M57) الفصل البنيوي وحده: غياب الإثبات ⇒ shape_missing (بلا ثقة)
+  ---
+  duration_ms: 0.162086
+  type: 'test'
+  ...
+# Subtest: ١) تجميد عقد MessageEnvelope للإصدار 1 ورفض الإصدارات غير المدعومة
+    # Subtest: ⭐ رقم الإصدار المجمَّد = "1"
+    ok 1 - ⭐ رقم الإصدار المجمَّد = "1"
+      ---
+      duration_ms: 0.765695
+      type: 'test'
+      ...
+    # Subtest: ⭐ قائمة الإصدارات المدعومة = ["1"] فقط
+    ok 2 - ⭐ قائمة الإصدارات المدعومة = ["1"] فقط
+      ---
+      duration_ms: 0.899903
+      type: 'test'
+      ...
+    # Subtest: ⭐ شكل العقد = ١٢ حقلاً بالترتيب والإلزامية المجمَّدة
+    ok 3 - ⭐ شكل العقد = ١٢ حقلاً بالترتيب والإلزامية المجمَّدة
+      ---
+      duration_ms: 0.476696
+      type: 'test'
+      ...
+    # Subtest: ⭐ الحقول الإلزامية هي ١١ والحقل الاختياري واحد
+    ok 4 - ⭐ الحقول الإلزامية هي ١١ والحقل الاختياري واحد
+      ---
+      duration_ms: 0.204536
+      type: 'test'
+      ...
+    # Subtest: ⭐ الرسالة الصالحة بالإصدار 1 تُقبل كما هي
+    ok 5 - ⭐ الرسالة الصالحة بالإصدار 1 تُقبل كما هي
+      ---
+      duration_ms: 1.104642
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ إصدار غير مدعوم ("2") ⇒ رفض صريح بقاعدة معلنة
+    ok 6 - ⭐⭐ إصدار غير مدعوم ("2") ⇒ رفض صريح بقاعدة معلنة
+      ---
+      duration_ms: 0.602276
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ كل إصدار خارج القائمة المدعومة مرفوض (0 · 2 · ١٠ · v1)
+    ok 7 - ⭐⭐ كل إصدار خارج القائمة المدعومة مرفوض (0 · 2 · ١٠ · v1)
+      ---
+      duration_ms: 0.58725
+      type: 'test'
+      ...
+    # Subtest: ⭐ الإصدار الفارغ/المفقود مرفوض (لا تمرير صامت)
+    ok 8 - ⭐ الإصدار الفارغ/المفقود مرفوض (لا تمرير صامت)
+      ---
+      duration_ms: 0.381874
+      type: 'test'
+      ...
+    # Subtest: ⭐ نتيجة المعالجة: ٩ أسباب مغلقة بلا تغيّر صامت
+    ok 9 - ⭐ نتيجة المعالجة: ٩ أسباب مغلقة بلا تغيّر صامت
+      ---
+      duration_ms: 0.384656
+      type: 'test'
+      ...
+    # Subtest: ⭐ صفر محاولة اتصال (الحاجز مُركَّب)
+    ok 10 - ⭐ صفر محاولة اتصال (الحاجز مُركَّب)
+      ---
+      duration_ms: 0.301114
+      type: 'test'
+      ...
+    1..10
+ok 18 - ١) تجميد عقد MessageEnvelope للإصدار 1 ورفض الإصدارات غير المدعومة
+  ---
+  duration_ms: 8.901274
+  type: 'test'
+  ...
+# Subtest: ١) ⭐ فشل تسجيل التغيير ⇒ لا تغيير في الحالة ولا سطر في السجل
+    # Subtest: ⭐⭐⭐⭐⭐ الاستثناء مرمي + لا صف حالة + صفر سطر
+    ok 1 - ⭐⭐⭐⭐⭐ الاستثناء مرمي + لا صف حالة + صفر سطر
+      ---
+      duration_ms: 5.557944
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ المحاولة الفاشلة لا تُسجَّل في سجل القراءة
+    ok 2 - ⭐⭐⭐⭐⭐ المحاولة الفاشلة لا تُسجَّل في سجل القراءة
+      ---
+      duration_ms: 0.743944
+      type: 'test'
+      ...
+    1..2
+ok 19 - ١) ⭐ فشل تسجيل التغيير ⇒ لا تغيير في الحالة ولا سطر في السجل
+  ---
+  duration_ms: 7.527087
+  type: 'test'
+  ...
+# Subtest: ٢) ⭐ فشل تسجيل التغيير ⇒ لا إسناد (ولا تغيير حالة)
+    # Subtest: ⭐⭐⭐⭐⭐ الإسناد مرفوض + الحالة كما كانت + سجل واحد فقط
+    ok 1 - ⭐⭐⭐⭐⭐ الإسناد مرفوض + الحالة كما كانت + سجل واحد فقط
+      ---
+      duration_ms: 1.641648
+      type: 'test'
+      ...
+    1..1
+ok 20 - ٢) ⭐ فشل تسجيل التغيير ⇒ لا إسناد (ولا تغيير حالة)
+  ---
+  duration_ms: 15.164055
+  type: 'test'
+  ...
+# Subtest: ٣) ⭐ مدخل غير صالح ⇒ لا كتابة على الإطلاق (الرفض قبل `setState`)
+    # Subtest: ⭐⭐⭐⭐⭐ `actor_id` مخالف للنمط ⇒ رفض + لا حالة + لا سجل
+    ok 1 - ⭐⭐⭐⭐⭐ `actor_id` مخالف للنمط ⇒ رفض + لا حالة + لا سجل
+      ---
+      duration_ms: 2.827688
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ سبب مرفوض (يشبه سرّاً) ⇒ لا كتابة (ضمان D-056 محفوظ)
+    ok 2 - ⭐⭐⭐⭐⭐ سبب مرفوض (يشبه سرّاً) ⇒ لا كتابة (ضمان D-056 محفوظ)
+      ---
+      duration_ms: 0.581182
+      type: 'test'
+      ...
+    1..2
+ok 21 - ٣) ⭐ مدخل غير صالح ⇒ لا كتابة على الإطلاق (الرفض قبل `setState`)
+  ---
+  duration_ms: 3.887859
+  type: 'test'
+  ...
+# Subtest: ٤) ⭐ النجاح العادي ⇒ تغيير واحد + سجل واحد مطابق
+    # Subtest: ⭐⭐⭐⭐⭐ السجل يطابق التغيير (العملية · من · إلى · الموظف · السبب)
+    ok 1 - ⭐⭐⭐⭐⭐ السجل يطابق التغيير (العملية · من · إلى · الموظف · السبب)
+      ---
+      duration_ms: 1.003705
+      type: 'test'
+      ...
+    1..1
+ok 22 - ٤) ⭐ النجاح العادي ⇒ تغيير واحد + سجل واحد مطابق
+  ---
+  duration_ms: 1.724496
+  type: 'test'
+  ...
+# Subtest: ٥) ⭐ التعارض (expectedVersion) ⇒ لا تغيير ولا سطر جديد
+    # Subtest: ⭐⭐⭐⭐⭐ `state_conflict` + الحالة كما كانت + السجل كما كان
+    ok 1 - ⭐⭐⭐⭐⭐ `state_conflict` + الحالة كما كانت + السجل كما كان
+      ---
+      duration_ms: 0.59806
+      type: 'test'
+      ...
+    1..1
+ok 23 - ٥) ⭐ التعارض (expectedVersion) ⇒ لا تغيير ولا سطر جديد
+  ---
+  duration_ms: 1.00874
+  type: 'test'
+  ...
+# Subtest: ٦) ⭐⭐⭐ الضمان مُثبَّت بنيوياً (حارس على الكود — لا على النية)
+    # Subtest: ⭐⭐⭐⭐⭐ التحقّق المسبق قبل `setState`
+    ok 1 - ⭐⭐⭐⭐⭐ التحقّق المسبق قبل `setState`
+      ---
+      duration_ms: 1.487303
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ التراجع المُعوَّض موجود عند فشل التسجيل
+    ok 2 - ⭐⭐⭐⭐⭐ التراجع المُعوَّض موجود عند فشل التسجيل
+      ---
+      duration_ms: 1.245885
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ فحوص السجل في دالة واحدة (لا ازدواج ولا فجوة)
+    ok 3 - ⭐⭐⭐⭐⭐ فحوص السجل في دالة واحدة (لا ازدواج ولا فجوة)
+      ---
+      duration_ms: 0.999946
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ حدود الضمان (C4): لا `await` داخل مسار الكتابة
+    ok 4 - ⭐⭐⭐⭐⭐ حدود الضمان (C4): لا `await` داخل مسار الكتابة
+      ---
+      duration_ms: 2.459539
+      type: 'test'
+      ...
+    1..4
+ok 24 - ٦) ⭐⭐⭐ الضمان مُثبَّت بنيوياً (حارس على الكود — لا على النية)
+  ---
+  duration_ms: 6.708888
+  type: 'test'
+  ...
+# Subtest: ٧) ⭐⭐⭐⭐⭐ صفر اتصال (الحاجز مُركَّب)
+    # Subtest: ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+    ok 1 - ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+      ---
+      duration_ms: 0.80772
+      type: 'test'
+      ...
+    1..1
+ok 25 - ٧) ⭐⭐⭐⭐⭐ صفر اتصال (الحاجز مُركَّب)
+  ---
+  duration_ms: 0.986323
+  type: 'test'
+  ...
+# Subtest: M13) ⭐⭐⭐⭐⭐ حارس سلامة النواة — مقارنة بخطّ أساس ثابت
+    # Subtest: ⭐ خطّ الأساس مُثبَّت في قرار المالك (لا ينحرف صامتاً)
+    ok 1 - ⭐ خطّ الأساس مُثبَّت في قرار المالك (لا ينحرف صامتاً)
+      ---
+      duration_ms: 7.110508
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ خطّ الأساس موجود في تاريخ المستودع وهو سلفٌ لـ`HEAD`
+    ok 2 - ⭐⭐ خطّ الأساس موجود في تاريخ المستودع وهو سلفٌ لـ`HEAD`
+      ---
+      duration_ms: 91.782482
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ `src/core/` لم تتغيّر منذ خطّ الأساس (ملتزم + غير ملتزم)
+    ok 3 - ⭐⭐⭐⭐⭐ `src/core/` لم تتغيّر منذ خطّ الأساس (ملتزم + غير ملتزم)
+      ---
+      duration_ms: 30.21208
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ الطرد: كسر حقيقي في نسخة معزولة ⇒ الحارس يكتشفه
+    ok 4 - ⭐⭐⭐⭐⭐⭐ الطرد: كسر حقيقي في نسخة معزولة ⇒ الحارس يكتشفه
+      ---
+      duration_ms: 20098.276489
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ النسخة المعزولة تُحذف (لا أثر خارج المستودع)
+    ok 5 - ⭐⭐⭐⭐⭐ النسخة المعزولة تُحذف (لا أثر خارج المستودع)
+      ---
+      duration_ms: 1.772216
+      type: 'test'
+      ...
+    1..5
+ok 26 - M13) ⭐⭐⭐⭐⭐ حارس سلامة النواة — مقارنة بخطّ أساس ثابت
+  ---
+  duration_ms: 20231.615938
+  type: 'test'
+  ...
+# Subtest: ١) ⭐ محادثة تبدأ برسالة واردة ثم ردّ صادر ⇒ يُحسب الزمن
+    # Subtest: ⭐⭐⭐⭐⭐ وارد ٠٩:٠٠ + صادر ٠٩:٣٠ ⇒ ٣٠ دقيقة
+    ok 1 - ⭐⭐⭐⭐⭐ وارد ٠٩:٠٠ + صادر ٠٩:٣٠ ⇒ ٣٠ دقيقة
+      ---
+      duration_ms: 5.145215
+      type: 'test'
+      ...
+    1..1
+ok 27 - ١) ⭐ محادثة تبدأ برسالة واردة ثم ردّ صادر ⇒ يُحسب الزمن
+  ---
+  duration_ms: 6.130395
+  type: 'test'
+  ...
+# Subtest: ٢) ⭐⭐ محادثة تبدأ برسالة صادرة ثم واردة ثم ردّ ⇒ يُحسب من الواردة
+    # Subtest: ⭐⭐⭐⭐⭐ صادر ٠٨:٠٠ (ترحيب) + وارد ٠٩:٠٠ + صادر ١٠:٠٠ ⇒ ٦٠ دقيقة
+    ok 1 - ⭐⭐⭐⭐⭐ صادر ٠٨:٠٠ (ترحيب) + وارد ٠٩:٠٠ + صادر ١٠:٠٠ ⇒ ٦٠ دقيقة
+      ---
+      duration_ms: 1.039323
+      type: 'test'
+      ...
+    1..1
+ok 28 - ٢) ⭐⭐ محادثة تبدأ برسالة صادرة ثم واردة ثم ردّ ⇒ يُحسب من الواردة
+  ---
+  duration_ms: 1.450865
+  type: 'test'
+  ...
+# Subtest: ٣) ⭐⭐ عدة رسائل صادرة قبل أول واردة ⇒ تُتجاهل
+    # Subtest: ⭐⭐⭐⭐⭐ صادرتان ٠٨:٠٠ و٠٨:٣٠ + وارد ٠٩:٠٠ + صادر ١٠:٠٠ ⇒ ٦٠ دقيقة
+    ok 1 - ⭐⭐⭐⭐⭐ صادرتان ٠٨:٠٠ و٠٨:٣٠ + وارد ٠٩:٠٠ + صادر ١٠:٠٠ ⇒ ٦٠ دقيقة
+      ---
+      duration_ms: 0.915377
+      type: 'test'
+      ...
+    1..1
+ok 29 - ٣) ⭐⭐ عدة رسائل صادرة قبل أول واردة ⇒ تُتجاهل
+  ---
+  duration_ms: 1.243066
+  type: 'test'
+  ...
+# Subtest: ٤) ⭐⭐ عدة رسائل واردة قبل أول ردّ ⇒ من أول واردة
+    # Subtest: ⭐⭐⭐⭐⭐ وارد ٠٨:٠٠ + وارد ٠٨:٣٠ + صادر ٠٩:٣٠ ⇒ ٩٠ دقيقة
+    ok 1 - ⭐⭐⭐⭐⭐ وارد ٠٨:٠٠ + وارد ٠٨:٣٠ + صادر ٠٩:٣٠ ⇒ ٩٠ دقيقة
+      ---
+      duration_ms: 2.678286
+      type: 'test'
+      ...
+    1..1
+ok 30 - ٤) ⭐⭐ عدة رسائل واردة قبل أول ردّ ⇒ من أول واردة
+  ---
+  duration_ms: 2.920108
+  type: 'test'
+  ...
+# Subtest: ٥) ⭐ محادثة دون ردّ ⇒ لا قيمة (لا صفر بديل)
+    # Subtest: ⭐⭐⭐⭐⭐ وارد فقط ⇒ `undefined`
+    ok 1 - ⭐⭐⭐⭐⭐ وارد فقط ⇒ `undefined`
+      ---
+      duration_ms: 0.781393
+      type: 'test'
+      ...
+    1..1
+ok 31 - ٥) ⭐ محادثة دون ردّ ⇒ لا قيمة (لا صفر بديل)
+  ---
+  duration_ms: 1.447921
+  type: 'test'
+  ...
+# Subtest: ٦) ⭐ محادثة دون رسالة واردة ⇒ لا قيمة
+    # Subtest: ⭐⭐⭐⭐⭐ صادرة فقط ⇒ `undefined` (لا نقطة بداية)
+    ok 1 - ⭐⭐⭐⭐⭐ صادرة فقط ⇒ `undefined` (لا نقطة بداية)
+      ---
+      duration_ms: 0.410232
+      type: 'test'
+      ...
+    1..1
+ok 32 - ٦) ⭐ محادثة دون رسالة واردة ⇒ لا قيمة
+  ---
+  duration_ms: 0.737132
+  type: 'test'
+  ...
+# Subtest: ٧) ⭐⭐ تساوي التوقيتات أو ترتيب غير متوقّع
+    # Subtest: ⭐⭐⭐⭐⭐ طابع متساوٍ ⇒ الرسالة الثانية تُؤجَّل عند الإدخال ⇒ `undefined`
+    ok 1 - ⭐⭐⭐⭐⭐ طابع متساوٍ ⇒ الرسالة الثانية تُؤجَّل عند الإدخال ⇒ `undefined`
+      ---
+      duration_ms: 0.375318
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ ترتيب غير متوقّع (واردة متأخرة زمنياً) ⇒ تُؤجَّل ⇒ `undefined`
+    ok 2 - ⭐⭐⭐⭐⭐ ترتيب غير متوقّع (واردة متأخرة زمنياً) ⇒ تُؤجَّل ⇒ `undefined`
+      ---
+      duration_ms: 0.351639
+      type: 'test'
+      ...
+    1..2
+ok 33 - ٧) ⭐⭐ تساوي التوقيتات أو ترتيب غير متوقّع
+  ---
+  duration_ms: 1.007968
+  type: 'test'
+  ...
+# Subtest: ٨) ⭐⭐⭐ عدم تسريب نصوص الرسائل
+    # Subtest: ⭐⭐⭐⭐⭐ لا نصّ رسالة في مخرجات المؤشرات
+    ok 1 - ⭐⭐⭐⭐⭐ لا نصّ رسالة في مخرجات المؤشرات
+      ---
+      duration_ms: 0.794014
+      type: 'test'
+      ...
+    1..1
+ok 34 - ٨) ⭐⭐⭐ عدم تسريب نصوص الرسائل
+  ---
+  duration_ms: 0.987421
+  type: 'test'
+  ...
+# Subtest: ٩) ⭐⭐⭐⭐⭐ العزل والصلاحيات محفوظان + صفر اتصال
+    # Subtest: ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+    ok 1 - ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+      ---
+      duration_ms: 0.765759
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ المؤشرات ما زالت تتطلّب صلاحية صريحة
+    ok 2 - ⭐⭐⭐⭐⭐ المؤشرات ما زالت تتطلّب صلاحية صريحة
+      ---
+      duration_ms: 0.811029
+      type: 'test'
+      ...
+    1..2
+ok 35 - ٩) ⭐⭐⭐⭐⭐ العزل والصلاحيات محفوظان + صفر اتصال
+  ---
+  duration_ms: 1.862876
+  type: 'test'
+  ...
+# Subtest: the same question gives the same result
+ok 36 - the same question gives the same result
+  ---
+  duration_ms: 9.66628
+  type: 'test'
+  ...
+# Subtest: the same question gives the same answer, word for word
+ok 37 - the same question gives the same answer, word for word
+  ---
+  duration_ms: 3.585294
+  type: 'test'
+  ...
+# Subtest: the same question gives the same result in a fresh index
+ok 38 - the same question gives the same result in a fresh index
+  ---
+  duration_ms: 13.131543
+  type: 'test'
+  ...
+# Subtest: the index built twice from the same folder is the same index
+ok 39 - the index built twice from the same folder is the same index
+  ---
+  duration_ms: 59.545523
+  type: 'test'
+  ...
+# Subtest: the order of the words of the question does not change the winner
+ok 40 - the order of the words of the question does not change the winner
+  ---
+  duration_ms: 3.679612
+  type: 'test'
+  ...
+# Subtest: the two spellings of the same word give the same result
+ok 41 - the two spellings of the same word give the same result
+  ---
+  duration_ms: 3.588165
+  type: 'test'
+  ...
+# Subtest: the refusal of a question without an answer is the same every time
+ok 42 - the refusal of a question without an answer is the same every time
+  ---
+  duration_ms: 0.490414
+  type: 'test'
+  ...
+# Subtest: the index is built from the files of the knowledge folder
+ok 43 - the index is built from the files of the knowledge folder
+  ---
+  duration_ms: 33.450096
+  type: 'test'
+  ...
+# Subtest: every document of the index carries a title, tags and sections
+ok 44 - every document of the index carries a title, tags and sections
+  ---
+  duration_ms: 12.198565
+  type: 'test'
+  ...
+# Subtest: every chunk of the index carries its source
+ok 45 - every chunk of the index carries its source
+  ---
+  duration_ms: 16.161142
+  type: 'test'
+  ...
+# Subtest: a file without a title is refused with its place and its reason
+ok 46 - a file without a title is refused with its place and its reason
+  ---
+  duration_ms: 2.642357
+  type: 'test'
+  ...
+# Subtest: a file without tags is refused
+ok 47 - a file without tags is refused
+  ---
+  duration_ms: 0.857517
+  type: 'test'
+  ...
+# Subtest: a file without a section is refused
+ok 48 - a file without a section is refused
+  ---
+  duration_ms: 0.786014
+  type: 'test'
+  ...
+# Subtest: an empty section is refused with the line of the section
+ok 49 - an empty section is refused with the line of the section
+  ---
+  duration_ms: 0.874384
+  type: 'test'
+  ...
+# Subtest: every broken file is listed at once and the index is not built
+ok 50 - every broken file is listed at once and the index is not built
+  ---
+  duration_ms: 1.829697
+  type: 'test'
+  ...
+# Subtest: a folder that does not exist is refused with a clear reason
+ok 51 - a folder that does not exist is refused with a clear reason
+  ---
+  duration_ms: 0.58867
+  type: 'test'
+  ...
+# Subtest: an empty folder is refused with a clear reason
+ok 52 - an empty folder is refused with a clear reason
+  ---
+  duration_ms: 0.978832
+  type: 'test'
+  ...
+# Subtest: «العملاء» and «العميل» are one word
+ok 53 - «العملاء» and «العميل» are one word
+  ---
+  duration_ms: 1.35328
+  type: 'test'
+  ...
+# Subtest: the question that says «العملاء» gives the same result as «العميل»
+ok 54 - the question that says «العملاء» gives the same result as «العميل»
+  ---
+  duration_ms: 4.694395
+  type: 'test'
+  ...
+# Subtest: the diacritics do not change the word
+ok 55 - the diacritics do not change the word
+  ---
+  duration_ms: 0.226891
+  type: 'test'
+  ...
+# Subtest: the variants of the alef and of the ya do not change the word
+ok 56 - the variants of the alef and of the ya do not change the word
+  ---
+  duration_ms: 0.179086
+  type: 'test'
+  ...
+# Subtest: the ta marbuta does not change the word
+ok 57 - the ta marbuta does not change the word
+  ---
+  duration_ms: 0.298025
+  type: 'test'
+  ...
+# Subtest: the definition article and the glued preposition do not change the word
+ok 58 - the definition article and the glued preposition do not change the word
+  ---
+  duration_ms: 0.858936
+  type: 'test'
+  ...
+# Subtest: the function words are dropped from the question
+ok 59 - the function words are dropped from the question
+  ---
+  duration_ms: 0.36185
+  type: 'test'
+  ...
+# Subtest: the normalisation keeps the numbers and drops the punctuation
+ok 60 - the normalisation keeps the numbers and drops the punctuation
+  ---
+  duration_ms: 0.178481
+  type: 'test'
+  ...
+# Subtest: a question that the index does not hold is refused
+ok 61 - a question that the index does not hold is refused
+  ---
+  duration_ms: 2.383321
+  type: 'test'
+  ...
+# Subtest: the refusal is exactly «لا إجابة في الفهرس» and it carries no source
+ok 62 - the refusal is exactly «لا إجابة في الفهرس» and it carries no source
+  ---
+  duration_ms: 23.356449
+  type: 'test'
+  ...
+# Subtest: a question of another field is refused too
+ok 63 - a question of another field is refused too
+  ---
+  duration_ms: 0.478539
+  type: 'test'
+  ...
+# Subtest: an empty question is refused with a reason
+ok 64 - an empty question is refused with a reason
+  ---
+  duration_ms: 0.639267
+  type: 'test'
+  ...
+# Subtest: a question of function words only is refused
+ok 65 - a question of function words only is refused
+  ---
+  duration_ms: 0.311962
+  type: 'test'
+  ...
+# Subtest: the refusal never carries a chunk of the index
+ok 66 - the refusal never carries a chunk of the index
+  ---
+  duration_ms: 0.238805
+  type: 'test'
+  ...
+# Subtest: a real Arabic question brings the right chunk
+ok 67 - a real Arabic question brings the right chunk
+  ---
+  duration_ms: 4.19125
+  type: 'test'
+  ...
+# Subtest: a question about the retention brings the section of the retention
+ok 68 - a question about the retention brings the section of the retention
+  ---
+  duration_ms: 2.099119
+  type: 'test'
+  ...
+# Subtest: a question about the export brings the section of the export
+ok 69 - a question about the export brings the section of the export
+  ---
+  duration_ms: 2.233962
+  type: 'test'
+  ...
+# Subtest: the hits are ordered by their score and the score is between 0 and 1
+ok 70 - the hits are ordered by their score and the score is between 0 and 1
+  ---
+  duration_ms: 1.109241
+  type: 'test'
+  ...
+# Subtest: the matched terms are really the terms of the question
+ok 71 - the matched terms are really the terms of the question
+  ---
+  duration_ms: 1.469506
+  type: 'test'
+  ...
+# Subtest: the search is a search and not a scan of everything
+ok 72 - the search is a search and not a scan of everything
+  ---
+  duration_ms: 1.031453
+  type: 'test'
+  ...
+# Subtest: the number of the hits follows the option of the caller
+ok 73 - the number of the hits follows the option of the caller
+  ---
+  duration_ms: 2.680607
+  type: 'test'
+  ...
+# Subtest: every hit carries a source and the source points at the real text
+ok 74 - every hit carries a source and the source points at the real text
+  ---
+  duration_ms: 7.283234
+  type: 'test'
+  ...
+# Subtest: the section of the source is a section of the document
+ok 75 - the section of the source is a section of the document
+  ---
+  duration_ms: 2.712263
+  type: 'test'
+  ...
+# Subtest: the locator of the source names the file and the line
+ok 76 - the locator of the source names the file and the line
+  ---
+  duration_ms: 4.05226
+  type: 'test'
+  ...
+# Subtest: the answer is quoted and every source of it is declared
+ok 77 - the answer is quoted and every source of it is declared
+  ---
+  duration_ms: 1.99837
+  type: 'test'
+  ...
+# Subtest: the answer carries no sentence that is not in the index
+ok 78 - the answer carries no sentence that is not in the index
+  ---
+  duration_ms: 2.360383
+  type: 'test'
+  ...
+# Subtest: the answer of a question without an answer carries no source at all
+ok 79 - the answer of a question without an answer carries no source at all
+  ---
+  duration_ms: 0.32592
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 3) the production gate — the pre-release check
+    # Subtest: ⭐ a missing required variable is a RED line and the exit code becomes 1
+    ok 1 - ⭐ a missing required variable is a RED line and the exit code becomes 1
+      ---
+      duration_ms: 4.754445
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the value of a secret is NEVER printed
+    ok 2 - ⭐⭐ the value of a secret is NEVER printed
+      ---
+      duration_ms: 4.579773
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ a secret written LITERALLY in a deployment file is a RED line
+    ok 3 - ⭐⭐ a secret written LITERALLY in a deployment file is a RED line
+      ---
+      duration_ms: 4.243295
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ a port published on EVERY interface is a RED line
+    ok 4 - ⭐⭐ a port published on EVERY interface is a RED line
+      ---
+      duration_ms: 5.913642
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ the schema checks read the real code of the project
+    ok 5 - ⭐⭐ the schema checks read the real code of the project
+      ---
+      duration_ms: 25.31626
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ a missing migration lock is a RED line
+    ok 6 - ⭐⭐ a missing migration lock is a RED line
+      ---
+      duration_ms: 1.51216
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ a healthy project has no RED line in the sections it owns
+    ok 7 - ⭐⭐ a healthy project has no RED line in the sections it owns
+      ---
+      duration_ms: 2.897492
+      type: 'test'
+      ...
+    1..7
+ok 80 - FOUNDATION 3) the production gate — the pre-release check
+  ---
+  duration_ms: 52.241333
+  type: 'test'
+  ...
+# Subtest: M32) ⭐⭐⭐⭐⭐ القدرات الحسّاسة مقيَّدة (التفريغ الشامل = سلطان إداري)
+    # Subtest: ⭐⭐⭐⭐⭐ التفريغ الشامل بلا نطاق ⇒ رفض `admin_scope_required`
+    ok 1 - ⭐⭐⭐⭐⭐ التفريغ الشامل بلا نطاق ⇒ رفض `admin_scope_required`
+      ---
+      duration_ms: 1.428605
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ نطاق مزوَّر (نفس الشكل) ⇒ مرفوض (النَسَب لا الشكل)
+    ok 2 - ⭐⭐⭐⭐⭐ نطاق مزوَّر (نفس الشكل) ⇒ مرفوض (النَسَب لا الشكل)
+      ---
+      duration_ms: 0.311828
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الوظيفة الإدارية المحلية لم تُكسر (نطاق حقيقي ⇒ عمل)
+    ok 3 - ⭐⭐⭐⭐⭐ الوظيفة الإدارية المحلية لم تُكسر (نطاق حقيقي ⇒ عمل)
+      ---
+      duration_ms: 0.904703
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ السطح العام لا يصدّر إصدار النطاق (لا تفريغ شامل عبره)
+    ok 4 - ⭐⭐⭐⭐⭐ السطح العام لا يصدّر إصدار النطاق (لا تفريغ شامل عبره)
+      ---
+      duration_ms: 1.76075
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ العدّادات المقيَّدة بالمستأجر ⇒ لا تُحصي مستأجراً آخر
+    ok 5 - ⭐⭐⭐⭐⭐ العدّادات المقيَّدة بالمستأجر ⇒ لا تُحصي مستأجراً آخر
+      ---
+      duration_ms: 6.662998
+      type: 'test'
+      ...
+    1..5
+ok 81 - M32) ⭐⭐⭐⭐⭐ القدرات الحسّاسة مقيَّدة (التفريغ الشامل = سلطان إداري)
+  ---
+  duration_ms: 13.191765
+  type: 'test'
+  ...
+# Subtest: M32) ⭐⭐⭐⭐⭐ حدّ الثقة عند الحقن: مخزن الحالة بلا معرّف مستأجر نصّي
+    # Subtest: ⭐⭐⭐⭐⭐ معرّف نصّي خام ⇒ رفض (لا استعلام عابر ممكن)
+    ok 1 - ⭐⭐⭐⭐⭐ معرّف نصّي خام ⇒ رفض (لا استعلام عابر ممكن)
+      ---
+      duration_ms: 0.528221
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ قراءة صفّ مستأجر آخر عبر سياقه ⇒ صفر (لا كشف وجود)
+    ok 2 - ⭐⭐⭐⭐⭐ قراءة صفّ مستأجر آخر عبر سياقه ⇒ صفر (لا كشف وجود)
+      ---
+      duration_ms: 0.47369
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ كتابة سطر باسم مستأجر آخر ⇒ رفض `tenant_mismatch`
+    ok 3 - ⭐⭐⭐⭐⭐ كتابة سطر باسم مستأجر آخر ⇒ رفض `tenant_mismatch`
+      ---
+      duration_ms: 0.985658
+      type: 'test'
+      ...
+    1..3
+ok 82 - M32) ⭐⭐⭐⭐⭐ حدّ الثقة عند الحقن: مخزن الحالة بلا معرّف مستأجر نصّي
+  ---
+  duration_ms: 2.894328
+  type: 'test'
+  ...
+# Subtest: M33) ⭐⭐⭐⭐⭐ العزل: ثلاثة مستأجرين × (قراءة · تعديل · إسناد · إلغاء إسناد · عدّادات · تدقيق)
+    # Subtest: ⭐⭐⭐⭐⭐ ① القراءة: لا صفّ ولا محادثة ولا تدقيق من مستأجر آخر
+    ok 1 - ⭐⭐⭐⭐⭐ ① القراءة: لا صفّ ولا محادثة ولا تدقيق من مستأجر آخر
+      ---
+      duration_ms: 2.089839
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ ② التعديل العابر ⇒ رفض `conversation_not_found`
+    ok 2 - ⭐⭐⭐⭐⭐ ② التعديل العابر ⇒ رفض `conversation_not_found`
+      ---
+      duration_ms: 0.896129
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ ③ الإسناد العابر ⇒ رفض `conversation_not_found`
+    ok 3 - ⭐⭐⭐⭐⭐ ③ الإسناد العابر ⇒ رفض `conversation_not_found`
+      ---
+      duration_ms: 0.843066
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ ④ إلغاء الإسناد العابر ⇒ رفض `conversation_not_found`
+    ok 4 - ⭐⭐⭐⭐⭐ ④ إلغاء الإسناد العابر ⇒ رفض `conversation_not_found`
+      ---
+      duration_ms: 0.718961
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ ⑤ العدّادات ⇒ لكل مستأجر أرقامه وحده
+    ok 5 - ⭐⭐⭐⭐⭐ ⑤ العدّادات ⇒ لكل مستأجر أرقامه وحده
+      ---
+      duration_ms: 2.153421
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ ⑥ سجلّات التدقيق ⇒ لا سطر من مستأجر آخر
+    ok 6 - ⭐⭐⭐⭐⭐ ⑥ سجلّات التدقيق ⇒ لا سطر من مستأجر آخر
+      ---
+      duration_ms: 0.64559
+      type: 'test'
+      ...
+    1..6
+ok 83 - M33) ⭐⭐⭐⭐⭐ العزل: ثلاثة مستأجرين × (قراءة · تعديل · إسناد · إلغاء إسناد · عدّادات · تدقيق)
+  ---
+  duration_ms: 8.208327
+  type: 'test'
+  ...
+# Subtest: M33) ⭐⭐⭐⭐⭐ فرق الأدوار: ما يُسمح به دورٌ يُرفض بدور (وكل الأدوار داخل مستأجرها)
+    # Subtest: ⭐⭐⭐⭐⭐ `viewer` يقرأ ولا يعدّل ولا يُسند
+    ok 1 - ⭐⭐⭐⭐⭐ `viewer` يقرأ ولا يعدّل ولا يُسند
+      ---
+      duration_ms: 0.699117
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ `agent` يقرأ ولا يعدّل ولا يُسند ولا يقرأ المؤشرات
+    ok 2 - ⭐⭐⭐⭐⭐ `agent` يقرأ ولا يعدّل ولا يُسند ولا يقرأ المؤشرات
+      ---
+      duration_ms: 1.124935
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ `supervisor` يعدّل ويقرأ المؤشرات ولا يجاوز نطاق مستأجره
+    ok 3 - ⭐⭐⭐⭐⭐ `supervisor` يعدّل ويقرأ المؤشرات ولا يجاوز نطاق مستأجره
+      ---
+      duration_ms: 7.937027
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الدور بلا صلاحية (`none`) ⇒ كل عملية مرفوضة
+    ok 4 - ⭐⭐⭐⭐⭐ الدور بلا صلاحية (`none`) ⇒ كل عملية مرفوضة
+      ---
+      duration_ms: 0.61168
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الطابور لا يخرج عن نطاق المستأجر
+    ok 5 - ⭐⭐⭐⭐⭐ الطابور لا يخرج عن نطاق المستأجر
+      ---
+      duration_ms: 0.58112
+      type: 'test'
+      ...
+    1..5
+ok 84 - M33) ⭐⭐⭐⭐⭐ فرق الأدوار: ما يُسمح به دورٌ يُرفض بدور (وكل الأدوار داخل مستأجرها)
+  ---
+  duration_ms: 11.527266
+  type: 'test'
+  ...
+# Subtest: M33) ⭐⭐⭐⭐⭐ الطرد: الكسر الحقيقي ⇒ نفس الحارس يفشل (الحارس حسّاس)
+    # Subtest: ⭐⭐⭐⭐⭐ الحارسان يمرّان على النواة الحقيقية
+    ok 1 - ⭐⭐⭐⭐⭐ الحارسان يمرّان على النواة الحقيقية
+      ---
+      duration_ms: 0.496494
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ كسر ① — حذف حدّ الثقة عند الحقن ⇒ الحارس يفشل
+    ok 2 - ⭐⭐⭐⭐⭐⭐ كسر ① — حذف حدّ الثقة عند الحقن ⇒ الحارس يفشل
+      ---
+      duration_ms: 364.91584
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ كسر ② — تعطيل حارس النطاق ⇒ الحارس يفشل
+    ok 3 - ⭐⭐⭐⭐⭐⭐ كسر ② — تعطيل حارس النطاق ⇒ الحارس يفشل
+      ---
+      duration_ms: 362.559905
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ النسخ المعزولة تُحذف (لا أثر خارج المستودع)
+    ok 4 - ⭐⭐⭐⭐⭐ النسخ المعزولة تُحذف (لا أثر خارج المستودع)
+      ---
+      duration_ms: 2.811262
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ صفر اتصال خارجي
+    ok 5 - ⭐⭐ صفر اتصال خارجي
+      ---
+      duration_ms: 0.243673
+      type: 'test'
+      ...
+    1..5
+ok 85 - M33) ⭐⭐⭐⭐⭐ الطرد: الكسر الحقيقي ⇒ نفس الحارس يفشل (الحارس حسّاس)
+  ---
+  duration_ms: 731.952103
+  type: 'test'
+  ...
+# Subtest: ٥) لا اتصالات خارجية ولا أسرار ولا بيانات حقيقية
+    # Subtest: ⭐ صفر محاولة اتصال طوال تشغيل الاختبار
+    ok 1 - ⭐ صفر محاولة اتصال طوال تشغيل الاختبار
+      ---
+      duration_ms: 0.786646
+      type: 'test'
+      ...
+    # Subtest: ⭐ الحاجز فعّال: نداء الشبكة يرمي استثناءً
+    ok 2 - ⭐ الحاجز فعّال: نداء الشبكة يرمي استثناءً
+      ---
+      duration_ms: 0.595655
+      type: 'test'
+      ...
+    # Subtest: ⭐ فحص ساكن لمصدر الشريحة: صفر رمز شبكة
+    ok 3 - ⭐ فحص ساكن لمصدر الشريحة: صفر رمز شبكة
+      ---
+      duration_ms: 67.487729
+      type: 'test'
+      ...
+    # Subtest: ⭐ فحص ساكن: صفر سرّ في مصدر الشريحة
+    ok 4 - ⭐ فحص ساكن: صفر سرّ في مصدر الشريحة
+      ---
+      duration_ms: 73.197405
+      type: 'test'
+      ...
+    # Subtest: ⭐ فحص ساكن: صفر بيانات حقيقية في مصدر الشريحة وفي الاختبارات
+    ok 5 - ⭐ فحص ساكن: صفر بيانات حقيقية في مصدر الشريحة وفي الاختبارات
+      ---
+      duration_ms: 136.886489
+      type: 'test'
+      ...
+    # Subtest: ⭐ فحص وقت التشغيل: البيانات المولَّدة كلها اصطناعية
+    ok 6 - ⭐ فحص وقت التشغيل: البيانات المولَّدة كلها اصطناعية
+      ---
+      duration_ms: 3.418264
+      type: 'test'
+      ...
+    1..6
+ok 86 - ٥) لا اتصالات خارجية ولا أسرار ولا بيانات حقيقية
+  ---
+  duration_ms: 284.612133
+  type: 'test'
+  ...
+# Subtest: ٧) ⭐ الفصل الأمني: أدوات الاختبار لا تدخل مسار الإنتاج
+    # Subtest: ⭐ ١) السطح العام الإنتاجي لا يُصدّر أي أداة اختبار
+    ok 1 - ⭐ ١) السطح العام الإنتاجي لا يُصدّر أي أداة اختبار
+      ---
+      duration_ms: 5.178723
+      type: 'test'
+      ...
+    # Subtest: ⭐ ٢) لا ملف في شجرة الإنتاج يستورد من شجرة الاختبار
+    ok 2 - ⭐ ٢) لا ملف في شجرة الإنتاج يستورد من شجرة الاختبار
+      ---
+      duration_ms: 130.629914
+      type: 'test'
+      ...
+    # Subtest: ⭐ ٣) نطاق `.invalid` المحجوز غير موجود في شجرة الإنتاج
+    ok 3 - ⭐ ٣) نطاق `.invalid` المحجوز غير موجود في شجرة الإنتاج
+      ---
+      duration_ms: 31.959929
+      type: 'test'
+      ...
+    # Subtest: ⭐ ٤) المسار العام لا يفترض مصدر جلسات
+    ok 4 - ⭐ ٤) المسار العام لا يفترض مصدر جلسات
+      ---
+      duration_ms: 1.149226
+      type: 'test'
+      ...
+    # Subtest: ⭐ ٥) المسار الإنتاجي يرفض مصدر الجلسات الاختباري
+    ok 5 - ⭐ ٥) المسار الإنتاجي يرفض مصدر الجلسات الاختباري
+      ---
+      duration_ms: 0.372217
+      type: 'test'
+      ...
+    # Subtest: ⭐ ٦) لا مصدر إنتاجي مسجَّل اليوم ⇒ لا مسار افتراضي
+    ok 6 - ⭐ ٦) لا مصدر إنتاجي مسجَّل اليوم ⇒ لا مسار افتراضي
+      ---
+      duration_ms: 0.213516
+      type: 'test'
+      ...
+    # Subtest: ⭐ ٧) حزمة الإنتاج تستثني شجرة الاختبار (فحص `npm pack` حقيقي)
+    ok 7 - ⭐ ٧) حزمة الإنتاج تستثني شجرة الاختبار (فحص `npm pack` حقيقي)
+      ---
+      duration_ms: 643.143497
+      type: 'test'
+      ...
+    1..7
+ok 87 - ٧) ⭐ الفصل الأمني: أدوات الاختبار لا تدخل مسار الإنتاج
+  ---
+  duration_ms: 815.79613
+  type: 'test'
+  ...
+# Subtest: ١) عقد الرسالة: الصالح يُقبَل والناقص يُرفض بقاعدة معلنة
+    # Subtest: الرسالة الاصطناعية الصالحة تُقبل وتُرجَع كما هي
+    ok 1 - الرسالة الاصطناعية الصالحة تُقبل وتُرجَع كما هي
+      ---
+      duration_ms: 1.975808
+      type: 'test'
+      ...
+    # Subtest: تُرفض: الحقل body مفقود ⇒ قاعدة «required»
+    ok 2 - تُرفض: الحقل body مفقود ⇒ قاعدة «required»
+      ---
+      duration_ms: 0.522199
+      type: 'test'
+      ...
+    # Subtest: تُرفض: نوع body رقم ⇒ قاعدة «type»
+    ok 3 - تُرفض: نوع body رقم ⇒ قاعدة «type»
+      ---
+      duration_ms: 0.197129
+      type: 'test'
+      ...
+    # Subtest: تُرفض: body فارغ ⇒ قاعدة «min_length»
+    ok 4 - تُرفض: body فارغ ⇒ قاعدة «min_length»
+      ---
+      duration_ms: 0.243271
+      type: 'test'
+      ...
+    # Subtest: تُرفض: التاريخ ليس طابعاً زمنياً ⇒ قاعدة «pattern»
+    ok 5 - تُرفض: التاريخ ليس طابعاً زمنياً ⇒ قاعدة «pattern»
+      ---
+      duration_ms: 0.337509
+      type: 'test'
+      ...
+    # Subtest: تُرفض: تاريخ غير قابل للتفسير ⇒ قاعدة «parse»
+    ok 6 - تُرفض: تاريخ غير قابل للتفسير ⇒ قاعدة «parse»
+      ---
+      duration_ms: 0.179643
+      type: 'test'
+      ...
+    # Subtest: تُرفض: اتجاه خارج المجموعة ⇒ قاعدة «enum»
+    ok 7 - تُرفض: اتجاه خارج المجموعة ⇒ قاعدة «enum»
+      ---
+      duration_ms: 0.170021
+      type: 'test'
+      ...
+    # Subtest: تُرفض: معرّف رسالة بأحرف ممنوعة ⇒ قاعدة «pattern»
+    ok 8 - تُرفض: معرّف رسالة بأحرف ممنوعة ⇒ قاعدة «pattern»
+      ---
+      duration_ms: 0.358443
+      type: 'test'
+      ...
+    # Subtest: تُرفض: إصدار العقد غير مطابق ⇒ قاعدة «pattern»
+    ok 9 - تُرفض: إصدار العقد غير مطابق ⇒ قاعدة «pattern»
+      ---
+      duration_ms: 0.369113
+      type: 'test'
+      ...
+    # Subtest: تُرفض: اللغة بصيغة خاطئة ⇒ قاعدة «pattern»
+    ok 10 - تُرفض: اللغة بصيغة خاطئة ⇒ قاعدة «pattern»
+      ---
+      duration_ms: 0.357055
+      type: 'test'
+      ...
+    # Subtest: تُرفض: attributes ليست كائناً ⇒ قاعدة «type»
+    ok 11 - تُرفض: attributes ليست كائناً ⇒ قاعدة «type»
+      ---
+      duration_ms: 0.153981
+      type: 'test'
+      ...
+    # Subtest: تُرفض: معرّف مستأجر مُعلن بصيغة خاطئة ⇒ قاعدة «pattern»
+    ok 12 - تُرفض: معرّف مستأجر مُعلن بصيغة خاطئة ⇒ قاعدة «pattern»
+      ---
+      duration_ms: 0.221408
+      type: 'test'
+      ...
+    # Subtest: تُرفض: معرّف المحادثة مفقود ⇒ قاعدة «required»
+    ok 13 - تُرفض: معرّف المحادثة مفقود ⇒ قاعدة «required»
+      ---
+      duration_ms: 0.124964
+      type: 'test'
+      ...
+    # Subtest: تُرفض: معرّف المحادثة بصيغة خاطئة ⇒ قاعدة «pattern»
+    ok 14 - تُرفض: معرّف المحادثة بصيغة خاطئة ⇒ قاعدة «pattern»
+      ---
+      duration_ms: 0.153082
+      type: 'test'
+      ...
+    # Subtest: parseEnvelope يرمي خطأ يحمل قائمة الأخطاء
+    ok 15 - parseEnvelope يرمي خطأ يحمل قائمة الأخطاء
+      ---
+      duration_ms: 0.658136
+      type: 'test'
+      ...
+    1..15
+ok 88 - ١) عقد الرسالة: الصالح يُقبَل والناقص يُرفض بقاعدة معلنة
+  ---
+  duration_ms: 9.475279
+  type: 'test'
+  ...
+# Subtest: ٢) عزل المستأجرين: استعلام مستأجر آخر ⇒ صفر نتيجة + انتحال يُرفض
+    # Subtest: الكتابة تتم في نطاق المستأجر صاحب السياق
+    ok 1 - الكتابة تتم في نطاق المستأجر صاحب السياق
+      ---
+      duration_ms: 1.258733
+      type: 'test'
+      ...
+    # Subtest: ⭐ الاختبار المعاكس: المستأجر الآخر لا يرى بيانات المستأجر الأول
+    ok 2 - ⭐ الاختبار المعاكس: المستأجر الآخر لا يرى بيانات المستأجر الأول
+      ---
+      duration_ms: 0.346675
+      type: 'test'
+      ...
+    # Subtest: ⭐ انتحال Tenant ID داخل الحمولة ⇒ رفض صريح
+    ok 3 - ⭐ انتحال Tenant ID داخل الحمولة ⇒ رفض صريح
+      ---
+      duration_ms: 0.584632
+      type: 'test'
+      ...
+    # Subtest: ⭐ ١٠٠ محاولة عدائية ⇒ صفر تسريب (معيار ARCHITECTURE §٤)
+    ok 4 - ⭐ ١٠٠ محاولة عدائية ⇒ صفر تسريب (معيار ARCHITECTURE §٤)
+      ---
+      duration_ms: 7.134395
+      type: 'test'
+      ...
+    1..4
+ok 89 - ٢) عزل المستأجرين: استعلام مستأجر آخر ⇒ صفر نتيجة + انتحال يُرفض
+  ---
+  duration_ms: 10.817404
+  type: 'test'
+  ...
+# Subtest: ٣) منع تكرار message_ref — مُطبَّق لأن message_ref جزء صريح من العقد المجمَّد
+    # Subtest: العقد يعلن message_ref صراحةً
+    ok 1 - العقد يعلن message_ref صراحةً
+      ---
+      duration_ms: 0.165128
+      type: 'test'
+      ...
+    # Subtest: التكرار داخل نفس المستأجر ⇒ مرفوض
+    ok 2 - التكرار داخل نفس المستأجر ⇒ مرفوض
+      ---
+      duration_ms: 0.326054
+      type: 'test'
+      ...
+    # Subtest: ⭐ نطاق التكرار داخل المستأجر فقط — لا تصادم بين المستأجرين
+    ok 3 - ⭐ نطاق التكرار داخل المستأجر فقط — لا تصادم بين المستأجرين
+      ---
+      duration_ms: 0.215618
+      type: 'test'
+      ...
+    1..3
+ok 90 - ٣) منع تكرار message_ref — مُطبَّق لأن message_ref جزء صريح من العقد المجمَّد
+  ---
+  duration_ms: 1.183056
+  type: 'test'
+  ...
+# Subtest: ٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد \#١٣): مسار الإدخال غير الموثوق لا يُنشئ سياقاً معتمداً
+    # Subtest: ⭐ `authenticated: true` وحدها ⇒ مرفوض
+    ok 1 - ⭐ `authenticated: true` وحدها ⇒ مرفوض
+      ---
+      duration_ms: 0.242025
+      type: 'test'
+      ...
+    # Subtest: ⭐ مدخل عميل خام (نص JSON · كائن · مصفوفة) ⇒ مرفوض
+    ok 2 - ⭐ مدخل عميل خام (نص JSON · كائن · مصفوفة) ⇒ مرفوض
+      ---
+      duration_ms: 0.472359
+      type: 'test'
+      ...
+    # Subtest: ⭐ نسخة من جلسة اصطناعية صحيحة الشكل ⇒ مرفوض (المعيار = النَسَب لا الشكل)
+    ok 3 - ⭐ نسخة من جلسة اصطناعية صحيحة الشكل ⇒ مرفوض (المعيار = النَسَب لا الشكل)
+      ---
+      duration_ms: 1.00488
+      type: 'test'
+      ...
+    # Subtest: ⭐ المسار العام الوحيد = `resolveTenantContext` (لا مسار من ادّعاءات خام)
+    ok 4 - ⭐ المسار العام الوحيد = `resolveTenantContext` (لا مسار من ادّعاءات خام)
+      ---
+      duration_ms: 0.174194
+      type: 'test'
+      ...
+    # Subtest: ⭐ السطح العام لا يُصدّر مسار الادّعاءات الخام
+    ok 5 - ⭐ السطح العام لا يُصدّر مسار الادّعاءات الخام
+      ---
+      duration_ms: 1.730139
+      type: 'test'
+      ...
+    # Subtest: ⭐ الجلسة الاصطناعية الأصلية وحدها ⇒ مقبولة
+    ok 6 - ⭐ الجلسة الاصطناعية الأصلية وحدها ⇒ مقبولة
+      ---
+      duration_ms: 0.249794
+      type: 'test'
+      ...
+    1..6
+ok 91 - ٦) ⭐ تصحيح حدّ الثقة (من مراجعة الرد \#١٣): مسار الإدخال غير الموثوق لا يُنشئ سياقاً معتمداً
+  ---
+  duration_ms: 4.651056
+  type: 'test'
+  ...
+# Subtest: ٤) سجل التدقيق: سطر واحد لكل عملية · بلا أسرار · بلا بيانات حقيقية
+    # Subtest: أربع عمليات ⇒ أربعة أسطر
+    ok 1 - أربع عمليات ⇒ أربعة أسطر
+      ---
+      duration_ms: 0.537309
+      type: 'test'
+      ...
+    # Subtest: ⭐ نص الرسالة (منه السرّ) لا يصل إلى السجل إطلاقاً
+    ok 2 - ⭐ نص الرسالة (منه السرّ) لا يصل إلى السجل إطلاقاً
+      ---
+      duration_ms: 0.289978
+      type: 'test'
+      ...
+    # Subtest: ⭐ قائمة السماح: أي حقل خارج المسموح يُرفض الكتابة
+    ok 3 - ⭐ قائمة السماح: أي حقل خارج المسموح يُرفض الكتابة
+      ---
+      duration_ms: 0.285381
+      type: 'test'
+      ...
+    # Subtest: ⭐ لا بريد ولا رقم ولا هاتف في السجل
+    ok 4 - ⭐ لا بريد ولا رقم ولا هاتف في السجل
+      ---
+      duration_ms: 0.289623
+      type: 'test'
+      ...
+    1..4
+ok 92 - ٤) سجل التدقيق: سطر واحد لكل عملية · بلا أسرار · بلا بيانات حقيقية
+  ---
+  duration_ms: 2.120486
+  type: 'test'
+  ...
+# Subtest: ١) عقد MessageEnvelope بعد إضافة معرّف المحادثة
+    # Subtest: ⭐ الحقل مُعلَن في جدول القواعد وإجباري
+    ok 1 - ⭐ الحقل مُعلَن في جدول القواعد وإجباري
+      ---
+      duration_ms: 1.165605
+      type: 'test'
+      ...
+    # Subtest: الرسالة الصالحة (فيها محادثة) تُقبل ويُرجَع الحقل
+    ok 2 - الرسالة الصالحة (فيها محادثة) تُقبل ويُرجَع الحقل
+      ---
+      duration_ms: 1.19155
+      type: 'test'
+      ...
+    # Subtest: ⭐ محادثة مفقودة ⇒ رفض بقاعدة «required»
+    ok 3 - ⭐ محادثة مفقودة ⇒ رفض بقاعدة «required»
+      ---
+      duration_ms: 0.428236
+      type: 'test'
+      ...
+    # Subtest: ⭐ محادثة بصيغة خاطئة ⇒ رفض بقاعدة «pattern»
+    ok 4 - ⭐ محادثة بصيغة خاطئة ⇒ رفض بقاعدة «pattern»
+      ---
+      duration_ms: 0.312961
+      type: 'test'
+      ...
+    1..4
+ok 93 - ١) عقد MessageEnvelope بعد إضافة معرّف المحادثة
+  ---
+  duration_ms: 29.591574
+  type: 'test'
+  ...
+# Subtest: ٢) رفض معرّفات المحادثة غير الموثوقة أو غير الصالحة
+    # Subtest: ⭐ ادّعاءات خام بمحادثة ⇒ مرفوض (لا إثبات provenance)
+    ok 1 - ⭐ ادّعاءات خام بمحادثة ⇒ مرفوض (لا إثبات provenance)
+      ---
+      duration_ms: 2.937526
+      type: 'test'
+      ...
+    # Subtest: ⭐ نسخة من جلسة صحيحة الشكل ⇒ مرفوض (النَسَب لا الشكل)
+    ok 2 - ⭐ نسخة من جلسة صحيحة الشكل ⇒ مرفوض (النَسَب لا الشكل)
+      ---
+      duration_ms: 1.036604
+      type: 'test'
+      ...
+    # Subtest: ⭐ مصدر يعيد محادثة بصيغة خاطئة ⇒ رفض عند بناء السياق
+    ok 3 - ⭐ مصدر يعيد محادثة بصيغة خاطئة ⇒ رفض عند بناء السياق
+      ---
+      duration_ms: 1.071947
+      type: 'test'
+      ...
+    # Subtest: ⭐ رسالة بمحادثة غير مطابقة للسياق ⇒ رفض صريح
+    ok 4 - ⭐ رسالة بمحادثة غير مطابقة للسياق ⇒ رفض صريح
+      ---
+      duration_ms: 2.022173
+      type: 'test'
+      ...
+    1..4
+ok 94 - ٢) رفض معرّفات المحادثة غير الموثوقة أو غير الصالحة
+  ---
+  duration_ms: 8.151566
+  type: 'test'
+  ...
+# Subtest: ٣) منع خلط المحادثات داخل المستأجر الواحد
+    # Subtest: ⭐ محادثتان في نفس المستأجر ⇒ لا تختلط حالة الترتيب بينهما
+    ok 1 - ⭐ محادثتان في نفس المستأجر ⇒ لا تختلط حالة الترتيب بينهما
+      ---
+      duration_ms: 1.050959
+      type: 'test'
+      ...
+    # Subtest: ⭐ رسالة تعلن محادثة غير محادثة الجلسة ⇒ رفض
+    ok 2 - ⭐ رسالة تعلن محادثة غير محادثة الجلسة ⇒ رفض
+      ---
+      duration_ms: 0.465116
+      type: 'test'
+      ...
+    1..2
+ok 95 - ٣) منع خلط المحادثات داخل المستأجر الواحد
+  ---
+  duration_ms: 1.979945
+  type: 'test'
+  ...
+# Subtest: ٤) منع الوصول العابر بين المستأجرين — ١٠٠ محاولة عدائية ⇒ صفر تسريب
+    # Subtest: معالجة رسالة في نطاق مستأجر ⇒ لا أثر في نطاق آخر
+    ok 1 - معالجة رسالة في نطاق مستأجر ⇒ لا أثر في نطاق آخر
+      ---
+      duration_ms: 0.374087
+      type: 'test'
+      ...
+    # Subtest: ⭐ الاختبار المعاكس: المستأجر الآخر لا يرى بيانات المستأجر الأول
+    ok 2 - ⭐ الاختبار المعاكس: المستأجر الآخر لا يرى بيانات المستأجر الأول
+      ---
+      duration_ms: 0.206752
+      type: 'test'
+      ...
+    # Subtest: ⭐ انتحال Tenant ID داخل الحمولة ⇒ رفض صريح بلا تخزين
+    ok 3 - ⭐ انتحال Tenant ID داخل الحمولة ⇒ رفض صريح بلا تخزين
+      ---
+      duration_ms: 0.267183
+      type: 'test'
+      ...
+    # Subtest: ⭐ نفس معرّف المحادثة في مستأجرين ⇒ لا تختلط حالة الترتيب
+    ok 4 - ⭐ نفس معرّف المحادثة في مستأجرين ⇒ لا تختلط حالة الترتيب
+      ---
+      duration_ms: 0.529717
+      type: 'test'
+      ...
+    # Subtest: ⭐ ١٠٠ محاولة عدائية ⇒ صفر تسريب
+    ok 5 - ⭐ ١٠٠ محاولة عدائية ⇒ صفر تسريب
+      ---
+      duration_ms: 4.793359
+      type: 'test'
+      ...
+    # Subtest: ⭐ لا دالة في طبقة المعالجة تقبل معرّف مستأجر كوسيط
+    ok 6 - ⭐ لا دالة في طبقة المعالجة تقبل معرّف مستأجر كوسيط
+      ---
+      duration_ms: 3.85725
+      type: 'test'
+      ...
+    # Subtest: ⭐ سياق غائب ⇒ رفض صريح (لا مسار افتراضي)
+    ok 7 - ⭐ سياق غائب ⇒ رفض صريح (لا مسار افتراضي)
+      ---
+      duration_ms: 0.176089
+      type: 'test'
+      ...
+    1..7
+ok 96 - ٤) منع الوصول العابر بين المستأجرين — ١٠٠ محاولة عدائية ⇒ صفر تسريب
+  ---
+  duration_ms: 11.071969
+  type: 'test'
+  ...
+# Subtest: ٥) قبول الرسائل بالترتيب الصحيح
+    # Subtest: ⭐ أول رسالة في المحادثة ⇒ تُقبل
+    ok 1 - ⭐ أول رسالة في المحادثة ⇒ تُقبل
+      ---
+      duration_ms: 0.369784
+      type: 'test'
+      ...
+    # Subtest: ⭐ رسائل متتالية بتوقيت متزايد ⇒ كلها تُقبل
+    ok 2 - ⭐ رسائل متتالية بتوقيت متزايد ⇒ كلها تُقبل
+      ---
+      duration_ms: 0.674923
+      type: 'test'
+      ...
+    1..2
+ok 97 - ٥) قبول الرسائل بالترتيب الصحيح
+  ---
+  duration_ms: 1.327024
+  type: 'test'
+  ...
+# Subtest: ٦) تأجيل الرسائل الأقدم والمتساوية في التوقيت
+    # Subtest: ⭐ الأقدم من آخر مقبول ⇒ تأجيل (ولا رفض نهائي)
+    ok 1 - ⭐ الأقدم من آخر مقبول ⇒ تأجيل (ولا رفض نهائي)
+      ---
+      duration_ms: 0.320302
+      type: 'test'
+      ...
+    # Subtest: ⭐ تساوي التوقيت لرسالتين مختلفتين ⇒ الثانية تُؤجَّل بلا ترتيب اعتباطي
+    ok 2 - ⭐ تساوي التوقيت لرسالتين مختلفتين ⇒ الثانية تُؤجَّل بلا ترتيب اعتباطي
+      ---
+      duration_ms: 0.308168
+      type: 'test'
+      ...
+    # Subtest: ⭐ حالة خارج القواعد المغلقة ⇒ تأجيل لا تخمين (فحص القاعدة مباشرة)
+    ok 3 - ⭐ حالة خارج القواعد المغلقة ⇒ تأجيل لا تخمين (فحص القاعدة مباشرة)
+      ---
+      duration_ms: 0.13471
+      type: 'test'
+      ...
+    1..3
+ok 98 - ٦) تأجيل الرسائل الأقدم والمتساوية في التوقيت
+  ---
+  duration_ms: 1.144417
+  type: 'test'
+  ...
+# Subtest: ٧) عدم تغيير حالة الترتيب عند التأجيل
+    # Subtest: ⭐ رسالة مؤجلة لا تُرجع نقطة القبول للخلف
+    ok 1 - ⭐ رسالة مؤجلة لا تُرجع نقطة القبول للخلف
+      ---
+      duration_ms: 0.449917
+      type: 'test'
+      ...
+    # Subtest: ⭐ رسالة مرفوضة (انتحال) لا تُغيّر حالة الترتيب
+    ok 2 - ⭐ رسالة مرفوضة (انتحال) لا تُغيّر حالة الترتيب
+      ---
+      duration_ms: 0.410838
+      type: 'test'
+      ...
+    1..2
+ok 99 - ٧) عدم تغيير حالة الترتيب عند التأجيل
+  ---
+  duration_ms: 1.148232
+  type: 'test'
+  ...
+# Subtest: ٨) استمرار منع تكرار message_ref
+    # Subtest: التكرار ⇒ رفض بنوع سبب معلن
+    ok 1 - التكرار ⇒ رفض بنوع سبب معلن
+      ---
+      duration_ms: 0.35739
+      type: 'test'
+      ...
+    # Subtest: ⭐ نطاق التكرار داخل المستأجر فقط — لا تصادم بين المستأجرين
+    ok 2 - ⭐ نطاق التكرار داخل المستأجر فقط — لا تصادم بين المستأجرين
+      ---
+      duration_ms: 0.348628
+      type: 'test'
+      ...
+    1..2
+ok 100 - ٨) استمرار منع تكرار message_ref
+  ---
+  duration_ms: 1.024055
+  type: 'test'
+  ...
+# Subtest: ٩) التوافق مع Slice 01 وAuditOutcome بما فيه deferred
+    # Subtest: ⭐ نتائج سجل التدقيق تشمل deferred مع القيم القديمة
+    ok 1 - ⭐ نتائج سجل التدقيق تشمل deferred مع القيم القديمة
+      ---
+      duration_ms: 0.300563
+      type: 'test'
+      ...
+    # Subtest: ⭐ عقد النتيجة يعلن كل الأسباب الممكنة
+    ok 2 - ⭐ عقد النتيجة يعلن كل الأسباب الممكنة
+      ---
+      duration_ms: 0.147219
+      type: 'test'
+      ...
+    # Subtest: ⭐ عقد النتيجة: صالحة تُقبل · غير صالحة تُرفض بقاعدة معلنة
+        # Subtest: تُرفض ⇒ قاعدة «enum» على decision
+        ok 1 - تُرفض ⇒ قاعدة «enum» على decision
+          ---
+          duration_ms: 0.224909
+          type: 'test'
+          ...
+        # Subtest: تُرفض ⇒ قاعدة «enum» على reason_code
+        ok 2 - تُرفض ⇒ قاعدة «enum» على reason_code
+          ---
+          duration_ms: 0.20436
+          type: 'test'
+          ...
+        # Subtest: تُرفض ⇒ قاعدة «type» على decision
+        ok 3 - تُرفض ⇒ قاعدة «type» على decision
+          ---
+          duration_ms: 0.104876
+          type: 'test'
+          ...
+        # Subtest: تُرفض ⇒ قاعدة «required» على tenant_id
+        ok 4 - تُرفض ⇒ قاعدة «required» على tenant_id
+          ---
+          duration_ms: 0.094003
+          type: 'test'
+          ...
+        # Subtest: تُرفض ⇒ قاعدة «pattern» على tenant_id
+        ok 5 - تُرفض ⇒ قاعدة «pattern» على tenant_id
+          ---
+          duration_ms: 0.100565
+          type: 'test'
+          ...
+        # Subtest: تُرفض ⇒ قاعدة «pattern» على occurred_at
+        ok 6 - تُرفض ⇒ قاعدة «pattern» على occurred_at
+          ---
+          duration_ms: 0.082554
+          type: 'test'
+          ...
+        # Subtest: تُرفض ⇒ قاعدة «parse» على occurred_at
+        ok 7 - تُرفض ⇒ قاعدة «parse» على occurred_at
+          ---
+          duration_ms: 0.097203
+          type: 'test'
+          ...
+        # Subtest: تُرفض ⇒ قاعدة «pattern» على message_ref
+        ok 8 - تُرفض ⇒ قاعدة «pattern» على message_ref
+          ---
+          duration_ms: 0.098939
+          type: 'test'
+          ...
+        # Subtest: parseProcessingOutcome يرمي خطأ يحمل قائمة الأخطاء
+        ok 9 - parseProcessingOutcome يرمي خطأ يحمل قائمة الأخطاء
+          ---
+          duration_ms: 0.234072
+          type: 'test'
+          ...
+        1..9
+    ok 3 - ⭐ عقد النتيجة: صالحة تُقبل · غير صالحة تُرفض بقاعدة معلنة
+      ---
+      duration_ms: 2.170832
+      type: 'test'
+      ...
+    # Subtest: ⭐ الحقول القديمة للعقد ما زالت كما هي (توافق مع Slice 01)
+    ok 4 - ⭐ الحقول القديمة للعقد ما زالت كما هي (توافق مع Slice 01)
+      ---
+      duration_ms: 0.122515
+      type: 'test'
+      ...
+    1..4
+ok 101 - ٩) التوافق مع Slice 01 وAuditOutcome بما فيه deferred
+  ---
+  duration_ms: 3.243788
+  type: 'test'
+  ...
+# Subtest: ١٠) أمان أثر التدقيق: سطر واحد لكل عملية · بلا نص رسالة · بلا أسرار
+    # Subtest: أربع عمليات معالجة ⇒ أربعة أسطر معالجة
+    ok 1 - أربع عمليات معالجة ⇒ أربعة أسطر معالجة
+      ---
+      duration_ms: 0.508122
+      type: 'test'
+      ...
+    # Subtest: ⭐ التأجيل مسجَّل بسطر وسبب معلن
+    ok 2 - ⭐ التأجيل مسجَّل بسطر وسبب معلن
+      ---
+      duration_ms: 0.302242
+      type: 'test'
+      ...
+    # Subtest: ⭐ نص الرسالة (منه السرّ) لا يصل إلى سجل المعالجة إطلاقاً
+    ok 3 - ⭐ نص الرسالة (منه السرّ) لا يصل إلى سجل المعالجة إطلاقاً
+      ---
+      duration_ms: 0.286272
+      type: 'test'
+      ...
+    # Subtest: ⭐ لا بريد ولا رقم ولا هاتف في سجل المعالجة
+    ok 4 - ⭐ لا بريد ولا رقم ولا هاتف في سجل المعالجة
+      ---
+      duration_ms: 0.225101
+      type: 'test'
+      ...
+    # Subtest: ⭐ أي مفتاح تفاصيل خارج قائمة السماح يُرفض
+    ok 5 - ⭐ أي مفتاح تفاصيل خارج قائمة السماح يُرفض
+      ---
+      duration_ms: 0.224962
+      type: 'test'
+      ...
+    1..5
+ok 102 - ١٠) أمان أثر التدقيق: سطر واحد لكل عملية · بلا نص رسالة · بلا أسرار
+  ---
+  duration_ms: 2.213737
+  type: 'test'
+  ...
+# Subtest: ١١) لا اتصالات خارجية ولا أسرار ولا بيانات حقيقية
+    # Subtest: ⭐ فحص ساكن لملفات الشريحة الثانية: صفر رمز شبكة
+    ok 1 - ⭐ فحص ساكن لملفات الشريحة الثانية: صفر رمز شبكة
+      ---
+      duration_ms: 2.276755
+      type: 'test'
+      ...
+    # Subtest: ⭐ فحص وقت التشغيل: لا بيانات حقيقية في أثر المعالجة
+    ok 2 - ⭐ فحص وقت التشغيل: لا بيانات حقيقية في أثر المعالجة
+      ---
+      duration_ms: 0.425515
+      type: 'test'
+      ...
+    # Subtest: ⭐ الحاجز مُركَّب وصفر محاولة اتصال
+    ok 3 - ⭐ الحاجز مُركَّب وصفر محاولة اتصال
+      ---
+      duration_ms: 0.131686
+      type: 'test'
+      ...
+    # Subtest: ⭐ لا كود في الشريحة الثانية يذكر فئة رسالة
+    ok 4 - ⭐ لا كود في الشريحة الثانية يذكر فئة رسالة
+      ---
+      duration_ms: 2.391143
+      type: 'test'
+      ...
+    1..4
+ok 103 - ١١) لا اتصالات خارجية ولا أسرار ولا بيانات حقيقية
+  ---
+  duration_ms: 5.755096
+  type: 'test'
+  ...
+# Subtest: ٢) حفظ `conversation_ref` واسترجاعه
+    # Subtest: ⭐ الصف المخزَّن يحمل معرّف المحادثة
+    ok 1 - ⭐ الصف المخزَّن يحمل معرّف المحادثة
+      ---
+      duration_ms: 1.588166
+      type: 'test'
+      ...
+    # Subtest: ⭐ الاسترجاع بالمحادثة يُرجع الصف نفسه
+    ok 2 - ⭐ الاسترجاع بالمحادثة يُرجع الصف نفسه
+      ---
+      duration_ms: 0.289446
+      type: 'test'
+      ...
+    # Subtest: ⭐ الفهرس يربط (المستأجر · المحادثة · الرسالة)
+    ok 3 - ⭐ الفهرس يربط (المستأجر · المحادثة · الرسالة)
+      ---
+      duration_ms: 1.290773
+      type: 'test'
+      ...
+    1..3
+ok 104 - ٢) حفظ `conversation_ref` واسترجاعه
+  ---
+  duration_ms: 10.241216
+  type: 'test'
+  ...
+# Subtest: ٣) عدم خلط المحادثات داخل المستأجر
+    # Subtest: ⭐ كل محادثة ترى رسائلها فقط
+    ok 1 - ⭐ كل محادثة ترى رسائلها فقط
+      ---
+      duration_ms: 1.128151
+      type: 'test'
+      ...
+    # Subtest: ⭐ القائمة تُرجع محادثتين لا محادثة واحدة
+    ok 2 - ⭐ القائمة تُرجع محادثتين لا محادثة واحدة
+      ---
+      duration_ms: 0.649878
+      type: 'test'
+      ...
+    # Subtest: ⭐ الرسائل المخزَّنة تحمل محادثتها
+    ok 3 - ⭐ الرسائل المخزَّنة تحمل محادثتها
+      ---
+      duration_ms: 0.550217
+      type: 'test'
+      ...
+    1..3
+ok 105 - ٣) عدم خلط المحادثات داخل المستأجر
+  ---
+  duration_ms: 5.586185
+  type: 'test'
+  ...
+# Subtest: ٤) عدم خلط البيانات بين المستأجرين
+    # Subtest: ⭐ قائمة المستأجر الآخر فارغة
+    ok 1 - ⭐ قائمة المستأجر الآخر فارغة
+      ---
+      duration_ms: 0.75003
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ محادثة المستأجر الأول تُقرأ عند المستأجر الآخر ⇒ صفوف صفر
+    ok 2 - ⭐⭐ محادثة المستأجر الأول تُقرأ عند المستأجر الآخر ⇒ صفوف صفر
+      ---
+      duration_ms: 0.483691
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ محادثة غير موجودة = نفس النتيجة تماماً (لا كشف وجود)
+    ok 3 - ⭐⭐ محادثة غير موجودة = نفس النتيجة تماماً (لا كشف وجود)
+      ---
+      duration_ms: 0.385041
+      type: 'test'
+      ...
+    # Subtest: ⭐ أحداث التدقيق معزولة بالمستأجر
+    ok 4 - ⭐ أحداث التدقيق معزولة بالمستأجر
+      ---
+      duration_ms: 0.524925
+      type: 'test'
+      ...
+    1..4
+ok 106 - ٤) عدم خلط البيانات بين المستأجرين
+  ---
+  duration_ms: 3.711444
+  type: 'test'
+  ...
+# Subtest: ٥) رفض قراءة قائمة المحادثات دون صلاحية مناسبة
+    # Subtest: ⭐⭐ الرفض صريح بخطأ صلاحية
+    ok 1 - ⭐⭐ الرفض صريح بخطأ صلاحية
+      ---
+      duration_ms: 0.941679
+      type: 'test'
+      ...
+    # Subtest: ⭐ المحاولة المرفوضة تُوثَّق في سجل القراءة
+    ok 2 - ⭐ المحاولة المرفوضة تُوثَّق في سجل القراءة
+      ---
+      duration_ms: 0.272025
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ الخيار الافتراضي = المنع (جلسة بلا صلاحيات)
+    ok 3 - ⭐⭐ الخيار الافتراضي = المنع (جلسة بلا صلاحيات)
+      ---
+      duration_ms: 0.375458
+      type: 'test'
+      ...
+    1..3
+ok 107 - ٥) رفض قراءة قائمة المحادثات دون صلاحية مناسبة
+  ---
+  duration_ms: 3.639723
+  type: 'test'
+  ...
+# Subtest: ٦) رفض قراءة محادثة منفردة دون صلاحيتها
+    # Subtest: ⭐⭐ الصلاحيتان منفصلتان: قائمة بلا قراءة محادثة
+    ok 1 - ⭐⭐ الصلاحيتان منفصلتان: قائمة بلا قراءة محادثة
+      ---
+      duration_ms: 0.427917
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ قراءة التدقيق تحتاج صلاحيتها الخاصة
+    ok 2 - ⭐⭐ قراءة التدقيق تحتاج صلاحيتها الخاصة
+      ---
+      duration_ms: 0.277203
+      type: 'test'
+      ...
+    # Subtest: ⭐ الرفض لا يُسرّب أي بيانات
+    ok 3 - ⭐ الرفض لا يُسرّب أي بيانات
+      ---
+      duration_ms: 0.221027
+      type: 'test'
+      ...
+    1..3
+ok 108 - ٦) رفض قراءة محادثة منفردة دون صلاحيتها
+  ---
+  duration_ms: 1.692508
+  type: 'test'
+  ...
+# Subtest: ٧) منع الوصول العابر حتى عند تخمين المعرّفات
+    # Subtest: ⭐⭐ ١٠٠ محاولة تخمين ⇒ صفر صفّ وصفر تسريب
+    ok 1 - ⭐⭐ ١٠٠ محاولة تخمين ⇒ صفر صفّ وصفر تسريب
+      ---
+      duration_ms: 8.777973
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ امتلاك المعرّف ليس دليل حق وصول (بلا صلاحية = رفض)
+    ok 2 - ⭐⭐ امتلاك المعرّف ليس دليل حق وصول (بلا صلاحية = رفض)
+      ---
+      duration_ms: 0.32378
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ معرّف مستأجر من العميل لا يبني سياقاً ⇒ لا قراءة
+    ok 3 - ⭐⭐ معرّف مستأجر من العميل لا يبني سياقاً ⇒ لا قراءة
+      ---
+      duration_ms: 0.600806
+      type: 'test'
+      ...
+    1..3
+ok 109 - ٧) منع الوصول العابر حتى عند تخمين المعرّفات
+  ---
+  duration_ms: 10.558139
+  type: 'test'
+  ...
+# Subtest: ٨) قراءة سجل التدقيق بصورة معزولة
+    # Subtest: ⭐ القراءة المعزولة ترجع أحداث المستأجر فقط
+    ok 1 - ⭐ القراءة المعزولة ترجع أحداث المستأجر فقط
+      ---
+      duration_ms: 0.532511
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ المسار الجديد لا يستدعي `entries()` غير المعزولة
+    ok 2 - ⭐⭐ المسار الجديد لا يستدعي `entries()` غير المعزولة
+      ---
+      duration_ms: 1.43713
+      type: 'test'
+      ...
+    # Subtest: ⭐ أحداث المحادثة تُقرأ بمرشّح المحادثة
+    ok 3 - ⭐ أحداث المحادثة تُقرأ بمرشّح المحادثة
+      ---
+      duration_ms: 0.346819
+      type: 'test'
+      ...
+    1..3
+ok 110 - ٨) قراءة سجل التدقيق بصورة معزولة
+  ---
+  duration_ms: 3.698336
+  type: 'test'
+  ...
+# Subtest: ٩) عدم تسجيل محتوى حساس في تدقيق القراءة
+    # Subtest: ⭐ أحداث القراءة لا تحمل نص الرسالة ولا سمات
+    ok 1 - ⭐ أحداث القراءة لا تحمل نص الرسالة ولا سمات
+      ---
+      duration_ms: 0.532182
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ قيمة تشبه سرّاً مرفوضة في سجل القراءة
+    ok 2 - ⭐⭐ قيمة تشبه سرّاً مرفوضة في سجل القراءة
+      ---
+      duration_ms: 0.394302
+      type: 'test'
+      ...
+    1..2
+ok 111 - ٩) عدم تسجيل محتوى حساس في تدقيق القراءة
+  ---
+  duration_ms: 1.729208
+  type: 'test'
+  ...
+# Subtest: ١٠) الترقيم والترتيب واستقرار النتائج
+    # Subtest: ⭐ الترتيب: أول توقيت تنازلياً (مفتاح لا يتغيّر)
+    ok 1 - ⭐ الترتيب: أول توقيت تنازلياً (مفتاح لا يتغيّر)
+      ---
+      duration_ms: 0.388577
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ الترقيم: صفحة بحدّ ⇒ لا تكرار ولا فقد بين الصفحات
+    ok 2 - ⭐⭐ الترقيم: صفحة بحدّ ⇒ لا تكرار ولا فقد بين الصفحات
+      ---
+      duration_ms: 0.501112
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ رسائل المحادثة: ترتيب القبول + ترقيم بلا فقد
+    ok 3 - ⭐⭐ رسائل المحادثة: ترتيب القبول + ترقيم بلا فقد
+      ---
+      duration_ms: 0.502344
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ وصول رسالة جديدة بين طلبين ⇒ لا تكرار ولا فقد ولا إعادة ترتيب
+    ok 4 - ⭐⭐ وصول رسالة جديدة بين طلبين ⇒ لا تكرار ولا فقد ولا إعادة ترتيب
+      ---
+      duration_ms: 0.645356
+      type: 'test'
+      ...
+    # Subtest: ⭐ حدّ الصفحة الأقصى مطبَّق ومؤشر خاطئ مرفوض
+    ok 5 - ⭐ حدّ الصفحة الأقصى مطبَّق ومؤشر خاطئ مرفوض
+      ---
+      duration_ms: 0.276298
+      type: 'test'
+      ...
+    1..5
+ok 112 - ١٠) الترقيم والترتيب واستقرار النتائج
+  ---
+  duration_ms: 3.73925
+  type: 'test'
+  ...
+# Subtest: ١١) عدم كسر Slice 01 وSlice 02
+    # Subtest: ⭐ عقد الرسالة ما زال كما هو (١٢ حقلاً · الإصدار 1)
+    ok 1 - ⭐ عقد الرسالة ما زال كما هو (١٢ حقلاً · الإصدار 1)
+      ---
+      duration_ms: 0.210577
+      type: 'test'
+      ...
+    # Subtest: ⭐ مخزن Slice 01 يعمل كما هو (قائمة · عدّ · جلب)
+    ok 2 - ⭐ مخزن Slice 01 يعمل كما هو (قائمة · عدّ · جلب)
+      ---
+      duration_ms: 0.343571
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ منطق Slice 02 (ترتيب · تكرار · رفض) ما زال يعمل
+    ok 3 - ⭐⭐ منطق Slice 02 (ترتيب · تكرار · رفض) ما زال يعمل
+      ---
+      duration_ms: 0.338585
+      type: 'test'
+      ...
+    # Subtest: ⭐ قيم سجل التدقيق لم تتغيّر (ولا قيمة قراءة داخله)
+    ok 4 - ⭐ قيم سجل التدقيق لم تتغيّر (ولا قيمة قراءة داخله)
+      ---
+      duration_ms: 0.265294
+      type: 'test'
+      ...
+    # Subtest: ⭐ الطبقة الجديدة لا تكسر المسار العام
+    ok 5 - ⭐ الطبقة الجديدة لا تكسر المسار العام
+      ---
+      duration_ms: 0.109331
+      type: 'test'
+      ...
+    1..5
+ok 113 - ١١) عدم كسر Slice 01 وSlice 02
+  ---
+  duration_ms: 1.892736
+  type: 'test'
+  ...
+# Subtest: ١٣) ⭐⭐ التحقّق: الصلاحيات لا تُشتق من مدخل عميل غير موثوق
+    # Subtest: ⭐ ادّعاءات عميل خام تحمل صلاحيات ⇒ رفض (لا سياق ⇒ لا صلاحية)
+    ok 1 - ⭐ ادّعاءات عميل خام تحمل صلاحيات ⇒ رفض (لا سياق ⇒ لا صلاحية)
+      ---
+      duration_ms: 0.427258
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ نسخة (كائن جديد) من جلسة صحيحة مع صلاحيات مُضافة ⇒ رفض
+    ok 2 - ⭐⭐ نسخة (كائن جديد) من جلسة صحيحة مع صلاحيات مُضافة ⇒ رفض
+      ---
+      duration_ms: 0.29545
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ حقل `capabilities` في الحمولة مُتجاهل تماماً (إصلاح D-055)
+    ok 3 - ⭐⭐⭐ حقل `capabilities` في الحمولة مُتجاهل تماماً (إصلاح D-055)
+      ---
+      duration_ms: 0.342242
+      type: 'test'
+      ...
+    # Subtest: ⭐ المسار الإنتاجي يرفض مصدر الاختبار ⇒ لا مسار إنتاجي من جلسة اختبار
+    ok 4 - ⭐ المسار الإنتاجي يرفض مصدر الاختبار ⇒ لا مسار إنتاجي من جلسة اختبار
+      ---
+      duration_ms: 0.229515
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ السطح العام لا يُصدّر أدوات إصدار الإثبات ⇒ لا بناء سياق من ادّعاءات
+    ok 5 - ⭐⭐ السطح العام لا يُصدّر أدوات إصدار الإثبات ⇒ لا بناء سياق من ادّعاءات
+      ---
+      duration_ms: 0.318408
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ⭐ الفجوة مُغلقة: مصدر غير مسجَّل ⇒ رفض بنيوي
+    ok 6 - ⭐⭐⭐ ⭐ الفجوة مُغلقة: مصدر غير مسجَّل ⇒ رفض بنيوي
+      ---
+      duration_ms: 0.227238
+      type: 'test'
+      ...
+    1..6
+ok 114 - ١٣) ⭐⭐ التحقّق: الصلاحيات لا تُشتق من مدخل عميل غير موثوق
+  ---
+  duration_ms: 2.506796
+  type: 'test'
+  ...
+# Subtest: ١٢) عدم وجود اتصالات خارجية
+    # Subtest: ⭐ الحاجز مُركَّب ولم تُسجَّل أي محاولة
+    ok 1 - ⭐ الحاجز مُركَّب ولم تُسجَّل أي محاولة
+      ---
+      duration_ms: 0.129167
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ فحص ساكن لملفات الشريحة الثالثة: صفر رمز شبكة
+    ok 2 - ⭐⭐ فحص ساكن لملفات الشريحة الثالثة: صفر رمز شبكة
+      ---
+      duration_ms: 64.808392
+      type: 'test'
+      ...
+    1..2
+ok 115 - ١٢) عدم وجود اتصالات خارجية
+  ---
+  duration_ms: 65.268487
+  type: 'test'
+  ...
+# Subtest: ١) ⭐ نجاح `resolved ⇒ closed` عند وجود الصلاحية
+    # Subtest: ⭐⭐⭐ الإغلاق ينفَّذ والحالة تصبح `closed`
+    ok 1 - ⭐⭐⭐ الإغلاق ينفَّذ والحالة تصبح `closed`
+      ---
+      duration_ms: 7.809097
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ `closed` نهائية ⇒ `isTerminalState` confirms
+    ok 2 - ⭐⭐⭐ `closed` نهائية ⇒ `isTerminalState` confirms
+      ---
+      duration_ms: 1.369686
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ عدد الانتقالات صار ١٢ (كان ١١)
+    ok 3 - ⭐⭐⭐⭐ عدد الانتقالات صار ١٢ (كان ١١)
+      ---
+      duration_ms: 0.288787
+      type: 'test'
+      ...
+    1..3
+ok 116 - ١) ⭐ نجاح `resolved ⇒ closed` عند وجود الصلاحية
+  ---
+  duration_ms: 11.200639
+  type: 'test'
+  ...
+# Subtest: ٢) ⭐ رفض الإغلاق من الحالات الأخرى
+    # Subtest: ⭐⭐⭐ `new ⇒ closed` و`open ⇒ closed` و`pending ⇒ closed` مرفوضة
+    ok 1 - ⭐⭐⭐ `new ⇒ closed` و`open ⇒ closed` و`pending ⇒ closed` مرفوضة
+      ---
+      duration_ms: 2.129923
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ `assigned ⇒ closed` مرفوضة (الإغلاق من `resolved` فقط)
+    ok 2 - ⭐⭐⭐ `assigned ⇒ closed` مرفوضة (الإغلاق من `resolved` فقط)
+      ---
+      duration_ms: 3.601263
+      type: 'test'
+      ...
+    1..2
+ok 117 - ٢) ⭐ رفض الإغلاق من الحالات الأخرى
+  ---
+  duration_ms: 6.320911
+  type: 'test'
+  ...
+# Subtest: ٣) ⭐ رفض الإغلاق دون الصلاحية
+    # Subtest: ⭐⭐⭐ دور بلا `conversation.state.update` ⇒ رفض + توثيق المحاولة
+    ok 1 - ⭐⭐⭐ دور بلا `conversation.state.update` ⇒ رفض + توثيق المحاولة
+      ---
+      duration_ms: 0.967176
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ بلا أي صلاحية ⇒ رفض (الافتراضي = المنع)
+    ok 2 - ⭐⭐⭐⭐ بلا أي صلاحية ⇒ رفض (الافتراضي = المنع)
+      ---
+      duration_ms: 0.574856
+      type: 'test'
+      ...
+    1..2
+ok 118 - ٣) ⭐ رفض الإغلاق دون الصلاحية
+  ---
+  duration_ms: 2.332771
+  type: 'test'
+  ...
+# Subtest: ٤) ⭐ رفض إعادة فتح محادثة مغلقة
+    # Subtest: ⭐⭐⭐ `closed ⇒ open` مرفوضة ⇒ الحالة تبقى `closed`
+    ok 1 - ⭐⭐⭐ `closed ⇒ open` مرفوضة ⇒ الحالة تبقى `closed`
+      ---
+      duration_ms: 15.822172
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ `closed ⇒ resolved` مرفوضة أيضاً
+    ok 2 - ⭐⭐⭐ `closed ⇒ resolved` مرفوضة أيضاً
+      ---
+      duration_ms: 0.67204
+      type: 'test'
+      ...
+    1..2
+ok 119 - ٤) ⭐ رفض إعادة فتح محادثة مغلقة
+  ---
+  duration_ms: 16.962636
+  type: 'test'
+  ...
+# Subtest: ٥) ⭐ رفض تعديل حالة المحادثة المغلقة
+    # Subtest: ⭐⭐⭐ أي تعديل حالة بعد الإغلاق ⇒ مرفوض (ولا تغيير)
+    ok 1 - ⭐⭐⭐ أي تعديل حالة بعد الإغلاق ⇒ مرفوض (ولا تغيير)
+      ---
+      duration_ms: 1.288215
+      type: 'test'
+      ...
+    1..1
+ok 120 - ٥) ⭐ رفض تعديل حالة المحادثة المغلقة
+  ---
+  duration_ms: 1.590683
+  type: 'test'
+  ...
+# Subtest: ٦) ⭐ رفض تغيير الموظف المسنَد بعد الإغلاق
+    # Subtest: ⭐⭐⭐ إسناد بعد الإغلاق ⇒ مرفوض (ولا تغيير في الموظف)
+    ok 1 - ⭐⭐⭐ إسناد بعد الإغلاق ⇒ مرفوض (ولا تغيير في الموظف)
+      ---
+      duration_ms: 1.246825
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ إلغاء الإسناد بعد الإغلاق ⇒ مرفوض
+    ok 2 - ⭐⭐⭐ إلغاء الإسناد بعد الإغلاق ⇒ مرفوض
+      ---
+      duration_ms: 0.928488
+      type: 'test'
+      ...
+    1..2
+ok 121 - ٦) ⭐ رفض تغيير الموظف المسنَد بعد الإغلاق
+  ---
+  duration_ms: 2.590616
+  type: 'test'
+  ...
+# Subtest: ٧) ⭐ منع التعديل العابر للمستأجرين
+    # Subtest: ⭐⭐⭐ مستأجر آخر لا يُغلق محادثة مستأجر ⇒ رفض (بلا كشف وجود)
+    ok 1 - ⭐⭐⭐ مستأجر آخر لا يُغلق محادثة مستأجر ⇒ رفض (بلا كشف وجود)
+      ---
+      duration_ms: 0.635058
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ ١٠٠ محاولة عابرة على محادثة مغلقة ⇒ صفر تسريب
+    ok 2 - ⭐⭐⭐⭐ ١٠٠ محاولة عابرة على محادثة مغلقة ⇒ صفر تسريب
+      ---
+      duration_ms: 3.166779
+      type: 'test'
+      ...
+    1..2
+ok 122 - ٧) ⭐ منع التعديل العابر للمستأجرين
+  ---
+  duration_ms: 4.278132
+  type: 'test'
+  ...
+# Subtest: ٨) ⭐ تسجيل الإغلاق في سجل التدقيق دون محتوى حسّاس
+    # Subtest: ⭐⭐⭐ سطر الإغلاق مسجَّل بالحقول المطلوبة
+    ok 1 - ⭐⭐⭐ سطر الإغلاق مسجَّل بالحقول المطلوبة
+      ---
+      duration_ms: 0.839055
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ السجل بلا محتوى رسائل ولا أسرار
+    ok 2 - ⭐⭐⭐ السجل بلا محتوى رسائل ولا أسرار
+      ---
+      duration_ms: 0.316388
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ سبب يشبه سرّاً عند الإغلاق ⇒ رفض الكتابة
+    ok 3 - ⭐⭐⭐⭐ سبب يشبه سرّاً عند الإغلاق ⇒ رفض الكتابة
+      ---
+      duration_ms: 0.42414
+      type: 'test'
+      ...
+    1..3
+ok 123 - ٨) ⭐ تسجيل الإغلاق في سجل التدقيق دون محتوى حسّاس
+  ---
+  duration_ms: 2.072009
+  type: 'test'
+  ...
+# Subtest: ٩) ⭐ سلامة التعامل مع التكرار والتعارض
+    # Subtest: ⭐⭐⭐ إغلاق مكرّر ⇒ رفض صريح (لا صمت) وبلا سطر ثانٍ
+    ok 1 - ⭐⭐⭐ إغلاق مكرّر ⇒ رفض صريح (لا صمت) وبلا سطر ثانٍ
+      ---
+      duration_ms: 0.366044
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ تعارض الإصدار ⇒ رفض (ولا كتابة فوق تغيير آخر)
+    ok 2 - ⭐⭐⭐⭐ تعارض الإصدار ⇒ رفض (ولا كتابة فوق تغيير آخر)
+      ---
+      duration_ms: 0.425227
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الإغلاق بإصدار متوقّع مطابق ينفَّذ
+    ok 3 - ⭐⭐⭐⭐⭐ الإغلاق بإصدار متوقّع مطابق ينفَّذ
+      ---
+      duration_ms: 0.287938
+      type: 'test'
+      ...
+    1..3
+ok 124 - ٩) ⭐ سلامة التعامل مع التكرار والتعارض
+  ---
+  duration_ms: 1.437759
+  type: 'test'
+  ...
+# Subtest: ١٠) ⭐ عدم كسر اختبارات Slice 01 – Slice 04
+    # Subtest: ⭐⭐⭐⭐⭐ خريطة الانتقالات: ١٢ انتقالاً + `closed` بلا مخرج
+    ok 1 - ⭐⭐⭐⭐⭐ خريطة الانتقالات: ١٢ انتقالاً + `closed` بلا مخرج
+      ---
+      duration_ms: 0.42609
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ قراءات Slice 03 ما زالت تعمل بعد الإغلاق
+    ok 2 - ⭐⭐⭐⭐⭐ قراءات Slice 03 ما زالت تعمل بعد الإغلاق
+      ---
+      duration_ms: 0.518909
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ الطرد: كسر حراسة النهائية ⇒ الاختبار يفشل
+    ok 3 - ⭐⭐⭐⭐⭐⭐ الطرد: كسر حراسة النهائية ⇒ الاختبار يفشل
+      ---
+      duration_ms: 1.456637
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐⭐ صفر اتصال (الحاجز مُركَّب)
+    ok 4 - ⭐⭐⭐⭐⭐⭐⭐ صفر اتصال (الحاجز مُركَّب)
+      ---
+      duration_ms: 0.122542
+      type: 'test'
+      ...
+    1..4
+ok 125 - ١٠) ⭐ عدم كسر اختبارات Slice 01 – Slice 04
+  ---
+  duration_ms: 5.180557
+  type: 'test'
+  ...
+# Subtest: ١) ⭐ انتقال مسموح ينفَّذ ⇒ والحالة تتغيّر فعلاً
+    # Subtest: ⭐ `new ⇒ open` ينفَّذ والحالة تتغيّر
+    ok 1 - ⭐ `new ⇒ open` ينفَّذ والحالة تتغيّر
+      ---
+      duration_ms: 8.422194
+      type: 'test'
+      ...
+    # Subtest: ⭐ `open ⇒ pending` و`pending ⇒ resolved` تتسلسلان
+    ok 2 - ⭐ `open ⇒ pending` و`pending ⇒ resolved` تتسلسلان
+      ---
+      duration_ms: 1.107317
+      type: 'test'
+      ...
+    # Subtest: ⭐ `resolved ⇒ open` (إعادة فتح) تنفَّذ بسبب مُسجَّل
+    ok 3 - ⭐ `resolved ⇒ open` (إعادة فتح) تنفَّذ بسبب مُسجَّل
+      ---
+      duration_ms: 2.21195
+      type: 'test'
+      ...
+    1..3
+ok 126 - ١) ⭐ انتقال مسموح ينفَّذ ⇒ والحالة تتغيّر فعلاً
+  ---
+  duration_ms: 17.147658
+  type: 'test'
+  ...
+# Subtest: ٢) ⭐ انتقال ممنوع ⇒ رفض صريح + صفر تغيير في الحالة
+    # Subtest: ⭐⭐ `new ⇒ pending` ممنوع ⇒ رفض + الحالة لم تتغيّر
+    ok 1 - ⭐⭐ `new ⇒ pending` ممنوع ⇒ رفض + الحالة لم تتغيّر
+      ---
+      duration_ms: 1.349226
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ `new ⇒ assigned` ممنوع (الإسناد شرط لا أثر جانبي)
+    ok 2 - ⭐⭐ `new ⇒ assigned` ممنوع (الإسناد شرط لا أثر جانبي)
+      ---
+      duration_ms: 0.68007
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ `resolved ⇒ open` بلا سبب ⇒ رفض صريح
+    ok 3 - ⭐⭐⭐ `resolved ⇒ open` بلا سبب ⇒ رفض صريح
+      ---
+      duration_ms: 0.952542
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ حالة خارج المجموعة المغلقة ⇒ رفض
+    ok 4 - ⭐⭐⭐⭐ حالة خارج المجموعة المغلقة ⇒ رفض
+      ---
+      duration_ms: 0.757766
+      type: 'test'
+      ...
+    # Subtest: ⭐⬀⬀⬀⬀⬀⬀⬀ تعارض النسخة ⇒ رفض وصفر صفر
+    ok 5 - ⭐⬀⬀⬀⬀⬀⬀⬀ تعارض النسخة ⇒ رفض وصفر صفر
+      ---
+      duration_ms: 1.016027
+      type: 'test'
+      ...
+    # Subtest: ⭐⬀⬀⬀⬀⬀⬀⬀⬀ عملية مكررة ⇒ رفض صريح (لا صمت)
+    ok 6 - ⭐⬀⬀⬀⬀⬀⬀⬀⬀ عملية مكررة ⇒ رفض صريح (لا صمت)
+      ---
+      duration_ms: 1.324408
+      type: 'test'
+      ...
+    1..6
+ok 127 - ٢) ⭐ انتقال ممنوع ⇒ رفض صريح + صفر تغيير في الحالة
+  ---
+  duration_ms: 7.903892
+  type: 'test'
+  ...
+# Subtest: ٣) ⭐ الإغلاق مسموح من `resolved` فقط (بعد `D-056`)
+    # Subtest: ⭐⭐⭐ الإغلاق من الحالات الأخرى ⇒ رفض صريح
+    ok 1 - ⭐⭐⭐ الإغلاق من الحالات الأخرى ⇒ رفض صريح
+      ---
+      duration_ms: 2.278983
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ خريطة الانتقالات مغلقة ومطابقة (١٢ انتقالاً — بعد `D-056`)
+    ok 2 - ⭐⭐⭐⭐ خريطة الانتقالات مغلقة ومطابقة (١٢ انتقالاً — بعد `D-056`)
+      ---
+      duration_ms: 0.344611
+      type: 'test'
+      ...
+    1..2
+ok 128 - ٣) ⭐ الإغلاق مسموح من `resolved` فقط (بعد `D-056`)
+  ---
+  duration_ms: 3.131007
+  type: 'test'
+  ...
+# Subtest: ٤) ⭐ تعديل حالة بلا `conversation.state.update` ⇒ رفض
+    # Subtest: ⭐⭐⭐ دور بلا صلاحية التعديل ⇒ رفض + توثيق المحاولة
+    ok 1 - ⭐⭐⭐ دور بلا صلاحية التعديل ⇒ رفض + توثيق المحاولة
+      ---
+      duration_ms: 0.526883
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ بلا أي صلاحية ⇒ رفض (الافتراضي = المنع)
+    ok 2 - ⭐⭐⭐⭐ بلا أي صلاحية ⇒ رفض (الافتراضي = المنع)
+      ---
+      duration_ms: 0.354897
+      type: 'test'
+      ...
+    1..2
+ok 129 - ٤) ⭐ تعديل حالة بلا `conversation.state.update` ⇒ رفض
+  ---
+  duration_ms: 1.182707
+  type: 'test'
+  ...
+# Subtest: ٥) ⭐ إسناد بلا `conversation.assign` ⇒ رفض
+    # Subtest: ⭐⭐⭐ دور بلا صلاحية الإسناد ⇒ رفض
+    ok 1 - ⭐⭐⭐ دور بلا صلاحية الإسناد ⇒ رفض
+      ---
+      duration_ms: 0.6063
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ إسناد صحيح ينفَّذ (المالك) ⇒ الحالة `assigned` + الموظف
+    ok 2 - ⭐⭐⭐⭐ إسناد صحيح ينفَّذ (المالك) ⇒ الحالة `assigned` + الموظف
+      ---
+      duration_ms: 0.369131
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الإسناد من `new` ممنوع (لازم `open` أولاً)
+    ok 3 - ⭐⭐⭐⭐⭐ الإسناد من `new` ممنوع (لازم `open` أولاً)
+      ---
+      duration_ms: 0.425814
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ الإسناد لنفس الموظف ⇒ رفض صريح (لا صمت)
+    ok 4 - ⭐⭐⭐⭐⭐⭐ الإسناد لنفس الموظف ⇒ رفض صريح (لا صمت)
+      ---
+      duration_ms: 0.342509
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐⭐ نقل الإسناد لموظف آخر (نفس المستأجر) ينفَّذ
+    ok 5 - ⭐⭐⭐⭐⭐⭐⭐ نقل الإسناد لموظف آخر (نفس المستأجر) ينفَّذ
+      ---
+      duration_ms: 0.377634
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐⭐⭐ إلغاء الإسناد ⇒ `open` والموظف يُزال
+    ok 6 - ⭐⭐⭐⭐⭐⭐⭐⭐ إلغاء الإسناد ⇒ `open` والموظف يُزال
+      ---
+      duration_ms: 0.423244
+      type: 'test'
+      ...
+    1..6
+ok 130 - ٥) ⭐ إسناد بلا `conversation.assign` ⇒ رفض
+  ---
+  duration_ms: 3.245924
+  type: 'test'
+  ...
+# Subtest: ٦) ⭐ إسناد إلى موظف من مستأجر آخر ⇒ رفض
+    # Subtest: ⭐⭐⭐ موظف مستأجر آخر ⇒ نفس رمز الرفض (لا كشف وجود)
+    ok 1 - ⭐⭐⭐ موظف مستأجر آخر ⇒ نفس رمز الرفض (لا كشف وجود)
+      ---
+      duration_ms: 0.385743
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ محادثة مستأجر آخر ⇒ لا تُعدَّل ولا تُكشف
+    ok 2 - ⭐⭐⭐⭐ محادثة مستأجر آخر ⇒ لا تُعدَّل ولا تُكشف
+      ---
+      duration_ms: 0.362127
+      type: 'test'
+      ...
+    1..2
+ok 131 - ٦) ⭐ إسناد إلى موظف من مستأجر آخر ⇒ رفض
+  ---
+  duration_ms: 1.045361
+  type: 'test'
+  ...
+# Subtest: ٧) ⭐ إسناد إلى موظف غير موجود ⇒ رفض
+    # Subtest: ⭐⭐⭐ معرّف موظف غير موجود ⇒ نفس رمز الرفض
+    ok 1 - ⭐⭐⭐ معرّف موظف غير موجود ⇒ نفس رمز الرفض
+      ---
+      duration_ms: 0.341798
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ معرّف موظف مشوّه ⇒ رفض (فحص الشكل قبل أي وصول)
+    ok 2 - ⭐⭐⭐⭐ معرّف موظف مشوّه ⇒ رفض (فحص الشكل قبل أي وصول)
+      ---
+      duration_ms: 0.366105
+      type: 'test'
+      ...
+    1..2
+ok 132 - ٧) ⭐ إسناد إلى موظف غير موجود ⇒ رفض
+  ---
+  duration_ms: 0.997805
+  type: 'test'
+  ...
+# Subtest: ٨) ⭐ ١٠٠ محاولة عابرة (تخمين المعرّفات) ⇒ صفر تسريب
+    # Subtest: ⭐⭐⭐⭐ ١٠٠ تخمين ⇒ صفر تسريب بين المستأجرين
+    ok 1 - ⭐⭐⭐⭐ ١٠٠ تخمين ⇒ صفر تسريب بين المستأجرين
+      ---
+      duration_ms: 6.216575
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ محادثة A ⇒ B لا تُقرأ ولا تُعدَّل (رمز واحد = لا كشف)
+    ok 2 - ⭐⭐⭐⭐⭐ محادثة A ⇒ B لا تُقرأ ولا تُعدَّل (رمز واحد = لا كشف)
+      ---
+      duration_ms: 0.407132
+      type: 'test'
+      ...
+    1..2
+ok 133 - ٨) ⭐ ١٠٠ محاولة عابرة (تخمين المعرّفات) ⇒ صفر تسريب
+  ---
+  duration_ms: 6.991499
+  type: 'test'
+  ...
+# Subtest: ٩) ⭐ سجل التغييرات معزول بالمستأجر + بلا محتوى حسّاس
+    # Subtest: ⭐⭐⭐ سجل التغييرات يرصد كل تغيير بالحقول المطلوبة
+    ok 1 - ⭐⭐⭐ سجل التغييرات يرصد كل تغيير بالحقول المطلوبة
+      ---
+      duration_ms: 0.369845
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ السجل معزول بالمستأجر (لا سطر من مستأجر آخر)
+    ok 2 - ⭐⭐⭐⭐ السجل معزول بالمستأجر (لا سطر من مستأجر آخر)
+      ---
+      duration_ms: 0.262154
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ سبب يشبه سرّاً ⇒ رفض الكتابة
+    ok 3 - ⭐⭐⭐⭐⭐ سبب يشبه سرّاً ⇒ رفض الكتابة
+      ---
+      duration_ms: 0.334677
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ قراءة السجل تتطلّب صلاحية وتُعزل
+    ok 4 - ⭐⭐⭐⭐⭐⭐ قراءة السجل تتطلّب صلاحية وتُعزل
+      ---
+      duration_ms: 0.491653
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐⭐ السجل لا يحمل محتوى الرسائل
+    ok 5 - ⭐⭐⭐⭐⭐⭐⭐ السجل لا يحمل محتوى الرسائل
+      ---
+      duration_ms: 0.258437
+      type: 'test'
+      ...
+    1..5
+ok 134 - ٩) ⭐ سجل التغييرات معزول بالمستأجر + بلا محتوى حسّاس
+  ---
+  duration_ms: 2.252574
+  type: 'test'
+  ...
+# Subtest: ١٠) ⭐ قاعدة الترتيب لا تكسر قراءات Slice 03
+    # Subtest: ⭐⭐⭐ القراءة + الحالة معاً ⇒ لا تعارض
+    ok 1 - ⭐⭐⭐ القراءة + الحالة معاً ⇒ لا تعارض
+      ---
+      duration_ms: 0.574113
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐ ترتيب الطبقة (Slice 02) سليم بعد تغيير الحالة
+    ok 2 - ⭐⭐⭐⭐ ترتيب الطبقة (Slice 02) سليم بعد تغيير الحالة
+      ---
+      duration_ms: 0.362236
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ طبقة الحالة لا تكسر المقروءات المحفوظة
+    ok 3 - ⭐⭐⭐⭐⭐ طبقة الحالة لا تكسر المقروءات المحفوظة
+      ---
+      duration_ms: 0.416605
+      type: 'test'
+      ...
+    1..3
+ok 135 - ١٠) ⭐ قاعدة الترتيب لا تكسر قراءات Slice 03
+  ---
+  duration_ms: 1.709329
+  type: 'test'
+  ...
+# Subtest: ١١) ⭐ الطرد: كسر فلتر المستأجر في طبقة الحالة ⇒ الاختبار يفشل
+    # Subtest: ⭐⭐⭐⭐⭐ فحص ساكن: طبقة الحالة لا تقرأ سجلاً غير معزول
+    ok 1 - ⭐⭐⭐⭐⭐ فحص ساكن: طبقة الحالة لا تقرأ سجلاً غير معزول
+      ---
+      duration_ms: 1.382838
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐⭐ فحص ساكن: صفر رمز شبكة في الشريحة الرابعة
+    ok 2 - ⭐⭐⭐⭐⭐⭐ فحص ساكن: صفر رمز شبكة في الشريحة الرابعة
+      ---
+      duration_ms: 2.206338
+      type: 'test'
+      ...
+    1..2
+ok 136 - ١١) ⭐ الطرد: كسر فلتر المستأجر في طبقة الحالة ⇒ الاختبار يفشل
+  ---
+  duration_ms: 3.863383
+  type: 'test'
+  ...
+# Subtest: ١٢) ⭐ صفر اتصال خارجي + بيانات اصطناعية فقط
+    # Subtest: ⭐ الحاجز مُركَّب ولم تُسجَّل أي محاولة
+    ok 1 - ⭐ الحاجز مُركَّب ولم تُسجَّل أي محاولة
+      ---
+      duration_ms: 0.13413
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ كل بيانات الاختبار اصطناعية (نطاق `.invalid` محجوز)
+    ok 2 - ⭐⭐ كل بيانات الاختبار اصطناعية (نطاق `.invalid` محجوز)
+      ---
+      duration_ms: 0.877746
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ حزمة الإنتاج تستثني شجرة الاختبار (فحص `npm pack` حقيقي)
+    ok 3 - ⭐⭐⭐ حزمة الإنتاج تستثني شجرة الاختبار (فحص `npm pack` حقيقي)
+      ---
+      duration_ms: 1.084085
+      type: 'test'
+      ...
+    1..3
+ok 137 - ١٢) ⭐ صفر اتصال خارجي + بيانات اصطناعية فقط
+  ---
+  duration_ms: 2.471968
+  type: 'test'
+  ...
+# Subtest: ١) ⭐⭐⭐ عزل المستأجر (الطابور والمؤشرات)
+    # Subtest: ⭐⭐⭐⭐⭐ طابور المستأجر لا يحتوي محادثة مستأجر آخر
+    ok 1 - ⭐⭐⭐⭐⭐ طابور المستأجر لا يحتوي محادثة مستأجر آخر
+      ---
+      duration_ms: 7.979514
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ مؤشرات المستأجر لا تحسب محادثات مستأجر آخر
+    ok 2 - ⭐⭐⭐⭐⭐ مؤشرات المستأجر لا تحسب محادثات مستأجر آخر
+      ---
+      duration_ms: 1.336184
+      type: 'test'
+      ...
+    1..2
+ok 138 - ١) ⭐⭐⭐ عزل المستأجر (الطابور والمؤشرات)
+  ---
+  duration_ms: 10.433677
+  type: 'test'
+  ...
+# Subtest: ٢) ⭐⭐ التصنيفات الأربعة (من الحالة والإسناد الفعلي)
+    # Subtest: ⭐⭐⭐⭐⭐ `mine` · `unassigned` · `pending` · `closed`
+    ok 1 - ⭐⭐⭐⭐⭐ `mine` · `unassigned` · `pending` · `closed`
+      ---
+      duration_ms: 2.519171
+      type: 'test'
+      ...
+    1..1
+ok 139 - ٢) ⭐⭐ التصنيفات الأربعة (من الحالة والإسناد الفعلي)
+  ---
+  duration_ms: 2.814917
+  type: 'test'
+  ...
+# Subtest: ٣) ⭐⭐ الترتيب الحتمي (الأكثر انتظاراً أولاً)
+    # Subtest: ⭐⭐⭐⭐⭐ نفس البيانات ⇒ نفس الترتيب دائماً
+    ok 1 - ⭐⭐⭐⭐⭐ نفس البيانات ⇒ نفس الترتيب دائماً
+      ---
+      duration_ms: 1.242936
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الترقيم بالصفحات (cursor) يعمل
+    ok 2 - ⭐⭐⭐⭐⭐ الترقيم بالصفحات (cursor) يعمل
+      ---
+      duration_ms: 0.567934
+      type: 'test'
+      ...
+    1..2
+ok 140 - ٣) ⭐⭐ الترتيب الحتمي (الأكثر انتظاراً أولاً)
+  ---
+  duration_ms: 2.254161
+  type: 'test'
+  ...
+# Subtest: ٤) ⭐⭐⭐ صحّة المؤشرات (حساب يدوي على بيانات معروفة)
+    # Subtest: ⭐⭐⭐⭐⭐ العدّادات + التأخير + أول رد + زمن الحل
+    ok 1 - ⭐⭐⭐⭐⭐ العدّادات + التأخير + أول رد + زمن الحل
+      ---
+      duration_ms: 1.207493
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ زمن الحل يُحسب عند وجود قيد حل
+    ok 2 - ⭐⭐⭐⭐⭐ زمن الحل يُحسب عند وجود قيد حل
+      ---
+      duration_ms: 0.815882
+      type: 'test'
+      ...
+    1..2
+ok 141 - ٤) ⭐⭐⭐ صحّة المؤشرات (حساب يدوي على بيانات معروفة)
+  ---
+  duration_ms: 2.779477
+  type: 'test'
+  ...
+# Subtest: ٥) ⭐⭐⭐⭐⭐ منع التسريب (لا نصّ رسالة في المخرجات)
+    # Subtest: ⭐⭐⭐⭐⭐ نص الرسالة غير موجود في الطابور ولا في المؤشرات
+    ok 1 - ⭐⭐⭐⭐⭐ نص الرسالة غير موجود في الطابور ولا في المؤشرات
+      ---
+      duration_ms: 0.516396
+      type: 'test'
+      ...
+    1..1
+ok 142 - ٥) ⭐⭐⭐⭐⭐ منع التسريب (لا نصّ رسالة في المخرجات)
+  ---
+  duration_ms: 0.742217
+  type: 'test'
+  ...
+# Subtest: ٦) ⭐⭐⭐⭐⭐ بوابة الصلاحيات (صريحة + السقف يحكم)
+    # Subtest: ⭐⭐⭐⭐⭐ الوكيل بلا المؤشرات ⇒ رفض
+    ok 1 - ⭐⭐⭐⭐⭐ الوكيل بلا المؤشرات ⇒ رفض
+      ---
+      duration_ms: 0.978927
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ `viewer` بلا الطابور ⇒ رفض
+    ok 2 - ⭐⭐⭐⭐⭐ `viewer` بلا الطابور ⇒ رفض
+      ---
+      duration_ms: 0.53913
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ مصدر بسقف ناقص ⇒ المؤشرات مرفوضة والطابور مسموح
+    ok 3 - ⭐⭐⭐⭐⭐ مصدر بسقف ناقص ⇒ المؤشرات مرفوضة والطابور مسموح
+      ---
+      duration_ms: 0.559258
+      type: 'test'
+      ...
+    1..3
+ok 143 - ٦) ⭐⭐⭐⭐⭐ بوابة الصلاحيات (صريحة + السقف يحكم)
+  ---
+  duration_ms: 2.52595
+  type: 'test'
+  ...
+# Subtest: ٧) ⭐⭐⭐⭐⭐ مصدر غير مسجَّل ⇒ لا سياق معتمد ⇒ لا طابور
+    # Subtest: ⭐⭐⭐⭐⭐ مصدر runtime غير مسجَّل يُرفض بنمط الفشل نفسه
+    ok 1 - ⭐⭐⭐⭐⭐ مصدر runtime غير مسجَّل يُرفض بنمط الفشل نفسه
+      ---
+      duration_ms: 0.246692
+      type: 'test'
+      ...
+    1..1
+ok 144 - ٧) ⭐⭐⭐⭐⭐ مصدر غير مسجَّل ⇒ لا سياق معتمد ⇒ لا طابور
+  ---
+  duration_ms: 0.487938
+  type: 'test'
+  ...
+# Subtest: ٨) ⭐⭐⭐ عدم التخمين (قيمة غير محسوبة ⇒ `undefined` صريح)
+    # Subtest: ⭐⭐⭐⭐⭐ لا أول رد ولا زمن حل ⇒ `undefined` لا صفر
+    ok 1 - ⭐⭐⭐⭐⭐ لا أول رد ولا زمن حل ⇒ `undefined` لا صفر
+      ---
+      duration_ms: 0.42493
+      type: 'test'
+      ...
+    1..1
+ok 145 - ٨) ⭐⭐⭐ عدم التخمين (قيمة غير محسوبة ⇒ `undefined` صريح)
+  ---
+  duration_ms: 0.612831
+  type: 'test'
+  ...
+# Subtest: ٩) ⭐⭐⭐⭐⭐ بلا شبكة (الحاجز مُركَّب)
+    # Subtest: ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+    ok 1 - ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+      ---
+      duration_ms: 0.150631
+      type: 'test'
+      ...
+    1..1
+ok 146 - ٩) ⭐⭐⭐⭐⭐ بلا شبكة (الحاجز مُركَّب)
+  ---
+  duration_ms: 0.352877
+  type: 'test'
+  ...
+# Subtest: ١٠) ⭐⭐⭐⭐⭐ القراءة فقط (بلا أي أثر كتابة)
+    # Subtest: ⭐⭐⭐⭐⭐ الطابور + المؤشرات ⇒ لا حالة ولا سجل تغييرات ولا إسناد
+    ok 1 - ⭐⭐⭐⭐⭐ الطابور + المؤشرات ⇒ لا حالة ولا سجل تغييرات ولا إسناد
+      ---
+      duration_ms: 0.593054
+      type: 'test'
+      ...
+    1..1
+ok 147 - ١٠) ⭐⭐⭐⭐⭐ القراءة فقط (بلا أي أثر كتابة)
+  ---
+  duration_ms: 0.794301
+  type: 'test'
+  ...
+# Subtest: ١١) ⭐⭐⭐⭐⭐ الانحدار (الشرائح السابقة سليمة)
+    # Subtest: ⭐⭐⭐⭐⭐ خريطة الانتقالات ١٢ + قراءة Slice 03 سليمة
+    ok 1 - ⭐⭐⭐⭐⭐ خريطة الانتقالات ١٢ + قراءة Slice 03 سليمة
+      ---
+      duration_ms: 0.641294
+      type: 'test'
+      ...
+    1..1
+ok 148 - ١١) ⭐⭐⭐⭐⭐ الانحدار (الشرائح السابقة سليمة)
+  ---
+  duration_ms: 0.848103
+  type: 'test'
+  ...
+# Subtest: ١٢) ⭐⭐⭐⭐⭐ نطاق الجمهور (قرار المالك)
+    # Subtest: ⭐⭐⭐⭐⭐ الوكيل يرى محادثاته فقط
+    ok 1 - ⭐⭐⭐⭐⭐ الوكيل يرى محادثاته فقط
+      ---
+      duration_ms: 0.667757
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ معيار الخمول ٣٠ دقيقة (والافتراضي مُعلن) — ⭐ «الخمول منذ آخر نشاط» لا تأخّر العميل
+    ok 2 - ⭐⭐⭐⭐⭐ معيار الخمول ٣٠ دقيقة (والافتراضي مُعلن) — ⭐ «الخمول منذ آخر نشاط» لا تأخّر العميل
+      ---
+      duration_ms: 0.484094
+      type: 'test'
+      ...
+    1..2
+ok 149 - ١٢) ⭐⭐⭐⭐⭐ نطاق الجمهور (قرار المالك)
+  ---
+  duration_ms: 1.472043
+  type: 'test'
+  ...
+# Subtest: ١٣) ⭐⭐⭐⭐⭐ الطرد (الضمان مُثبَّت في الكود)
+    # Subtest: ⭐⭐⭐⭐⭐ فلتر المستأجر موجود في مسار القراءة
+    ok 1 - ⭐⭐⭐⭐⭐ فلتر المستأجر موجود في مسار القراءة
+      ---
+      duration_ms: 1.297983
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ نطاق الدور مطبَّق (الوكيل يرى محادثاته فقط)
+    ok 2 - ⭐⭐⭐⭐⭐ نطاق الدور مطبَّق (الوكيل يرى محادثاته فقط)
+      ---
+      duration_ms: 1.074367
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ المؤشرات تحتاج صلاحية صريحة
+    ok 3 - ⭐⭐⭐⭐⭐ المؤشرات تحتاج صلاحية صريحة
+      ---
+      duration_ms: 1.003025
+      type: 'test'
+      ...
+    1..3
+ok 150 - ١٣) ⭐⭐⭐⭐⭐ الطرد (الضمان مُثبَّت في الكود)
+  ---
+  duration_ms: 3.734747
+  type: 'test'
+  ...
+# (node:30062) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: ⭐⭐ Slice 07 — الملف الواحد مستقلّ تماماً
+    # Subtest: ⭐ الملف موجود
+    ok 1 - ⭐ الملف موجود
+      ---
+      duration_ms: 0.993745
+      type: 'test'
+      ...
+    # Subtest: ⭐ صفحة HTML واحدة بـ RTL
+    ok 2 - ⭐ صفحة HTML واحدة بـ RTL
+      ---
+      duration_ms: 3.893787
+      type: 'test'
+      ...
+    # Subtest: ⭐ CSP محجوبة افتراضياً (default-src none)
+    ok 3 - ⭐ CSP محجوبة افتراضياً (default-src none)
+      ---
+      duration_ms: 3.559934
+      type: 'test'
+      ...
+    # Subtest: ⭐ بلا موارد خارجية (CDN · خطوط · سكربتات خارجية)
+    ok 4 - ⭐ بلا موارد خارجية (CDN · خطوط · سكربتات خارجية)
+      ---
+      duration_ms: 4.23704
+      type: 'test'
+      ...
+    # Subtest: ⭐ بلا طلب شبكة ولا تخزين دائم (على الكود لا التعليق)
+    ok 5 - ⭐ بلا طلب شبكة ولا تخزين دائم (على الكود لا التعليق)
+      ---
+      duration_ms: 8.523475
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ بلا أسرار — الفحص بماسح النواة نفسه
+    ok 6 - ⭐ ⭐ بلا أسرار — الفحص بماسح النواة نفسه
+      ---
+      duration_ms: 10.423222
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ بلا نصوص رسائل — أسماء فقط
+    ok 7 - ⭐ ⭐ بلا نصوص رسائل — أسماء فقط
+      ---
+      duration_ms: 7.907064
+      type: 'test'
+      ...
+    1..7
+ok 151 - ⭐⭐ Slice 07 — الملف الواحد مستقلّ تماماً
+  ---
+  duration_ms: 41.751087
+  type: 'test'
+  ...
+# Subtest: ⭐⭐ Slice 07 — المعاينة تُعيد استخدام منطق النواة
+    # Subtest: ⭐ الملف يحوي نواة النواة مُجمَّعة (ALLOWED_TRANSITIONS)
+    ok 1 - ⭐ الملف يحوي نواة النواة مُجمَّعة (ALLOWED_TRANSITIONS)
+      ---
+      duration_ms: 3.734962
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ لا قائمة انتقالات موازية في المعاينة
+    ok 2 - ⭐ ⭐ لا قائمة انتقالات موازية في المعاينة
+      ---
+      duration_ms: 6.108883
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ الواجهة لا تحسم القرار (القرار من النواة)
+    ok 3 - ⭐ ⭐ الواجهة لا تحسم القرار (القرار من النواة)
+      ---
+      duration_ms: 7.68829
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ المُجمِّع يغلّف كل وحدة ⇒ فلا تصادم أسماء
+    ok 4 - ⭐ ⭐ المُجمِّع يغلّف كل وحدة ⇒ فلا تصادم أسماء
+      ---
+      duration_ms: 161.725577
+      type: 'test'
+      ...
+    1..4
+ok 152 - ⭐⭐ Slice 07 — المعاينة تُعيد استخدام منطق النواة
+  ---
+  duration_ms: 180.37202
+  type: 'test'
+  ...
+# Subtest: ⭐⭐ Slice 07 — سلوك المحرّك يطابق قواعد النواة
+    # Subtest: ⭐ الدور الافتراضي = مشرف تجريبي
+    ok 1 - ⭐ الدور الافتراضي = مشرف تجريبي
+      ---
+      duration_ms: 13.380275
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ المشرف يملك تعديل الحالة ولا يملك الإسناد
+    ok 2 - ⭐ ⭐ المشرف يملك تعديل الحالة ولا يملك الإسناد
+      ---
+      duration_ms: 3.021123
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ المالك يملك الإسناد والموظف والقراءة لا يملكان التعديل
+    ok 3 - ⭐ ⭐ المالك يملك الإسناد والموظف والقراءة لا يملكان التعديل
+      ---
+      duration_ms: 8.672315
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ الانتقالات المسموحة = خريطة النواة نفسها
+    ok 4 - ⭐ ⭐ الانتقالات المسموحة = خريطة النواة نفسها
+      ---
+      duration_ms: 2.394065
+      type: 'test'
+      ...
+    # Subtest: ⭐ انتقال مسموح ينجح
+    ok 5 - ⭐ انتقال مسموح ينجح
+      ---
+      duration_ms: 2.010562
+      type: 'test'
+      ...
+    # Subtest: ⭐ انتقال غير مسموح يُرفض بلا أثر
+    ok 6 - ⭐ انتقال غير مسموح يُرفض بلا أثر
+      ---
+      duration_ms: 2.033765
+      type: 'test'
+      ...
+    # Subtest: ⭐ الإغلاق من resolved فقط
+    ok 7 - ⭐ الإغلاق من resolved فقط
+      ---
+      duration_ms: 1.692789
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ closed نهائية — لا تعديل ولا إسناد
+    ok 8 - ⭐ ⭐ closed نهائية — لا تعديل ولا إسناد
+      ---
+      duration_ms: 1.60214
+      type: 'test'
+      ...
+    # Subtest: ⭐ إسناد مسموح ينجح (مالك)
+    ok 9 - ⭐ إسناد مسموح ينجح (مالك)
+      ---
+      duration_ms: 1.733648
+      type: 'test'
+      ...
+    # Subtest: ⭐ إلغاء الإسناد ينجح
+    ok 10 - ⭐ إلغاء الإسناد ينجح
+      ---
+      duration_ms: 1.88782
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ الإسناد لموظف من مستأجر آخر يُرفض
+    ok 11 - ⭐ ⭐ الإسناد لموظف من مستأجر آخر يُرفض
+      ---
+      duration_ms: 4.441025
+      type: 'test'
+      ...
+    # Subtest: ⭐ الإسناد لموظف غير موجود يُرفض
+    ok 12 - ⭐ الإسناد لموظف غير موجود يُرفض
+      ---
+      duration_ms: 1.964355
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ الكتابة من دور قراءة فقط تُرفض
+    ok 13 - ⭐ ⭐ الكتابة من دور قراءة فقط تُرفض
+      ---
+      duration_ms: 3.608997
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ العزل: لا تسريب بين المستأجرين
+    ok 14 - ⭐ ⭐ العزل: لا تسريب بين المستأجرين
+      ---
+      duration_ms: 2.170512
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ سجل التغييرات: الناجحة فقط
+    ok 15 - ⭐ ⭐ سجل التغييرات: الناجحة فقط
+      ---
+      duration_ms: 11.20273
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ الطابور يختلف باختلاف الدور
+    ok 16 - ⭐ ⭐ الطابور يختلف باختلاف الدور
+      ---
+      duration_ms: 1.463534
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ محاكاة الأدوار لا تعتمد على حمولة العميل
+    ok 17 - ⭐ ⭐ محاكاة الأدوار لا تعتمد على حمولة العميل
+      ---
+      duration_ms: 2.302649
+      type: 'test'
+      ...
+    1..17
+ok 153 - ⭐⭐ Slice 07 — سلوك المحرّك يطابق قواعد النواة
+  ---
+  duration_ms: 68.010386
+  type: 'test'
+  ...
+# Subtest: ⭐⭐ Slice 07 — حدود التسليم
+    # Subtest: ⭐ ⭐ المعاينة ليست في حزمة الإنتاج
+    ok 1 - ⭐ ⭐ المعاينة ليست في حزمة الإنتاج
+      ---
+      duration_ms: 1.054806
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ لا استيراد من شجرة الاختبار داخل المعاينة
+    ok 2 - ⭐ ⭐ لا استيراد من شجرة الاختبار داخل المعاينة
+      ---
+      duration_ms: 120.028563
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ `src/core/` لم يتغيّر (المعاينة لا تعدّل النواة)
+    ok 3 - ⭐ ⭐ `src/core/` لم يتغيّر (المعاينة لا تعدّل النواة)
+      ---
+      duration_ms: 29.044896
+      type: 'test'
+      ...
+    # Subtest: ⭐ ⭐ لا مفاتيح ولا أسرار في المعاينة (فحص مستقلّ)
+    ok 4 - ⭐ ⭐ لا مفاتيح ولا أسرار في المعاينة (فحص مستقلّ)
+      ---
+      duration_ms: 8.652112
+      type: 'test'
+      ...
+    1..4
+ok 154 - ⭐⭐ Slice 07 — حدود التسليم
+  ---
+  duration_ms: 159.581617
+  type: 'test'
+  ...
+# Subtest: S08-01) ⭐⭐⭐ قبول العمليات المسموحة لهوية موثوقة
+    # Subtest: S08-01أ) ⭐ المالك: كل العمليات المسموحة مقبولة
+    ok 1 - S08-01أ) ⭐ المالك: كل العمليات المسموحة مقبولة
+      ---
+      duration_ms: 3.57079
+      type: 'test'
+      ...
+    # Subtest: S08-01ب) ⭐ المشرف: مقبول، ودوره ودور المستأجر من السجلّ
+    ok 2 - S08-01ب) ⭐ المشرف: مقبول، ودوره ودور المستأجر من السجلّ
+      ---
+      duration_ms: 0.56942
+      type: 'test'
+      ...
+    # Subtest: S08-01ج) ⭐ الموظف: مقبول للقراءة والطابور، مرفوض للإسناد
+    ok 3 - S08-01ج) ⭐ الموظف: مقبول للقراءة والطابور، مرفوض للإسناد
+      ---
+      duration_ms: 0.536701
+      type: 'test'
+      ...
+    # Subtest: S08-01د) ⭐ القارئ (`viewer`): قراءة فقط
+    ok 4 - S08-01د) ⭐ القارئ (`viewer`): قراءة فقط
+      ---
+      duration_ms: 2.287464
+      type: 'test'
+      ...
+    1..4
+ok 155 - S08-01) ⭐⭐⭐ قبول العمليات المسموحة لهوية موثوقة
+  ---
+  duration_ms: 8.331602
+  type: 'test'
+  ...
+# Subtest: S08-02) ⭐⭐⭐ رفض الهوية المجهولة
+ok 156 - S08-02) ⭐⭐⭐ رفض الهوية المجهولة
+  ---
+  duration_ms: 0.24264
+  type: 'test'
+  ...
+# Subtest: S08-03) ⭐⭐⭐ رفض الهوية الملغاة
+ok 157 - S08-03) ⭐⭐⭐ رفض الهوية الملغاة
+  ---
+  duration_ms: 0.296167
+  type: 'test'
+  ...
+# Subtest: S08-04) ⭐⭐⭐ رفض الهوية منتهية الصلاحية
+ok 158 - S08-04) ⭐⭐⭐ رفض الهوية منتهية الصلاحية
+  ---
+  duration_ms: 0.284414
+  type: 'test'
+  ...
+# Subtest: S08-05) ⭐⭐⭐ رفض الهوية/السلطة المزوّرة
+    # Subtest: S08-05أ) ⭐ سلطة إدارة مزوّرة (نفس الشكل) ⇒ مرفوضة
+    ok 1 - S08-05أ) ⭐ سلطة إدارة مزوّرة (نفس الشكل) ⇒ مرفوضة
+      ---
+      duration_ms: 0.888906
+      type: 'test'
+      ...
+    # Subtest: S08-05ب) ⭐ سلطة صادرة عن هوية غير مسجَّلة في هذا السجلّ ⇒ مرفوضة
+    ok 2 - S08-05ب) ⭐ سلطة صادرة عن هوية غير مسجَّلة في هذا السجلّ ⇒ مرفوضة
+      ---
+      duration_ms: 0.46556
+      type: 'test'
+      ...
+    # Subtest: S08-05ج) ⭐ تغيير دور/مستأجر هوية مسجَّلة ⇒ مرفوض (تسجيل واحد)
+    ok 3 - S08-05ج) ⭐ تغيير دور/مستأجر هوية مسجَّلة ⇒ مرفوض (تسجيل واحد)
+      ---
+      duration_ms: 0.285774
+      type: 'test'
+      ...
+    1..3
+ok 159 - S08-05) ⭐⭐⭐ رفض الهوية/السلطة المزوّرة
+  ---
+  duration_ms: 2.501328
+  type: 'test'
+  ...
+# Subtest: S08-06) ⭐⭐⭐ رفض محاولة رفع الدور
+    # Subtest: S08-06أ) ⭐⭕ مصدر الدور الأعلى يرفض هوية أدنى
+    ok 1 - S08-06أ) ⭐⭕ مصدر الدور الأعلى يرفض هوية أدنى
+      ---
+      duration_ms: 0.211658
+      type: 'test'
+      ...
+    # Subtest: S08-06ب) ⭐⭕ إعادة تسجيل دور أعلى ⇒ مرفوضة (تسجيل واحد)
+    ok 2 - S08-06ب) ⭐⭕ إعادة تسجيل دور أعلى ⇒ مرفوضة (تسجيل واحد)
+      ---
+      duration_ms: 0.217682
+      type: 'test'
+      ...
+    1..2
+ok 160 - S08-06) ⭐⭐⭐ رفض محاولة رفع الدور
+  ---
+  duration_ms: 0.708363
+  type: 'test'
+  ...
+# Subtest: S08-07) ⭐⭐⭐ رفض تمرير دور أعلى عبر مدخلات المستخدم
+ok 161 - S08-07) ⭐⭐⭐ رفض تمرير دور أعلى عبر مدخلات المستخدم
+  ---
+  duration_ms: 0.286817
+  type: 'test'
+  ...
+# Subtest: S08-08) ⭐⭐⭐ رفض تغيير المستأجر
+ok 162 - S08-08) ⭐⭐⭐ رفض تغيير المستأجر
+  ---
+  duration_ms: 0.189322
+  type: 'test'
+  ...
+# Subtest: S08-09) ⭐⭐⭐ رفض الوصول لمستأجر آخر
+    # Subtest: S08-09أ) ⭐ عملية على محادثة مستأجر آخر ⇒ `conversation_not_found`
+    ok 1 - S08-09أ) ⭐ عملية على محادثة مستأجر آخر ⇒ `conversation_not_found`
+      ---
+      duration_ms: 22.214821
+      type: 'test'
+      ...
+    # Subtest: S08-09ب) ⭐ ثلاثة مستأجرين: لا تسريب بين أي اثنين
+    ok 2 - S08-09ب) ⭐ ثلاثة مستأجرين: لا تسريب بين أي اثنين
+      ---
+      duration_ms: 1.481089
+      type: 'test'
+      ...
+    1..2
+ok 163 - S08-09) ⭐⭐⭐ رفض الوصول لمستأجر آخر
+  ---
+  duration_ms: 24.029489
+  type: 'test'
+  ...
+# Subtest: S08-10) ⭐⭐⭐ رفض العمليات عند فقدان سياق الهوية
+    # Subtest: S08-10أ) ⭐ طلب بلا هوية ⇒ رفض (والافتراضي = المنع)
+    ok 1 - S08-10أ) ⭐ طلب بلا هوية ⇒ رفض (والافتراضي = المنع)
+      ---
+      duration_ms: 0.293995
+      type: 'test'
+      ...
+    # Subtest: S08-10ب) ⭐ البوّابة الفاشلة-المغلقة ترمي ⇒ لا تنفيذ
+    ok 2 - S08-10ب) ⭐ البوّابة الفاشلة-المغلقة ترمي ⇒ لا تنفيذ
+      ---
+      duration_ms: 0.365278
+      type: 'test'
+      ...
+    # Subtest: S08-10ج) ⭐ طلب ناقص/مشوَّه ⇒ رفض
+    ok 3 - S08-10ج) ⭐ طلب ناقص/مشوَّه ⇒ رفض
+      ---
+      duration_ms: 0.208657
+      type: 'test'
+      ...
+    1..3
+ok 164 - S08-10) ⭐⭐⭐ رفض العمليات عند فقدان سياق الهوية
+  ---
+  duration_ms: 1.248368
+  type: 'test'
+  ...
+# Subtest: S08-11) ⭐⭐⭐ عدم تسريب بيانات أو سجلات تدقيق بين المستأجرين
+    # Subtest: S08-11أ) ⭐ سجلّ قرارات التفويض معزول بالمستأجر
+    ok 1 - S08-11أ) ⭐ سجلّ قرارات التفويض معزول بالمستأجر
+      ---
+      duration_ms: 0.511243
+      type: 'test'
+      ...
+    # Subtest: S08-11ب) ⭐ الطابور والمؤشرات لكل مستأجر أرقامه
+    ok 2 - S08-11ب) ⭐ الطابور والمؤشرات لكل مستأجر أرقامه
+      ---
+      duration_ms: 1.849552
+      type: 'test'
+      ...
+    # Subtest: S08-11ج) ⭐ الإسناد لا يخرج عن نطاق المستأجر
+    ok 3 - S08-11ج) ⭐ الإسناد لا يخرج عن نطاق المستأجر
+      ---
+      duration_ms: 1.57354
+      type: 'test'
+      ...
+    1..3
+ok 165 - S08-11) ⭐⭐⭐ عدم تسريب بيانات أو سجلات تدقيق بين المستأجرين
+  ---
+  duration_ms: 4.385194
+  type: 'test'
+  ...
+# Subtest: S08-12) ⭐⭐⭐ استمرار الوظائف المحلية المصرّح بها سابقاً
+    # Subtest: S08-12أ) ⭐ المعاينة التفاعلية تعمل وتبديل الأدوار فعّال
+    ok 1 - S08-12أ) ⭐ المعاينة التفاعلية تعمل وتبديل الأدوار فعّال
+      ---
+      duration_ms: 28.258226
+      type: 'test'
+      ...
+    # Subtest: S08-12ب) ⭐⭐ صفر اتصال خارجي
+    ok 2 - S08-12ب) ⭐⭐ صفر اتصال خارجي
+      ---
+      duration_ms: 0.801715
+      type: 'test'
+      ...
+    1..2
+ok 166 - S08-12) ⭐⭐⭐ استمرار الوظائف المحلية المصرّح بها سابقاً
+  ---
+  duration_ms: 29.354965
+  type: 'test'
+  ...
+# Subtest: S08-13) ⭐⭐⭐ رفض العمليات الإدارية بلا أحقية (M34)
+    # Subtest: S08-13أ) ⭐ إلغاء بلا سلطة ⇒ مرفوض
+    ok 1 - S08-13أ) ⭐ إلغاء بلا سلطة ⇒ مرفوض
+      ---
+      duration_ms: 0.297885
+      type: 'test'
+      ...
+    # Subtest: S08-13ب) ⭐ إلغاء صاحب السلطة ⇒ يفقد أحقيته فوراً
+    ok 2 - S08-13ب) ⭐ إلغاء صاحب السلطة ⇒ يفقد أحقيته فوراً
+      ---
+      duration_ms: 0.255959
+      type: 'test'
+      ...
+    # Subtest: S08-13ج) ⭐ لا إلغاء المالك الأخير الفعّال
+    ok 3 - S08-13ج) ⭐ لا إلغاء المالك الأخير الفعّال
+      ---
+      duration_ms: 0.201034
+      type: 'test'
+      ...
+    # Subtest: S08-13د) ⭐ قائمة الهويات ⇒ تحتاج سلطة إدارية
+    ok 4 - S08-13د) ⭐ قائمة الهويات ⇒ تحتاج سلطة إدارية
+      ---
+      duration_ms: 0.233535
+      type: 'test'
+      ...
+    1..4
+ok 167 - S08-13) ⭐⭐⭐ رفض العمليات الإدارية بلا أحقية (M34)
+  ---
+  duration_ms: 1.456034
+  type: 'test'
+  ...
+# Subtest: S08-14) ⭐⭐⭐ فصل مصدر الهوية عن قرار السماح (M34)
+    # Subtest: S08-14أ) ⭐ الدور في السياق من السجلّ لا من مدخل الطلب
+    ok 1 - S08-14أ) ⭐ الدور في السياق من السجلّ لا من مدخل الطلب
+      ---
+      duration_ms: 0.299085
+      type: 'test'
+      ...
+    # Subtest: S08-14ب) ⭐ عملية بلا صلاحية ⇒ رفض (والرفض = المنع)
+    ok 2 - S08-14ب) ⭐ عملية بلا صلاحية ⇒ رفض (والرفض = المنع)
+      ---
+      duration_ms: 0.32764
+      type: 'test'
+      ...
+    1..2
+ok 168 - S08-14) ⭐⭐⭐ فصل مصدر الهوية عن قرار السماح (M34)
+  ---
+  duration_ms: 0.967703
+  type: 'test'
+  ...
+# Subtest: S09-E) ⭐⭐⭐⭐⭐ اختبارات الطرد E-1..E-7 — كل كسر يكشفه فحص سلوكي
+    # Subtest: ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-1)
+    ok 1 - ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-1)
+      ---
+      duration_ms: 719.516006
+      type: 'test'
+      ...
+    # Subtest: ⭐ الكسر E-1 — الدور من العميل بدل السجلّ ⇒ الفحص يكشفه سلوكياً
+    ok 2 - ⭐ الكسر E-1 — الدور من العميل بدل السجلّ ⇒ الفحص يكشفه سلوكياً
+      ---
+      duration_ms: 18445.862507
+      type: 'test'
+      ...
+    # Subtest: ⭐ نواة الريبو الأصلي لم تُمَسّ (E-1)
+    ok 3 - ⭐ نواة الريبو الأصلي لم تُمَسّ (E-1)
+      ---
+      duration_ms: 15.383266
+      type: 'test'
+      ...
+    # Subtest: ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-2)
+    ok 4 - ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-2)
+      ---
+      duration_ms: 0.33637
+      type: 'test'
+      ...
+    # Subtest: ⭐ الكسر E-2 — هوية غير مسجَّلة تُقبل كمالك ⇒ الفحص يكشفه سلوكياً
+    ok 5 - ⭐ الكسر E-2 — هوية غير مسجَّلة تُقبل كمالك ⇒ الفحص يكشفه سلوكياً
+      ---
+      duration_ms: 18709.219127
+      type: 'test'
+      ...
+    # Subtest: ⭐ نواة الريبو الأصلي لم تُمَسّ (E-2)
+    ok 6 - ⭐ نواة الريبو الأصلي لم تُمَسّ (E-2)
+      ---
+      duration_ms: 15.461659
+      type: 'test'
+      ...
+    # Subtest: ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-3)
+    ok 7 - ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-3)
+      ---
+      duration_ms: 672.260959
+      type: 'test'
+      ...
+    # Subtest: ⭐ الكسر E-3 — قبول دور بلا مصدر مسجَّل ⇒ الفحص يكشفه سلوكياً
+    ok 8 - ⭐ الكسر E-3 — قبول دور بلا مصدر مسجَّل ⇒ الفحص يكشفه سلوكياً
+      ---
+      duration_ms: 19097.285156
+      type: 'test'
+      ...
+    # Subtest: ⭐ نواة الريبو الأصلي لم تُمَسّ (E-3)
+    ok 9 - ⭐ نواة الريبو الأصلي لم تُمَسّ (E-3)
+      ---
+      duration_ms: 16.167311
+      type: 'test'
+      ...
+    # Subtest: ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-4)
+    ok 10 - ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-4)
+      ---
+      duration_ms: 0.379946
+      type: 'test'
+      ...
+    # Subtest: ⭐ الكسر E-4 — نقص الصلاحية يُسمح ⇒ الفحص يكشفه سلوكياً
+    ok 11 - ⭐ الكسر E-4 — نقص الصلاحية يُسمح ⇒ الفحص يكشفه سلوكياً
+      ---
+      duration_ms: 18495.6405
+      type: 'test'
+      ...
+    # Subtest: ⭐ نواة الريبو الأصلي لم تُمَسّ (E-4)
+    ok 12 - ⭐ نواة الريبو الأصلي لم تُمَسّ (E-4)
+      ---
+      duration_ms: 15.026891
+      type: 'test'
+      ...
+    # Subtest: ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-5)
+    ok 13 - ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-5)
+      ---
+      duration_ms: 0.193712
+      type: 'test'
+      ...
+    # Subtest: ⭐ الكسر E-5 — تبديل المستأجر بلا فحص ⇒ الفحص يكشفه سلوكياً
+    ok 14 - ⭐ الكسر E-5 — تبديل المستأجر بلا فحص ⇒ الفحص يكشفه سلوكياً
+      ---
+      duration_ms: 19859.163233
+      type: 'test'
+      ...
+    # Subtest: ⭐ نواة الريبو الأصلي لم تُمَسّ (E-5)
+    ok 15 - ⭐ نواة الريبو الأصلي لم تُمَسّ (E-5)
+      ---
+      duration_ms: 14.915233
+      type: 'test'
+      ...
+    # Subtest: ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-6)
+    ok 16 - ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-6)
+      ---
+      duration_ms: 0.175213
+      type: 'test'
+      ...
+    # Subtest: ⭐ الكسر E-6 — سلطة إدارة من غير مالك ⇒ الفحص يكشفه سلوكياً
+    ok 17 - ⭐ الكسر E-6 — سلطة إدارة من غير مالك ⇒ الفحص يكشفه سلوكياً
+      ---
+      duration_ms: 19796.439904
+      type: 'test'
+      ...
+    # Subtest: ⭐ نواة الريبو الأصلي لم تُمَسّ (E-6)
+    ok 18 - ⭐ نواة الريبو الأصلي لم تُمَسّ (E-6)
+      ---
+      duration_ms: 15.570037
+      type: 'test'
+      ...
+    # Subtest: ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-7)
+    ok 19 - ⭐ الضابط: الكود الحقيقي ⇒ الفحص ينجح (E-7)
+      ---
+      duration_ms: 1205.165837
+      type: 'test'
+      ...
+    # Subtest: ⭐ الكسر E-7 — مصدر اختبار في المسار الإنتاجي ⇒ الفحص يكشفه سلوكياً
+    ok 20 - ⭐ الكسر E-7 — مصدر اختبار في المسار الإنتاجي ⇒ الفحص يكشفه سلوكياً
+      ---
+      duration_ms: 20786.829634
+      type: 'test'
+      ...
+    # Subtest: ⭐ نواة الريبو الأصلي لم تُمَسّ (E-7)
+    ok 21 - ⭐ نواة الريبو الأصلي لم تُمَسّ (E-7)
+      ---
+      duration_ms: 15.656465
+      type: 'test'
+      ...
+    1..21
+ok 169 - S09-E) ⭐⭐⭐⭐⭐ اختبارات الطرد E-1..E-7 — كل كسر يكشفه فحص سلوكي
+  ---
+  duration_ms: 138037.7371
+  type: 'test'
+  ...
+# Subtest: S09-E) ⭐⭐⭐⭐⭐ النسخة المعزولة تُحذف (لا أثر خارج المستودع)
+ok 170 - S09-E) ⭐⭐⭐⭐⭐ النسخة المعزولة تُحذف (لا أثر خارج المستودع)
+  ---
+  duration_ms: 1.003117
+  type: 'test'
+  ...
+# Subtest: S09-01) ⭐⭐⭐⭐⭐ غياب الإثبات ⇒ رفض (الافتراضي = المنع)
+ok 171 - S09-01) ⭐⭐⭐⭐⭐ غياب الإثبات ⇒ رفض (الافتراضي = المنع)
+  ---
+  duration_ms: 2.417918
+  type: 'test'
+  ...
+# Subtest: S09-02) ⭐⭐⭐ نوع مصدر مجهول ⇒ رفض
+ok 172 - S09-02) ⭐⭐⭐ نوع مصدر مجهول ⇒ رفض
+  ---
+  duration_ms: 0.341851
+  type: 'test'
+  ...
+# Subtest: S09-03) ⭐⭐⭐⭐⭐ مصدر خارجي موثّق ⇒ رفض (غير مفعّل) + العقد نفسه غير مفعّل
+ok 173 - S09-03) ⭐⭐⭐⭐⭐ مصدر خارجي موثّق ⇒ رفض (غير مفعّل) + العقد نفسه غير مفعّل
+  ---
+  duration_ms: 1.074449
+  type: 'test'
+  ...
+# Subtest: S09-04) ⭐⭐⭐⭐⭐ نطاق إنتاجي ⇒ رفض بنيوي (لا مصدر إنتاجي في هذه الشريحة)
+ok 174 - S09-04) ⭐⭐⭐⭐⭐ نطاق إنتاجي ⇒ رفض بنيوي (لا مصدر إنتاجي في هذه الشريحة)
+  ---
+  duration_ms: 0.235231
+  type: 'test'
+  ...
+# Subtest: S09-05) ⭐⭐⭐⭐⭐ ادّعاء دور أعلى من العميل ⇒ رفض (لا مصدر للحقيقة)
+ok 175 - S09-05) ⭐⭐⭐⭐⭐ ادّعاء دور أعلى من العميل ⇒ رفض (لا مصدر للحقيقة)
+  ---
+  duration_ms: 1.544227
+  type: 'test'
+  ...
+# Subtest: S09-06) ⭐⭐⭐⭐⭐ ادّعاء مستأجر مختلف ⇒ رفض (لا تبديل مستأجر)
+ok 176 - S09-06) ⭐⭐⭐⭐⭐ ادّعاء مستأجر مختلف ⇒ رفض (لا تبديل مستأجر)
+  ---
+  duration_ms: 0.222576
+  type: 'test'
+  ...
+# Subtest: S09-07) ⭐⭐⭐ دور خارج المجموعة المغلقة ⇒ رفض
+ok 177 - S09-07) ⭐⭐⭐ دور خارج المجموعة المغلقة ⇒ رفض
+  ---
+  duration_ms: 0.316508
+  type: 'test'
+  ...
+# Subtest: S09-08) ⭐⭐⭐ هوية ملغاة أو منتهية ⇒ رفض
+ok 178 - S09-08) ⭐⭐⭐ هوية ملغاة أو منتهية ⇒ رفض
+  ---
+  duration_ms: 0.210725
+  type: 'test'
+  ...
+# Subtest: S09-09) ⭐⭐⭐ إثبات مشوّه ⇒ رفض (المعرّفات بنمط النواة)
+ok 179 - S09-09) ⭐⭐⭐ إثبات مشوّه ⇒ رفض (المعرّفات بنمط النواة)
+  ---
+  duration_ms: 0.513281
+  type: 'test'
+  ...
+# Subtest: S09-10) ⭐⭐⭐⭐⭐ سياق إداري مزيف ⇒ رفض (نَسَب مثبت = لا نسخ مزوّرة)
+ok 180 - S09-10) ⭐⭐⭐⭐⭐ سياق إداري مزيف ⇒ رفض (نَسَب مثبت = لا نسخ مزوّرة)
+  ---
+  duration_ms: 0.538419
+  type: 'test'
+  ...
+# Subtest: S09-11) ⭐⭐⭐⭐⭐ طلب إداري بلا سلطة ⇒ رفض (المصدر لا يمنح صلاحية إدارية)
+ok 181 - S09-11) ⭐⭐⭐⭐⭐ طلب إداري بلا سلطة ⇒ رفض (المصدر لا يمنح صلاحية إدارية)
+  ---
+  duration_ms: 0.227407
+  type: 'test'
+  ...
+# Subtest: S09-12) ⭐⭐⭐⭐⭐ سلطة إدارية من هوية ليست مالكاً ⇒ رفض
+ok 182 - S09-12) ⭐⭐⭐⭐⭐ سلطة إدارية من هوية ليست مالكاً ⇒ رفض
+  ---
+  duration_ms: 0.220353
+  type: 'test'
+  ...
+# Subtest: S09-13) ⭐⭐⭐⭐⭐ إثبات سليم ⇒ ادّعاء موثوق **بلا صلاحية** (لا محرك موازٍ)
+ok 183 - S09-13) ⭐⭐⭐⭐⭐ إثبات سليم ⇒ ادّعاء موثوق **بلا صلاحية** (لا محرك موازٍ)
+  ---
+  duration_ms: 0.22652
+  type: 'test'
+  ...
+# Subtest: S09-14) ⭐⭐⭐⭐⭐ العقد لا يُفعّل أي مصدر ولا يفتح مساراً إنتاجياً
+ok 184 - S09-14) ⭐⭐⭐⭐⭐ العقد لا يُفعّل أي مصدر ولا يفتح مساراً إنتاجياً
+  ---
+  duration_ms: 0.169378
+  type: 'test'
+  ...
+# Subtest: G-01) ⭐⭐⭐ رمز `request_invalid` ⇒ رفض (طلب مفقود)
+ok 185 - G-01) ⭐⭐⭐ رمز `request_invalid` ⇒ رفض (طلب مفقود)
+  ---
+  duration_ms: 0.757702
+  type: 'test'
+  ...
+# Subtest: G-02) ⭐⭐⭐ رمز `operation_unknown` ⇒ رفض (عملية خارج المجموعة المعلنة)
+ok 186 - G-02) ⭐⭐⭐ رمز `operation_unknown` ⇒ رفض (عملية خارج المجموعة المعلنة)
+  ---
+  duration_ms: 0.38732
+  type: 'test'
+  ...
+# Subtest: G-03) ⭐⭐⭐⭐ رمز `identity_rejected` ⇒ رفض (مصدر مسجَّل يرفض التحقّق)
+ok 187 - G-03) ⭐⭐⭐⭐ رمز `identity_rejected` ⇒ رفض (مصدر مسجَّل يرفض التحقّق)
+  ---
+  duration_ms: 0.467847
+  type: 'test'
+  ...
+# Subtest: G-04) ⭐⭐⭐⭐ رمز `identity_role_unsupported` ⇒ رفض (دور بلا مصدر مسجَّل)
+ok 188 - G-04) ⭐⭐⭐⭐ رمز `identity_role_unsupported` ⇒ رفض (دور بلا مصدر مسجَّل)
+  ---
+  duration_ms: 0.223266
+  type: 'test'
+  ...
+# Subtest: G-05) ⭐⭐⭐⭐ رمز `admin_not_owner` ⇒ رفض (سلطة من هوية ليست مالكاً)
+ok 189 - G-05) ⭐⭐⭐⭐ رمز `admin_not_owner` ⇒ رفض (سلطة من هوية ليست مالكاً)
+  ---
+  duration_ms: 0.273725
+  type: 'test'
+  ...
+# Subtest: G-06) ⭐⭐⭐ رمز `admin_expired` ⇒ رفض (صاحب سلطة منتهية)
+ok 190 - G-06) ⭐⭐⭐ رمز `admin_expired` ⇒ رفض (صاحب سلطة منتهية)
+  ---
+  duration_ms: 0.286383
+  type: 'test'
+  ...
+# Subtest: G-07) ⭐⭐⭐ رمز `admin_bootstrap_requires_owner` ⇒ رفض (أول هوية ليست مالكاً)
+ok 191 - G-07) ⭐⭐⭐ رمز `admin_bootstrap_requires_owner` ⇒ رفض (أول هوية ليست مالكاً)
+  ---
+  duration_ms: 0.210545
+  type: 'test'
+  ...
+# Subtest: G-08) ⭐⭐⭐ رمز `identity_input_missing` ⇒ رفض (مدخل هوية مفقود)
+ok 192 - G-08) ⭐⭐⭐ رمز `identity_input_missing` ⇒ رفض (مدخل هوية مفقود)
+  ---
+  duration_ms: 0.172838
+  type: 'test'
+  ...
+# Subtest: G-09) ⭐⭐⭐ رمز `tenant_invalid` ⇒ رفض (معرّف مستأجر غير صالح)
+ok 193 - G-09) ⭐⭐⭐ رمز `tenant_invalid` ⇒ رفض (معرّف مستأجر غير صالح)
+  ---
+  duration_ms: 0.163032
+  type: 'test'
+  ...
+# Subtest: G-10) ⭐⭐⭐ رمز `role_invalid` ⇒ رفض (دور خارج المجموعة المغلقة)
+ok 194 - G-10) ⭐⭐⭐ رمز `role_invalid` ⇒ رفض (دور خارج المجموعة المغلقة)
+  ---
+  duration_ms: 0.171922
+  type: 'test'
+  ...
+# Subtest: S09-15) ⭐⭐⭐⭐⭐ طبقة التفويض القائمة ترفض انتحال الدور وتبديل المستأجر
+ok 195 - S09-15) ⭐⭐⭐⭐⭐ طبقة التفويض القائمة ترفض انتحال الدور وتبديل المستأجر
+  ---
+  duration_ms: 1.00318
+  type: 'test'
+  ...
+# Subtest: M54-01) ⭐⭐⭐⭐⭐ إثبات مبنيّ يدوياً (شكل سليم) ⇒ رفض
+ok 196 - M54-01) ⭐⭐⭐⭐⭐ إثبات مبنيّ يدوياً (شكل سليم) ⇒ رفض
+  ---
+  duration_ms: 0.15819
+  type: 'test'
+  ...
+# Subtest: M54-02) ⭐⭐⭐⭐⭐ نسخة من إثبات مُصدَر ⇒ رفض (النسخ ليس الإصدار)
+ok 197 - M54-02) ⭐⭐⭐⭐⭐ نسخة من إثبات مُصدَر ⇒ رفض (النسخ ليس الإصدار)
+  ---
+  duration_ms: 0.266483
+  type: 'test'
+  ...
+# Subtest: M54-03) ⭐⭐⭐⭐⭐ تعديل الدور بعد الإصدار ⇒ رفض (القيمة المثبتة هي المرجع)
+ok 198 - M54-03) ⭐⭐⭐⭐⭐ تعديل الدور بعد الإصدار ⇒ رفض (القيمة المثبتة هي المرجع)
+  ---
+  duration_ms: 0.187275
+  type: 'test'
+  ...
+# Subtest: M54-04) ⭐⭐⭐⭐⭐ إلغاء الهوية بعد الإصدار ⇒ رفض عند إعادة التحقّق
+ok 199 - M54-04) ⭐⭐⭐⭐⭐ إلغاء الهوية بعد الإصدار ⇒ رفض عند إعادة التحقّق
+  ---
+  duration_ms: 0.268595
+  type: 'test'
+  ...
+# Subtest: M54-05) ⭐⭐⭐⭐⭐ الإصدار يشتقّ الدور والمستأجر من السجلّ (لا من المستدعي)
+ok 200 - M54-05) ⭐⭐⭐⭐⭐ الإصدار يشتقّ الدور والمستأجر من السجلّ (لا من المستدعي)
+  ---
+  duration_ms: 0.38292
+  type: 'test'
+  ...
+# Subtest: M54-06) ⭐⭐⭐⭐⭐ السطح العام لا يُصدّر مُصدِر الإثبات
+ok 201 - M54-06) ⭐⭐⭐⭐⭐ السطح العام لا يُصدّر مُصدِر الإثبات
+  ---
+  duration_ms: 0.128614
+  type: 'test'
+  ...
+# Subtest: M54-07) ⭐⭐⭐⭐⭐ الفحص البنيوي لا يمنح ثقة (الفصل صريح)
+ok 202 - M54-07) ⭐⭐⭐⭐⭐ الفحص البنيوي لا يمنح ثقة (الفصل صريح)
+  ---
+  duration_ms: 0.119254
+  type: 'test'
+  ...
+# Subtest: M55-01) ⭐⭐⭐⭐⭐ دلالة العقد معلنة (تعريف ⇦ تقييم ⇦ تفعيل)
+ok 203 - M55-01) ⭐⭐⭐⭐⭐ دلالة العقد معلنة (تعريف ⇦ تقييم ⇦ تفعيل)
+  ---
+  duration_ms: 0.115032
+  type: 'test'
+  ...
+# Subtest: M55-02) ⭐⭐⭐⭐⭐ كل رمز رفض يرجّعه العقد معلَن في المجموعة المغلقة
+ok 204 - M55-02) ⭐⭐⭐⭐⭐ كل رمز رفض يرجّعه العقد معلَن في المجموعة المغلقة
+  ---
+  duration_ms: 0.60665
+  type: 'test'
+  ...
+# Subtest: M55-03) ⭐⭐⭐⭐⭐ ناتج التقييم يحمل دلالته (بلا جلسة مصادقة)
+ok 205 - M55-03) ⭐⭐⭐⭐⭐ ناتج التقييم يحمل دلالته (بلا جلسة مصادقة)
+  ---
+  duration_ms: 0.16355
+  type: 'test'
+  ...
+# Subtest: M57-01) ⭐⭐⭐⭐⭐ جرد رموز الرفض (مقيس: ١٧ قابل · ١ معلَن بلا مسار)
+ok 206 - M57-01) ⭐⭐⭐⭐⭐ جرد رموز الرفض (مقيس: ١٧ قابل · ١ معلَن بلا مسار)
+  ---
+  duration_ms: 0.332419
+  type: 'test'
+  ...
+# Subtest: M15) ⭐⭐⭐⭐⭐ رفض الوصول العابر داخل المشغّل (لا في العرض فقط)
+    # Subtest: ⭐⭐⭐⭐⭐ القراءة العابرة ⇒ `null` (لا تفصيل لمحادثة مستأجر آخر)
+    ok 1 - ⭐⭐⭐⭐⭐ القراءة العابرة ⇒ `null` (لا تفصيل لمحادثة مستأجر آخر)
+      ---
+      duration_ms: 9.194882
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ التعديل العابر ⇒ رفض `conversation_not_found`
+    ok 2 - ⭐⭐⭐⭐⭐ التعديل العابر ⇒ رفض `conversation_not_found`
+      ---
+      duration_ms: 1.951814
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الإسناد العابر ⇒ رفض `conversation_not_found`
+    ok 3 - ⭐⭐⭐⭐⭐ الإسناد العابر ⇒ رفض `conversation_not_found`
+      ---
+      duration_ms: 1.280661
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الإسناد لموظف من مستأجر آخر ⇒ رفض `conversation_not_found`
+    ok 4 - ⭐⭐⭐⭐⭐ الإسناد لموظف من مستأجر آخر ⇒ رفض `conversation_not_found`
+      ---
+      duration_ms: 3.283252
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ إلغاء الإسناد العابر ⇒ رفض `conversation_not_found`
+    ok 5 - ⭐⭐⭐⭐⭐ إلغاء الإسناد العابر ⇒ رفض `conversation_not_found`
+      ---
+      duration_ms: 1.864025
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الطابور لا يحوي محادثة المستأجر الآخر + دليل التسريب = صفر
+    ok 6 - ⭐⭐⭐⭐⭐ الطابور لا يحوي محادثة المستأجر الآخر + دليل التسريب = صفر
+      ---
+      duration_ms: 2.28275
+      type: 'test'
+      ...
+    1..6
+ok 207 - M15) ⭐⭐⭐⭐⭐ رفض الوصول العابر داخل المشغّل (لا في العرض فقط)
+  ---
+  duration_ms: 22.07725
+  type: 'test'
+  ...
+# Subtest: M15) ⭐⭐⭐⭐⭐ الحارس على مستوى النواة نفسها
+    # Subtest: ⭐⭐⭐⭐⭐ القراءة العابرة ⇒ صفر صفوف
+    ok 1 - ⭐⭐⭐⭐⭐ القراءة العابرة ⇒ صفر صفوف
+      ---
+      duration_ms: 1.205426
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ التعديل · الإسناد · إلغاء الإسناد العابرة ⇒ رفض
+    ok 2 - ⭐⭐⭐⭐⭐ التعديل · الإسناد · إلغاء الإسناد العابرة ⇒ رفض
+      ---
+      duration_ms: 0.525769
+      type: 'test'
+      ...
+    1..2
+ok 208 - M15) ⭐⭐⭐⭐⭐ الحارس على مستوى النواة نفسها
+  ---
+  duration_ms: 2.575618
+  type: 'test'
+  ...
+# Subtest: M15) ⭐⭐⭐⭐⭐⭐ الطرد: كسر عزل المستأجر ⇒ الحارس يفشل (ليس زائفاً)
+    # Subtest: ⭐⭐⭐⭐⭐⭐ كسر حقيقي داخل نسخة معزولة من النواة
+    ok 1 - ⭐⭐⭐⭐⭐⭐ كسر حقيقي داخل نسخة معزولة من النواة
+      ---
+      duration_ms: 383.797865
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ النسخة المعزولة تُحذف (لا أثر خارج المستودع)
+    ok 2 - ⭐⭐⭐⭐⭐ النسخة المعزولة تُحذف (لا أثر خارج المستودع)
+      ---
+      duration_ms: 1.71307
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ صفر اتصال خارجي
+    ok 3 - ⭐⭐ صفر اتصال خارجي
+      ---
+      duration_ms: 0.938807
+      type: 'test'
+      ...
+    1..3
+ok 209 - M15) ⭐⭐⭐⭐⭐⭐ الطرد: كسر عزل المستأجر ⇒ الحارس يفشل (ليس زائفاً)
+  ---
+  duration_ms: 387.157416
+  type: 'test'
+  ...
+# a11y audit failed: ENOENT: no such file or directory, stat '/run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/wasl-ai/tests/tools/fixtures/a11y-not-here.html'
+# Subtest: pf-26) the accessibility audit of the interface
+    # Subtest: ⭐⭐⭐ ① the tool reads a file and reports the missing element
+    ok 1 - ⭐⭐⭐ ① the tool reads a file and reports the missing element
+      ---
+      duration_ms: 43.512054
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ② the command prints ONE clear line for the defect
+    ok 2 - ⭐⭐⭐ ② the command prints ONE clear line for the defect
+      ---
+      duration_ms: 254.501092
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ③ the exit code is 1 with a high finding and 0 on a clean file
+    ok 3 - ⭐⭐⭐ ③ the exit code is 1 with a high finding and 0 on a clean file
+      ---
+      duration_ms: 496.524936
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ④ the exit code is 2 when the path does not exist
+    ok 4 - ⭐⭐⭐ ④ the exit code is 2 when the path does not exist
+      ---
+      duration_ms: 273.403157
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ⑤ the output is reproducible
+    ok 5 - ⭐⭐⭐ ⑤ the output is reproducible
+      ---
+      duration_ms: 489.90107
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ⑥ the clean file produces no finding at all
+    ok 6 - ⭐⭐⭐ ⑥ the clean file produces no finding at all
+      ---
+      duration_ms: 4.627529
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ⑦ the line of a finding is readable on its own
+    ok 7 - ⭐⭐⭐ ⑦ the line of a finding is readable on its own
+      ---
+      duration_ms: 1.262004
+      type: 'test'
+      ...
+    1..7
+ok 210 - pf-26) the accessibility audit of the interface
+  ---
+  duration_ms: 1567.078699
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 22) M-118 — the board of the completion is reproducible
+    # Subtest: ⭐⭐⭐ M-118-1: the denominator and the weights NEVER move
+    ok 1 - ⭐⭐⭐ M-118-1: the denominator and the weights NEVER move
+      ---
+      duration_ms: 6.852765
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-118-2: every done item carries its evidence
+    ok 2 - ⭐⭐⭐ M-118-2: every done item carries its evidence
+      ---
+      duration_ms: 1458.178715
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-118-3: the published board matches the computed one
+    ok 3 - ⭐⭐⭐ M-118-3: the published board matches the computed one
+      ---
+      duration_ms: 2550.775791
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-123: the board shows the areas BEFORE and AFTER (the same weights)
+    ok 4 - ⭐⭐⭐ M-123: the board shows the areas BEFORE and AFTER (the same weights)
+      ---
+      duration_ms: 1050.991184
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-118-4: the estimate of the project never goes backwards and carries its basis
+    ok 5 - ⭐⭐⭐ M-118-4: the estimate of the project never goes backwards and carries its basis
+      ---
+      duration_ms: 3.127381
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-118-5: the items of this round are marked with their truth
+    ok 6 - ⭐⭐⭐ M-118-5: the items of this round are marked with their truth
+      ---
+      duration_ms: 1.404574
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-128-1: the twelve domains carry EQUAL weights that never move
+    ok 7 - ⭐⭐⭐ M-128-1: the twelve domains carry EQUAL weights that never move
+      ---
+      duration_ms: 1.364254
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-128-2: every claimed evidence REALLY exists (the tool refuses a made up one)
+    ok 8 - ⭐⭐⭐ M-128-2: every claimed evidence REALLY exists (the tool refuses a made up one)
+      ---
+      duration_ms: 1153.932097
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ M-128-3: the numbers are MEASURED (the disk now · the baseline commit before)
+    ok 9 - ⭐⭐⭐ M-128-3: the numbers are MEASURED (the disk now · the baseline commit before)
+      ---
+      duration_ms: 1132.252772
+      type: 'test'
+      ...
+    1..9
+ok 211 - FOUNDATION 22) M-118 — the board of the completion is reproducible
+  ---
+  duration_ms: 7363.063511
+  type: 'test'
+  ...
+# Subtest: pf-30 — the cost tracker reads, computes, and refuses
+    # Subtest: ⭐⭐⭐ ① the tracker READS the configuration file
+    ok 1 - ⭐⭐⭐ ① the tracker READS the configuration file
+      ---
+      duration_ms: 233.399572
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ② it COMPUTES the total of the lines
+    ok 2 - ⭐⭐⭐ ② it COMPUTES the total of the lines
+      ---
+      duration_ms: 177.374081
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ③ it REFUSES an empty price (and prints no report at all)
+    ok 3 - ⭐⭐⭐ ③ it REFUSES an empty price (and prints no report at all)
+      ---
+      duration_ms: 632.116943
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ③ it REFUSES a negative price and a negative quantity
+    ok 4 - ⭐⭐⭐ ③ it REFUSES a negative price and a negative quantity
+      ---
+      duration_ms: 443.03169
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ④ it NEVER prints a default price
+    ok 5 - ⭐⭐⭐ ④ it NEVER prints a default price
+      ---
+      duration_ms: 772.744104
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ⑤ the exit code is the contract
+    ok 6 - ⭐⭐⭐ ⑤ the exit code is the contract
+      ---
+      duration_ms: 1008.951017
+      type: 'test'
+      ...
+    1..6
+ok 212 - pf-30 — the cost tracker reads, computes, and refuses
+  ---
+  duration_ms: 3287.304888
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4 bis) the guard of the open decisions register (M-92 · M-94)
+    # Subtest: ⭐⭐⭐ no open item is dropped
+    ok 1 - ⭐⭐⭐ no open item is dropped
+      ---
+      duration_ms: 0.916965
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the three production parts are present
+    ok 2 - ⭐⭐⭐ the three production parts are present
+      ---
+      duration_ms: 0.210808
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ no approved decision is re-opened
+    ok 3 - ⭐⭐⭐ no approved decision is re-opened
+      ---
+      duration_ms: 0.889891
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ every open row carries a source and a state
+    ok 4 - ⭐⭐⭐ every open row carries a source and a state
+      ---
+      duration_ms: 0.411914
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the ratified ticket bridge is CLOSED locally (D-078)
+    ok 5 - ⭐⭐⭐ the ratified ticket bridge is CLOSED locally (D-078)
+      ---
+      duration_ms: 1.583965
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the production permissions of the tickets stay a SEPARATE item
+    ok 6 - ⭐⭐⭐ the production permissions of the tickets stay a SEPARATE item
+      ---
+      duration_ms: 0.193299
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the register does NOT contradict DECISIONS.md (the scope of D-066)
+    ok 7 - ⭐⭐⭐ the register does NOT contradict DECISIONS.md (the scope of D-066)
+      ---
+      duration_ms: 6.036318
+      type: 'test'
+      ...
+    1..7
+ok 213 - FOUNDATION 4 bis) the guard of the open decisions register (M-92 · M-94)
+  ---
+  duration_ms: 12.572803
+  type: 'test'
+  ...
+# ⭐⭐⭐ the platform budget is measured by: tests/server/foundation-auth-grading.test.ts, tests/server/foundation-auth-protection.test.ts
+# ⭐⭐⭐ the declared residual risks of the platform budget:
+# tests/server/foundation-auth-grading.test.ts ⇒ waited < 700
+# Subtest: FOUNDATION 4) the audit of the shared platform resources (M-82)
+    # Subtest: ⭐⭐⭐ every drill that MUTATES a shared resource takes the lock
+    ok 1 - ⭐⭐⭐ every drill that MUTATES a shared resource takes the lock
+      ---
+      duration_ms: 123.434887
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ every lock has ONE key and ONE call site (no second lock)
+    ok 2 - ⭐⭐⭐ every lock has ONE key and ONE call site (no second lock)
+      ---
+      duration_ms: 1.54812
+      type: 'test'
+      ...
+    # Subtest: M-100: the guard of the evidence is switched off ONLY inside a transaction
+    ok 3 - M-100: the guard of the evidence is switched off ONLY inside a transaction
+      ---
+      duration_ms: 181.655703
+      type: 'test'
+      ...
+    # Subtest: M-107: the NEGATIVE PROOF of the guard of the evidence
+    ok 4 - M-107: the NEGATIVE PROOF of the guard of the evidence
+      ---
+      duration_ms: 1.115132
+      type: 'test'
+      ...
+    # Subtest: M-112: the NEGATIVE PROOF of a transaction that was CLOSED before the switch
+    ok 5 - M-112: the NEGATIVE PROOF of a transaction that was CLOSED before the switch
+      ---
+      duration_ms: 0.609214
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the tenant scoped resources are NOT under the lock (a namespace separates them)
+    ok 6 - ⭐⭐⭐ the tenant scoped resources are NOT under the lock (a namespace separates them)
+      ---
+      duration_ms: 116.667158
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the wait of the measuring drills: LOWER bounds are safe, the UPPER bound is a DECLARED risk
+    ok 7 - ⭐⭐⭐ the wait of the measuring drills: LOWER bounds are safe, the UPPER bound is a DECLARED risk
+      ---
+      duration_ms: 73.639149
+      type: 'test'
+      ...
+    1..7
+ok 214 - FOUNDATION 4) the audit of the shared platform resources (M-82)
+  ---
+  duration_ms: 523.233042
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 4 bis 2) the guard of the published numbers (M113)
+    # Subtest: ⭐⭐⭐ the published documents are consistent right now
+    ok 1 - ⭐⭐⭐ the published documents are consistent right now
+      ---
+      duration_ms: 182.435584
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the negative proof: an unreplaced placeholder is refused
+    ok 2 - ⭐⭐⭐ the negative proof: an unreplaced placeholder is refused
+      ---
+      duration_ms: 184.935197
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the negative proof: two documents that disagree are refused
+    ok 3 - ⭐⭐⭐ the negative proof: two documents that disagree are refused
+      ---
+      duration_ms: 150.903852
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the negative proof: a prose number against the marker is refused
+    ok 4 - ⭐⭐⭐ the negative proof: a prose number against the marker is refused
+      ---
+      duration_ms: 140.27534
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ the negative proof: a measurement against the marker is refused
+    ok 5 - ⭐⭐⭐ the negative proof: a measurement against the marker is refused
+      ---
+      duration_ms: 130.102712
+      type: 'test'
+      ...
+    1..5
+ok 215 - FOUNDATION 4 bis 2) the guard of the published numbers (M113)
+  ---
+  duration_ms: 791.718307
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 04) the table of the reply IS the measured matrix (M-110)
+    # Subtest: docs/GPT-REVIEW-053-REQUEST.md: the table is there and it matches the matrix
+    ok 1 - docs/GPT-REVIEW-053-REQUEST.md: the table is there and it matches the matrix
+      ---
+      duration_ms: 3.123942
+      type: 'test'
+      ...
+    # Subtest: docs/GPT-REVIEW-054-REQUEST.md: the table is there and it matches the matrix
+    ok 2 - docs/GPT-REVIEW-054-REQUEST.md: the table is there and it matches the matrix
+      ---
+      duration_ms: 1.411487
+      type: 'test'
+      ...
+    1..2
+ok 216 - FOUNDATION 04) the table of the reply IS the measured matrix (M-110)
+  ---
+  duration_ms: 6.07461
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 04) the matrix of the reply is NOT empty (M-110)
+ok 217 - FOUNDATION 04) the matrix of the reply is NOT empty (M-110)
+  ---
+  duration_ms: 0.278118
+  type: 'test'
+  ...
+# Subtest: FOUNDATION 3) the audit of the test numbers is itself tested (M-85)
+    # Subtest: ⭐⭐ M-85a: a correct project passes (the positive case)
+    ok 1 - ⭐⭐ M-85a: a correct project passes (the positive case)
+      ---
+      duration_ms: 120.709415
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85b: the history is NOT compared with the measurement
+    ok 2 - ⭐⭐ M-85b: the history is NOT compared with the measurement
+      ---
+      duration_ms: 61.756867
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85c: a wrong sum is a real contradiction (the negative case)
+    ok 3 - ⭐⭐ M-85c: a wrong sum is a real contradiction (the negative case)
+      ---
+      duration_ms: 68.499734
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85d: a missing marker is refused (the current state must be explicit)
+    ok 4 - ⭐⭐ M-85d: a missing marker is refused (the current state must be explicit)
+      ---
+      duration_ms: 60.571819
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85e: a file counted twice is refused
+    ok 5 - ⭐⭐ M-85e: a file counted twice is refused
+      ---
+      duration_ms: 62.851392
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85f: a file in two groups is refused
+    ok 6 - ⭐⭐ M-85f: a file in two groups is refused
+      ---
+      duration_ms: 61.856658
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85g: a current partition that differs from the measurement is refused
+    ok 7 - ⭐⭐ M-85g: a current partition that differs from the measurement is refused
+      ---
+      duration_ms: 69.274357
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85h: a missing log is refused (the tool never invents a number)
+    ok 8 - ⭐⭐ M-85h: a missing log is refused (the tool never invents a number)
+      ---
+      duration_ms: 61.090801
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐ M-85i: the real project of the owner is consistent right now
+    ok 9 - ⭐⭐ M-85i: the real project of the owner is consistent right now
+      ---
+      duration_ms: 138.904466
+      type: 'test'
+      ...
+    1..9
+ok 218 - FOUNDATION 3) the audit of the test numbers is itself tested (M-85)
+  ---
+  duration_ms: 709.819468
+  type: 'test'
+  ...
+# Subtest: ١) ⭐⭐⭐⭐⭐ الحتمية — نفس المدخلات ⇒ نفس البايت
+    # Subtest: ⭐⭐⭐⭐⭐ اللقطة نفسها بايت-ببايت في تشغيلين
+    ok 1 - ⭐⭐⭐⭐⭐ اللقطة نفسها بايت-ببايت في تشغيلين
+      ---
+      duration_ms: 36.690273
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ التوقيت مثبَّت (لا `Date.now` في اللقطة)
+    ok 2 - ⭐⭐⭐⭐⭐ التوقيت مثبَّت (لا `Date.now` في اللقطة)
+      ---
+      duration_ms: 1.252768
+      type: 'test'
+      ...
+    1..2
+ok 219 - ١) ⭐⭐⭐⭐⭐ الحتمية — نفس المدخلات ⇒ نفس البايت
+  ---
+  duration_ms: 39.347
+  type: 'test'
+  ...
+# Subtest: ٢) ⭐⭐⭐⭐⭐ الملف المولَّد مطابق للنسخة في الريبو (لا انحراف)
+    # Subtest: ⭐⭐⭐⭐⭐ `docs/wasl-workbench-snapshot.json` مطابق
+    ok 1 - ⭐⭐⭐⭐⭐ `docs/wasl-workbench-snapshot.json` مطابق
+      ---
+      duration_ms: 2.027151
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ `docs/wasl-workbench-preview.html` مطابق
+    ok 2 - ⭐⭐⭐⭐⭐ `docs/wasl-workbench-preview.html` مطابق
+      ---
+      duration_ms: 2.206511
+      type: 'test'
+      ...
+    1..2
+ok 220 - ٢) ⭐⭐⭐⭐⭐ الملف المولَّد مطابق للنسخة في الريبو (لا انحراف)
+  ---
+  duration_ms: 4.680631
+  type: 'test'
+  ...
+# Subtest: ٣) ⭐⭐⭐⭐⭐ منع التسريب — لا نص رسائل في اللقطة ولا في الصفحة
+    # Subtest: ⭐⭐⭐⭐⭐ لا نص من نصوص الرسائل الاصطناعية
+    ok 1 - ⭐⭐⭐⭐⭐ لا نص من نصوص الرسائل الاصطناعية
+      ---
+      duration_ms: 2.075898
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ لا مفتاح «body» ولا «text» ولا «content» في اللقطة
+    ok 2 - ⭐⭐⭐⭐⭐ لا مفتاح «body» ولا «text» ولا «content» في اللقطة
+      ---
+      duration_ms: 1.161335
+      type: 'test'
+      ...
+    1..2
+ok 221 - ٣) ⭐⭐⭐⭐⭐ منع التسريب — لا نص رسائل في اللقطة ولا في الصفحة
+  ---
+  duration_ms: 3.8281
+  type: 'test'
+  ...
+# Subtest: ٤) ⭐⭐⭐⭐⭐ بلا شبكة — فحص على ملف الصفحة نفسه
+    # Subtest: ⭐⭐⭐⭐⭐ لا `fetch` ولا `XMLHttpRequest` ولا WebSocket
+    ok 1 - ⭐⭐⭐⭐⭐ لا `fetch` ولا `XMLHttpRequest` ولا WebSocket
+      ---
+      duration_ms: 1.333104
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ لا رابط خارجي ولا CDN ولا خط أو سكربت خارجي
+    ok 2 - ⭐⭐⭐⭐⭐ لا رابط خارجي ولا CDN ولا خط أو سكربت خارجي
+      ---
+      duration_ms: 1.194151
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ سياسة CSP مانعة: `default-src none`
+    ok 3 - ⭐⭐⭐⭐⭐ سياسة CSP مانعة: `default-src none`
+      ---
+      duration_ms: 0.991256
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ الصفحة ملف واحد بلا موارد مرافقة
+    ok 4 - ⭐⭐⭐⭐⭐ الصفحة ملف واحد بلا موارد مرافقة
+      ---
+      duration_ms: 0.968543
+      type: 'test'
+      ...
+    1..4
+ok 222 - ٤) ⭐⭐⭐⭐⭐ بلا شبكة — فحص على ملف الصفحة نفسه
+  ---
+  duration_ms: 5.152248
+  type: 'test'
+  ...
+# Subtest: ٥) ⭐⭐⭐⭐⭐ العزل مُثبَت بالأرقام — لا تسريب بين المستأجرين
+    # Subtest: ⭐⭐⭐⭐⭐ المحادثات المسرَّبة = صفر
+    ok 1 - ⭐⭐⭐⭐⭐ المحادثات المسرَّبة = صفر
+      ---
+      duration_ms: 0.773083
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ محادثة المستأجر الثاني غائبة عن كل طابور
+    ok 2 - ⭐⭐⭐⭐⭐ محادثة المستأجر الثاني غائبة عن كل طابور
+      ---
+      duration_ms: 0.661433
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ نطاق الموظف = محادثاته فقط
+    ok 3 - ⭐⭐⭐⭐⭐ نطاق الموظف = محادثاته فقط
+      ---
+      duration_ms: 0.596058
+      type: 'test'
+      ...
+    1..3
+ok 223 - ٥) ⭐⭐⭐⭐⭐ العزل مُثبَت بالأرقام — لا تسريب بين المستأجرين
+  ---
+  duration_ms: 2.44508
+  type: 'test'
+  ...
+# Subtest: ٦) ⭐⭐⭐⭐⭐ JSON المضمَّن في الصفحة = ملف JSON نفسه
+    # Subtest: ⭐⭐⭐⭐⭐ المحتوى متطابق بايت-ببايت
+    ok 1 - ⭐⭐⭐⭐⭐ المحتوى متطابق بايت-ببايت
+      ---
+      duration_ms: 4.442905
+      type: 'test'
+      ...
+    1..1
+ok 224 - ٦) ⭐⭐⭐⭐⭐ JSON المضمَّن في الصفحة = ملف JSON نفسه
+  ---
+  duration_ms: 4.636688
+  type: 'test'
+  ...
+# Subtest: ٧) ⭐⭐⭐⭐⭐ RTL + صفحة قراءة فقط (لا أزرار كتابة)
+    # Subtest: ⭐⭐⭐⭐⭐ الاتجاه من اليمين لليسار
+    ok 1 - ⭐⭐⭐⭐⭐ الاتجاه من اليمين لليسار
+      ---
+      duration_ms: 0.946668
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ لا أزرار ولا حقول إدخال ولا نماذج
+    ok 2 - ⭐⭐⭐⭐⭐ لا أزرار ولا حقول إدخال ولا نماذج
+      ---
+      duration_ms: 0.996444
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐⭐⭐ لافتة «اصطناعية» موجودة في الصفحة
+    ok 3 - ⭐⭐⭐⭐⭐ لافتة «اصطناعية» موجودة في الصفحة
+      ---
+      duration_ms: 0.901639
+      type: 'test'
+      ...
+    1..3
+ok 225 - ٧) ⭐⭐⭐⭐⭐ RTL + صفحة قراءة فقط (لا أزرار كتابة)
+  ---
+  duration_ms: 3.198082
+  type: 'test'
+  ...
+# Subtest: ٨) ⭐⭐⭐⭐⭐ صفر اتصال (الحاجز مُركَّب)
+    # Subtest: ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+    ok 1 - ⭐⭐⭐⭐⭐ صفر محاولة اتصال خارجية
+      ---
+      duration_ms: 0.133851
+      type: 'test'
+      ...
+    1..1
+ok 226 - ٨) ⭐⭐⭐⭐⭐ صفر اتصال (الحاجز مُركَّب)
+  ---
+  duration_ms: 0.297687
+  type: 'test'
+  ...
+1..226
+# tests 672
+# suites 0
+# pass 672
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 191400.059416
+# the exit code: 0
+# the measured SHA: e9385cb11f15148d63e3fc89f420c3b7ff5a3dd5
