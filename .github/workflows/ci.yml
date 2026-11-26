@@ -43,7 +43,7 @@ env:
   # ⭐ PostgreSQL 15 — the version of the measured environment.
   POSTGRES_IMAGE: 'postgres:15'
   # ⭐ The published log that holds the numbers of the last measurement.
-  BASELINE_LOG: logs/2026-11-11-m131-m133-ui19-tk16-tk20-npm-test.log
+  BASELINE_LOG: logs/2026-11-26-wave1-npm-test.log
 
 jobs:
   # ============================================================
