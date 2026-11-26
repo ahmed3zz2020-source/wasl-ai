@@ -75,6 +75,20 @@ function portFree(host: string, port: number): boolean {
   });
 }
 
+/** ⭐⭐⭐ the health endpoint of the service that is ALREADY running (if any). */
+async function healthOf(host: string, port: number): Promise<Record<string, unknown> | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1500);
+    const response = await fetch(`http://${host}:${port}/api/health`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!response.ok) return null;
+    return (await response.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
   line('');
   line('⭐ WASL AI — the doctor of the readiness (it changes nothing)');
@@ -123,7 +137,18 @@ async function main(): Promise<void> {
   line('② ⭐ the service');
   const serverHost = process.env['WASL_SERVER_HOST'] ?? '127.0.0.1';
   const serverPort = Number(process.env['WASL_SERVER_PORT'] ?? '8787');
-  check(await portFree(serverHost, serverPort), 'the port is free', `${serverHost}:${serverPort}`);
+  // ⭐⭐⭐ the port may be taken by the service THAT IS ALREADY RUNNING ⇒
+  //   ⇒ ⇒ ⇒ and that is not a broken thing ⇒ ⇒ ⇒ so we ask it.
+  const running = await healthOf(serverHost, serverPort);
+  if (running) {
+    check(
+      true,
+      'the service is already running on this port',
+      `${serverHost}:${serverPort} · the db ok: ${String(running['db_ok'] ?? '?')} · the schema ${String(running['schema_version'] ?? '?')}`,
+    );
+  } else {
+    check(await portFree(serverHost, serverPort), 'the port is free', `${serverHost}:${serverPort}`);
+  }
   const health = read('server/api/server.ts');
   check(health.includes("'/api/health'"), 'the health endpoint exists', '/api/health');
   check(health.includes('/ui/index.html'), 'the interface is served by the service', '/ui/*.html');

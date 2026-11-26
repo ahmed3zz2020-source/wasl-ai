@@ -32,6 +32,7 @@
 // ============================================================
 
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from '../server/config.ts';
 import { createPool } from '../server/db/pool.ts';
@@ -52,6 +53,21 @@ function box(title: string, rows: string[]): void {
     line(`│  ${row.padEnd(width - 4)}  │`);
   }
   line(`└${'─'.repeat(width)}┘`);
+}
+
+/**
+ * ⭐⭐⭐ the number of the published tests ⇒ read from `CURRENT-STATE.md`
+ *   (the marker of the truth) ⇒ ⇒ ⇒ and never written by hand here ⇒
+ *   ⇒ ⇒ ⇒ so the banner cannot go stale.
+ */
+function publishedTotal(): string {
+  try {
+    const text = fs.readFileSync(path.join(ROOT, 'CURRENT-STATE.md'), 'utf8');
+    const found = text.match(/wasl:current-total\s+(\d+)/);
+    return found?.[1] ?? '?';
+  } catch {
+    return '?';
+  }
 }
 
 /** ⭐⭐ Runs the database setup (idempotent) ⇒ it is safe to call it. */
@@ -117,7 +133,7 @@ async function main(): Promise<void> {
     `the profile : ${String(health['profile'] ?? '?')} · the db ok: ${String(health['db_ok'] ?? '?')}`,
     '',
     'the journey (the proof that it works end to end): npm run e2e',
-    'the whole suite (1034+ tests):            npm test',
+    `the whole suite (${publishedTotal()} tests):           npm test`,
     'to stop: Ctrl+C',
   ]);
   line('');

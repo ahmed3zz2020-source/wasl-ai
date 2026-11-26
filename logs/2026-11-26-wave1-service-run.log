@@ -23,7 +23,7 @@
 - tenant seeded: tnt_gamma
 
 credentials written to .local/pg-credentials.json (git ignored)
-{"ts":"2026-11-26T02:46:13.539Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_15ed43cd2f1ea249","method":"GET","path":"/api/health","status":200,"duration_ms":19}
+{"ts":"2026-11-26T03:49:56.939Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_d446a3b223dd73d4","method":"GET","path":"/api/health","status":200,"duration_ms":18}
 
 ┌─────────────────────────────────────────────────────────────────┐
 │  THE SERVICE IS RUNNING ⭐ (the health endpoint answered 200)    │
@@ -40,14 +40,11 @@ credentials written to .local/pg-credentials.json (git ignored)
 │  the profile : development · the db ok: true                    │
 │                                                                 │
 │  the journey (the proof that it works end to end): npm run e2e  │
-│  the whole suite (1034+ tests):            npm test             │
+│  the whole suite (1049 tests):           npm test               │
 │  to stop: Ctrl+C                                                │
 └─────────────────────────────────────────────────────────────────┘
 
 ⛔ the port is the loopback of this machine ⇒ nothing outside it can reach it.
 ⛔ a public run needs: a provider · a domain · the secrets · the owner signature.
 
-{"ts":"2026-11-26T02:47:05.327Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_ae99c16d9bd0c9b6","method":"GET","path":"/api/health","status":200,"duration_ms":12}
-{"ts":"2026-11-26T02:47:05.339Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_514aa1ae7acfb333","method":"GET","path":"/ui/index.html","status":200,"duration_ms":1}
-{"ts":"2026-11-26T02:47:05.350Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_aef8943540f8bf20","method":"GET","path":"/ui/inbox.html","status":200,"duration_ms":1}
-{"ts":"2026-11-26T02:48:48.954Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_beff07351e8f9595","method":"GET","path":"/api/health","status":200,"duration_ms":12}
+{"ts":"2026-11-26T03:50:15.040Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_ab43d4ab8d4ee424","method":"GET","path":"/api/health","status":200,"duration_ms":12}
