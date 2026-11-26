@@ -1,0 +1,16 @@
+# Health / readiness probes — measured 2026-11-26T01:41:02Z
+# command: curl -s -o /dev/null -w '%{http_code} %{time_total}' http://127.0.0.1:8787/api/health
+200 0.058431
+200 0.004034
+200 0.001721
+200 0.001541
+200 0.001581
+200 0.001500
+200 0.001396
+200 0.001491
+200 0.002196
+200 0.001619
+# command: curl -s -o /dev/null -w '%{http_code} %{time_total}' http://127.0.0.1:8787/api/ready
+200 0.007566
+# body of /api/ready:
+{"ok":true,"service":"wasl-local-api","scope":"local-test","profile":"development","db_ok":true,"schema_version":"008_phase04_tickets","migrations":8,"uptime_ms":2585}

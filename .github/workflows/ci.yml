@@ -1,0 +1,194 @@
+# ============================================================
+# WASL AI — the CI line (item `pf-23` of the comprehensive review)
+# ------------------------------------------------------------
+# ⭐ WHAT THIS IS: the guard of the regression.
+# ⛔ WHAT THIS IS NOT: no deployment · no package · no artefact
+#   · no tag · no signature.
+# ⭐ Every secret comes from GitHub Secrets as a reference ⇒ the value
+#   never appears in this file, in the repository, or in the log.
+#
+# ⭐ THE STATE OF THIS FILE (26 November 2026): the line is ACTIVE from
+#   the moment it is committed ⇒ the `guards` job runs on every push and
+#   needs no secret ⇒ and the `tests` job waits for ONE thing only: the
+#   secret `WASL_CI_POSTGRES_PASSWORD` in the settings of the repository
+#   ⇒ ⇒ ⇒ so the first push is GREEN and the full run starts by itself
+#   ⇒ ⇒ ⇒ ⇒ the owner turns it off by deleting this file, nothing else.
+#   ⛔ What it never does: it never publishes anything, and it never
+#     holds the value of a secret.
+# ============================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+# ⭐ The smallest permission that does the job: read the content only.
+permissions:
+  contents: read
+
+# ⭐ A new push on the same reference cancels the run that is behind.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # ⭐ Node 22 — the version of the measured environment (v22.19.0).
+  NODE_VERSION: '22'
+  # ⭐ Playwright — the version of the measured environment (1.63.0).
+  PLAYWRIGHT_VERSION: '1.63.0'
+  # ⭐ PostgreSQL 15 — the version of the measured environment.
+  POSTGRES_IMAGE: 'postgres:15'
+  # ⭐ The published log that holds the numbers of the last measurement.
+  BASELINE_LOG: logs/2026-11-11-m131-m133-ui19-tk16-tk20-npm-test.log
+
+jobs:
+  # ============================================================
+  # the guards of the published numbers — no database, no browser
+  # ============================================================
+  guards:
+    name: the guards of the published numbers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      # ⭐⭐ ONE output ⇒ and it is a BOOLEAN ⇒ the value of the secret
+      #   is never printed, never written, never leaves this step.
+      has_db_secret: ${{ steps.db_secret.outputs.present }}
+    steps:
+      - name: the repository
+        uses: actions/checkout@v4
+
+      - name: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: ⭐ no secret written in the workflows
+        run: python3 .github/workflows/scripts/no-secret-check.py
+
+      - name: ⭐⭐ the secret of the database (the presence only)
+        id: db_secret
+        env:
+          WASL_CI_PG_SUPERUSER_PASSWORD: ${{ secrets.WASL_CI_POSTGRES_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "${WASL_CI_PG_SUPERUSER_PASSWORD:-}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "⭐ the secret is there ⇒ the full test job will run"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::the secret WASL_CI_POSTGRES_PASSWORD is not set ⇒ the full test job is SKIPPED (the guards above still ran)"
+          fi
+
+      - name: ⭐ the language guard
+        run: python3 tools/check-lang.py
+
+      - name: ⭐ the published numbers
+        run: python3 tools/published_numbers_audit.py
+
+      - name: ⭐ the count of the tests
+        run: python3 tools/test_count_audit.py --docs
+
+      - name: ⭐ the board of the completion
+        run: python3 tools/completion_board.py --check
+
+  # ============================================================
+  # the tests — the whole published list, on a real database
+  # ============================================================
+  tests:
+    name: the tests
+    needs: guards
+    # ⭐⭐ The heavy job runs ONLY when the owner has put the secret in
+    #   the settings of the repository ⇒ ⇒ ⇒ so a repository without
+    #   that secret is green and honest ⇒ ⇒ ⇒ ⇒ and one line in the
+    #   settings is enough to turn the full run on.
+    if: needs.guards.outputs.has_db_secret == 'true'
+    runs-on: ubuntu-latest
+    # ⭐ The measured run of the whole list is 751985 ms (12.5 minutes)
+    #   ⇒ the ceiling is far above it ⇒ and a run that hangs is killed.
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_IMAGE }}
+        env:
+          POSTGRES_USER: postgres
+          # ⭐⭐ THE ONLY SECRET HERE ⇒ a reference and nothing else.
+          POSTGRES_PASSWORD: ${{ secrets.WASL_CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: the repository
+        uses: actions/checkout@v4
+
+      - name: Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: the dependencies
+        run: npm ci
+
+      - name: ⭐ the browser of the UI drills
+        run: |
+          set -euo pipefail
+          npm install -g "playwright@${PLAYWRIGHT_VERSION}"
+          playwright install --with-deps chromium
+          # ⭐ The drills read the module and the browsers from the
+          #   environment ⇒ these two names are what they look for.
+          echo "PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs" >> "$GITHUB_ENV"
+          echo "PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright" >> "$GITHUB_ENV"
+
+      - name: ⭐ the superuser URL of the database
+        env:
+          WASL_CI_PG_SUPERUSER_PASSWORD: ${{ secrets.WASL_CI_POSTGRES_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${WASL_CI_PG_SUPERUSER_PASSWORD:-}" ]; then
+            echo "::error::the secret WASL_CI_POSTGRES_PASSWORD is missing"
+            exit 1
+          fi
+          ENCODED="$(python3 -c "import os,urllib.parse;print(urllib.parse.quote(os.environ['WASL_CI_PG_SUPERUSER_PASSWORD'],safe=''))")"
+          echo "::add-mask::${ENCODED}"
+          echo "::add-mask::${WASL_CI_PG_SUPERUSER_PASSWORD}"
+          echo "WASL_PG_SUPERUSER_URL=postgresql://postgres:${ENCODED}@127.0.0.1:5432/postgres" >> "$GITHUB_ENV"
+
+      - name: ⭐ the local synthetic database
+        run: npm run db:setup
+
+      - name: ⭐ the tests
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee "${RUNNER_TEMP}/npm-test.log"
+        env:
+          # ⭐⭐ THE DOCKER DRILL STAYS OUT ON PURPOSE.
+          #   The published baseline was measured in an environment where
+          #   no container starts ⇒ the drill reports that reason and is
+          #   skipped ⇒ and the published skip count stays one.
+          #   ⛔ Item `pf-22` (Docker / M75) is BLOCKED and out of scope
+          #   ⇒ turning the container on would change the published
+          #   numbers ⇒ it needs a new measurement and a new decision.
+          DOCKER_HOST: tcp://127.0.0.1:1
+
+      - name: ⭐ the comparison with the published baseline
+        # ⭐ `always()` ⇒ the comparison runs even when the tests failed
+        #   ⇒ so the log shows WHAT drifted and not only that it failed.
+        if: always()
+        run: |
+          python3 .github/workflows/scripts/compare-baseline.py \
+            --live "${RUNNER_TEMP}/npm-test.log" \
+            --baseline "${BASELINE_LOG}"
+
+      - name: ⭐ the journey
+        run: npm run e2e
+        env:
+          DOCKER_HOST: tcp://127.0.0.1:1

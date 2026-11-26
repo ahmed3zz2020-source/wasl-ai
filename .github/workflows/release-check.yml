@@ -1,0 +1,81 @@
+# ============================================================
+# WASL AI — the check of the pre-release
+# ------------------------------------------------------------
+# ⭐ WHAT THIS IS: the four audits of the repository, run as a gate
+#   before a release package is published.
+# ⛔ WHAT THIS IS NOT: no deployment · no package · no artefact
+#   · no tag · no signature. It reads, it checks, and it stops the
+#   build when something is wrong.
+#
+# ⭐ THE FOUR AUDITS (the same four that the measurement of every
+#   round runs — see `logs/2026-11-11-m131-m133-measurement-summary.md`):
+#   1) `tools/check-lang.py`               — no foreign letter in the prose
+#   2) `tools/published_numbers_audit.py`  — the published numbers agree
+#   3) `tools/test_count_audit.py --docs`  — the count of the tests agrees
+#   4) `tools/completion_board.py --check` — the board of the completion agrees
+#
+# ⭐ WHEN IT RUNS: by hand (`workflow_dispatch`) before the release, and
+#   again on `main` whenever a release package or these documents move.
+# ============================================================
+
+name: Release check
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'REVIEWS/**'
+      - 'docs/release/**'
+      - 'CURRENT-STATE.md'
+      - 'docs/TEST-MATRIX.md'
+      - 'docs/COMPLETION-BOARD.md'
+      - 'docs/completion-board.json'
+  pull_request:
+    paths:
+      - 'REVIEWS/**'
+      - 'docs/release/**'
+
+# ⭐ The smallest permission that does the job: read the content only.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: the four audits of the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: the repository
+        uses: actions/checkout@v4
+
+      - name: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: ⭐ no secret written in the workflows
+        run: python3 .github/workflows/scripts/no-secret-check.py
+
+      - name: ⭐ the language guard
+        run: python3 tools/check-lang.py
+
+      - name: ⭐ the published numbers
+        run: python3 tools/published_numbers_audit.py
+
+      - name: ⭐ the count of the tests
+        run: python3 tools/test_count_audit.py --docs
+
+      - name: ⭐ the board of the completion
+        run: python3 tools/completion_board.py --check
+
+      - name: ⭐ the summary of the gate
+        run: |
+          echo "the four audits passed => the release gate is open"
+          echo "the release itself still needs the signature of the owner"
+          echo "(see docs/release/release-process.md)"

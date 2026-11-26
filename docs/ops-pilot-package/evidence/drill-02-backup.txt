@@ -1,0 +1,10 @@
+
+> wasl-ai@0.1.0 db:backup
+> node --experimental-strip-types tools/wasl-db-backup.ts
+
+backup written: /run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/wasl-ai/.local/backups/wasl_local_2026-11-26T01-36-19-228Z.dump.enc (260157 bytes)
+manifest written: /run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/wasl-ai/.local/backups/wasl_local_2026-11-26T01-36-19-228Z.dump.enc.manifest.json
+key fingerprint: c50b653e46a7abff
+dump duration: 651 ms
+verified: true
+END_UTC=2026-11-26T01:36:20Z

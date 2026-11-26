@@ -1,0 +1,72 @@
+{
+  "_note": "⭐ قالب ملف إعداد متتبّع التكاليف (pf-30). ⭐⭐⭐ كل بند هنا بلا سعر — والسعر لا يُكتب إلا بقرار المالك: ⭐⭐⭐ الأداة ترفض الملف كله وتخرج بالرمز 1 ما دام أي بند مفعّل بلا سعر. ⭐ لا سعر افتراضي في أي مكان. ⭐ انسخ هذا الملف إلى .local/cost-config.json واملأ unit_cost.",
+  "_how_to_read": "unit_cost = سعر الوحدة في الدورة الواحدة · quantity = كم وحدة في الدورة · period = دورة التقرير · ceiling = سقف التكلفة الذي يوقّعه المالك (null = لا سقف معتمد بعد)",
+  "currency": "EGP",
+  "period": "monthly",
+  "ceiling": null,
+  "items": [
+    {
+      "id": "hosting_server",
+      "category": "hosting",
+      "label": "خادم التطبيق (استضافة)",
+      "quantity": 1,
+      "unit": "شهر",
+      "unit_cost": null,
+      "enabled": true
+    },
+    {
+      "id": "database",
+      "category": "database",
+      "label": "قاعدة البيانات المُدارة",
+      "quantity": 1,
+      "unit": "شهر",
+      "unit_cost": null,
+      "enabled": true
+    },
+    {
+      "id": "backup_storage",
+      "category": "backup",
+      "label": "مساحة تخزين النسخ خارج الجهاز",
+      "quantity": 0,
+      "unit": "GB",
+      "unit_cost": null,
+      "enabled": true
+    },
+    {
+      "id": "backup_egress",
+      "category": "backup",
+      "label": "رسوم إرسال النسخ (egress)",
+      "quantity": 0,
+      "unit": "GB",
+      "unit_cost": null,
+      "enabled": true
+    },
+    {
+      "id": "monitoring_logs",
+      "category": "monitoring",
+      "label": "تخزين سجلّات المراقبة",
+      "quantity": 0,
+      "unit": "GB",
+      "unit_cost": null,
+      "enabled": true
+    },
+    {
+      "id": "monitoring_channel",
+      "category": "monitoring",
+      "label": "قناة التنبيه (مشغّل)",
+      "quantity": 0,
+      "unit": "شهر",
+      "unit_cost": null,
+      "enabled": true
+    },
+    {
+      "id": "messaging_variable",
+      "category": "messaging",
+      "label": "قناة المتغيّرة (رسوم لكل رسالة)",
+      "quantity": 0,
+      "unit": "رسالة",
+      "unit_cost": null,
+      "enabled": true
+    }
+  ]
+}

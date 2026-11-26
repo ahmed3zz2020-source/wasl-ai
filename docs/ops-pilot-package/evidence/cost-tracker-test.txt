@@ -1,0 +1,53 @@
+TAP version 13
+# Subtest: pf-30 — the cost tracker reads, computes, and refuses
+    # Subtest: ⭐⭐⭐ ① the tracker READS the configuration file
+    ok 1 - ⭐⭐⭐ ① the tracker READS the configuration file
+      ---
+      duration_ms: 394.446805
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ② it COMPUTES the total of the lines
+    ok 2 - ⭐⭐⭐ ② it COMPUTES the total of the lines
+      ---
+      duration_ms: 195.914079
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ③ it REFUSES an empty price (and prints no report at all)
+    ok 3 - ⭐⭐⭐ ③ it REFUSES an empty price (and prints no report at all)
+      ---
+      duration_ms: 604.135194
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ③ it REFUSES a negative price and a negative quantity
+    ok 4 - ⭐⭐⭐ ③ it REFUSES a negative price and a negative quantity
+      ---
+      duration_ms: 411.948863
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ④ it NEVER prints a default price
+    ok 5 - ⭐⭐⭐ ④ it NEVER prints a default price
+      ---
+      duration_ms: 401.328957
+      type: 'test'
+      ...
+    # Subtest: ⭐⭐⭐ ⑤ the exit code is the contract
+    ok 6 - ⭐⭐⭐ ⑤ the exit code is the contract
+      ---
+      duration_ms: 588.153118
+      type: 'test'
+      ...
+    1..6
+ok 1 - pf-30 — the cost tracker reads, computes, and refuses
+  ---
+  duration_ms: 2599.014057
+  type: 'test'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3112.202095

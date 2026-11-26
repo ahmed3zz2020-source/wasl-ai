@@ -1,0 +1,1 @@
+2026-11-26T01:42:07Z | ALERT | health_probe_failed | http_code=000 | url=http://127.0.0.1:8787/api/health

@@ -1,0 +1,14 @@
+
+> wasl-ai@0.1.0 db:verify
+> node --experimental-strip-types tools/wasl-db-verify.ts .local/backups/wasl_local_2026-11-26T01-36-19-228Z.dump.enc
+
+{
+  "artifact": ".local/backups/wasl_local_2026-11-26T01-36-19-228Z.dump.enc",
+  "manifest": ".local/backups/wasl_local_2026-11-26T01-36-19-228Z.dump.enc.manifest.json",
+  "verified": true,
+  "plainBytes": 260121,
+  "keyFingerprint": "c50b653e46a7abff",
+  "schemaVersion": "008_phase04_tickets",
+  "createdAt": "2026-11-26T01:36:20.008Z",
+  "mode": "600"
+}

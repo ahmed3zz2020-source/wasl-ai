@@ -1,0 +1,53 @@
+
+> wasl-ai@0.1.0 start:local
+> node --experimental-strip-types tools/wasl-run.ts
+
+
+⭐ WASL AI — starting the service (local · synthetic data · loopback only)
+
+→ the database (the setup is safe to repeat)…
+  - database wasl_local already exists
+- role wasl_owner password refreshed
+- role wasl_app password refreshed
+- schema public prepared for the owner role
+- migration already applied: 001_foundation.sql
+- migration already applied: 002_deletion_evidence.sql
+- migration already applied: 003_phase01_security.sql
+- migration already applied: 004_phase02_auth_hardening.sql
+- migration already applied: 005_phase02_evidence_integrity.sql
+- migration already applied: 006_phase03_login_admission.sql
+- migration already applied: 007_phase02_crm.sql
+- migration already applied: 008_phase04_tickets.sql
+- tenant seeded: tnt_alpha
+- tenant seeded: tnt_beta
+- tenant seeded: tnt_gamma
+
+credentials written to .local/pg-credentials.json (git ignored)
+{"ts":"2026-11-26T02:46:13.539Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_15ed43cd2f1ea249","method":"GET","path":"/api/health","status":200,"duration_ms":19}
+
+┌─────────────────────────────────────────────────────────────────┐
+│  THE SERVICE IS RUNNING ⭐ (the health endpoint answered 200)    │
+│  the UI      → http://127.0.0.1:8787/ui/index.html              │
+│  the inbox   → http://127.0.0.1:8787/ui/inbox.html              │
+│  the tickets → http://127.0.0.1:8787/ui/tickets.html            │
+│  the CRM     → http://127.0.0.1:8787/ui/crm.html                │
+│  the health  → http://127.0.0.1:8787/api/health                 │
+│                                                                 │
+│  the synthetic login: tenant tnt_alpha · user usr_alpha_owner   │
+│                       passcode wasl-local-test                  │
+│                                                                 │
+│  the database: wasl_local · the schema 008_phase04_tickets      │
+│  the profile : development · the db ok: true                    │
+│                                                                 │
+│  the journey (the proof that it works end to end): npm run e2e  │
+│  the whole suite (1034+ tests):            npm test             │
+│  to stop: Ctrl+C                                                │
+└─────────────────────────────────────────────────────────────────┘
+
+⛔ the port is the loopback of this machine ⇒ nothing outside it can reach it.
+⛔ a public run needs: a provider · a domain · the secrets · the owner signature.
+
+{"ts":"2026-11-26T02:47:05.327Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_ae99c16d9bd0c9b6","method":"GET","path":"/api/health","status":200,"duration_ms":12}
+{"ts":"2026-11-26T02:47:05.339Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_514aa1ae7acfb333","method":"GET","path":"/ui/index.html","status":200,"duration_ms":1}
+{"ts":"2026-11-26T02:47:05.350Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_aef8943540f8bf20","method":"GET","path":"/ui/inbox.html","status":200,"duration_ms":1}
+{"ts":"2026-11-26T02:48:48.954Z","level":"info","service":"wasl-local-api","event":"http_request","request_id":"req_beff07351e8f9595","method":"GET","path":"/api/health","status":200,"duration_ms":12}

@@ -1,0 +1,13 @@
+{
+  "manifest_version": 1,
+  "created_at": "2026-11-26T01:36:20.008Z",
+  "database": "wasl_local",
+  "schema_version": "008_phase04_tickets",
+  "plain_sha256": "d8cc328ad569eb404d700f8402378c2c4afa546f9c75bfdd520ae0b6b67417c5",
+  "artifact_sha256": "fb1eb90c059074e7c25bfb7638f135b2ce3b44b40c69302eadb1da1e4e313ddc",
+  "plain_bytes": 260121,
+  "artifact_bytes": 260157,
+  "cipher": "aes-256-gcm",
+  "key_fingerprint": "c50b653e46a7abff",
+  "dump_duration_ms": 651
+}

@@ -1,0 +1,10 @@
+# Drill measurements — 2026-11-26T01:36:47Z
+artifact_path|.local/backups/wasl_local_2026-11-26T01-36-19-228Z.dump.enc
+artifact_bytes_stat|260157
+artifact_mode_stat|600
+artifact_bytes_manifest|260157
+plain_bytes_manifest|260121
+db_size_wasl_local_bytes|14548327
+db_size_wasl_restore_drill_bytes|12352871
+tenants_live|138
+tenants_restored|138

@@ -1,0 +1,16 @@
+# Monitoring baseline — measured 2026-11-26T01:41:14Z (all values from psql on wasl_local)
+db_size_bytes|14548327
+artifact_bytes_last_backup|260157
+global_admission_tokens|39
+global_admission_initialized|t
+global_admission_updated_at|2026-11-26 01:40:22.959011+00
+tenant_buckets|72
+tenant_buckets_max_tokens|19
+tickets_total|28
+tickets_by_state|open|26
+tickets_by_state|closed|2
+tickets_open_unassigned|19
+sessions_total|591
+login_attempts_total|0
+schema_version|008_phase04_tickets
+migrations_count|8

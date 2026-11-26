@@ -1,0 +1,21 @@
+# Pre-drill inventory (wasl_local) — psql — measured 2026-11-26T01:36:02Z
+audit_events|1767
+conversation_changes|222
+conversations|1964
+customers|1720
+deletion_requests|83
+login_admission_global|1
+login_admission_tenant|72
+login_attempts|0
+login_attempts_global|6
+memberships|171
+messages|2199
+read_audit_events|222
+retention_policies|180
+sessions|587
+support_ticket_changes|38
+support_tickets|28
+tenant_deletion_evidence|72
+tenants|138
+users|268
+wasl_schema_migrations|8

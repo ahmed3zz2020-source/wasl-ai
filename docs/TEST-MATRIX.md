@@ -30,14 +30,14 @@
 > `security` only (it was listed in `unit` as well in a first draft,
 > which made the sum of the groups 763 while the real total of one run
 > was 724 — a misleading number).
-<!-- wasl:current-partition 605 + 286 + 127 + 16 = 1034 -->
-<!-- wasl:current-total 1034 = 1033 pass + 0 fail + 1 skipped -->
+<!-- wasl:current-partition 620 + 286 + 127 + 16 = 1049 -->
+<!-- wasl:current-total 1049 = 1048 pass + 0 fail + 1 skipped -->
 
-> ⭐⭐ **CURRENT (round #60 · D-084)**: the partition is checked by a TOOL
+> ⭐⭐ **CURRENT (wave of 26 November 2026)**: the partition is checked by a TOOL
 > (`tools/test_count_audit.py`) and the numbers are read from the LOG of
 > a real run, never written by hand ⇒ now:
-> **605 + 286 + 127 + 16 = 1034** = the number of `npm test` exactly
-> (1033 of the 1034 pass and **1 is SKIPPED**: the dynamic Docker drill,
+> **620 + 286 + 127 + 16 = 1049** = the number of `npm test` exactly
+> (1048 of the 1049 pass and **1 is SKIPPED**: the dynamic Docker drill,
 > see §6).
 > ⭐⭐ **The +20 of this round are the acceptance tests of the new
 > items** (`tests/ui/inbox-session-isolation.test.ts` = 4 ·
@@ -398,6 +398,30 @@ python3 tools/test_count_audit.py --log <run.log> --docs \
 
 
 ---
+
+
+### ⭐⭐ The measured results of the WAVE (٢٦ نوفمبر ٢٠٢٦) — the seven agents
+
+| # | Run | Result | Log |
+|:-:|---|---|---|
+| ⭐ 0 | ⭐ `npm test` (the run of the wave) | ⭐ **1049** · **1048 pass** · **0 fail** · **1 skipped** | ⭐ `logs/2026-11-26-wave1-npm-test.log` |
+| ⭐ 1 | ⭐ `npm run test:unit` | ⭐ **620/620** | ⭐ `logs/2026-11-26-wave1-npm-test-group-unit.log` |
+| ⭐ 2 | ⭐ `npm run test:integration` | ⭐ **286** | ⭐ `logs/2026-11-26-wave1-npm-test-group-integration.log` |
+| ⭐ 3 | ⭐ `npm run test:security` | ⭐ **127/127** | ⭐ `logs/2026-11-26-wave1-npm-test-group-security.log` |
+| ⭐ 4 | ⭐ `npm run test:recovery` | ⭐ **16/16** | ⭐ `logs/2026-11-26-wave1-npm-test-group-recovery.log` |
+
+> ⭐ **The +15 of this wave** are the acceptance tests of the two new
+> tools ⇒ ⇒ ⇒ `tests/tools/cost-tracker.test.ts` (the cost tracker of
+> `pf-30`) ⇒ ⇒ ⇒ and `tests/tools/a11y-audit.test.ts` (the accessibility
+> audit of `pf-26`) ⇒ ⇒ ⇒ ⇒ and both are in the group `unit` ⇒ ⇒ ⇒ ⇒
+> ⇒ the other three groups did not move.
+> ⭐⭐ **A measurement that failed and was NOT published**: the first
+> run of the wave was polluted by a SECOND `npm test` that was running
+> at the same time on the same database ⇒ ⇒ ⇒ 12 failures ⇒ ⇒ ⇒ and
+> the log of that run is kept as evidence
+> (`logs/2026-11-26-wave1-npm-test-concurrent-contaminated.log`) ⇒ ⇒ ⇒
+> ⇒ **and the published numbers come from the clean single run above**
+> ⇒ ⇒ ⇒ ⇒ **⇒ «حالة واحدة · قياس واحد · في وقت واحد»**.
 
 ## 8. ⭐ The history of the phases (the measurements are NOT rewritten)
 
